@@ -865,16 +865,52 @@ function renderScan(results){
   }catch(e){}
 }
 
-// Auto-scan every 30s when scanner tab is open
-setInterval(()=>{try{if(document.getElementById('tab-sc').classList.contains('on'))runScan();}catch(e){}},30000);
-
 // ══════════════════════════════════════════════
-// TRADING INTEGRATION
+// TRADING ENGINE - LIGHTNING FAST + MARTINGALE
 // ══════════════════════════════════════════════
 let apiToken=null,accountInfo=null,tradeWS=null,tradeWSok=false,openContracts={};
 const tradePendQ=[];
 
-function tradeSend(o){try{tradeWS&&tradeWS.readyState===1?tradeWS.send(JSON.stringify(o)):tradePendQ.push(o);}catch(e){}}
+// Martingale state
+const MG={
+  base:1,current:1,wins:0,losses:0,streak:0,totalPnl:0,
+  lastType:null // 'over_group' or 'under_group'
+};
+
+function mgGroup(ct){return['DIGITOVER','DIGITDIFF','CALL'].includes(ct)?'over':'under';}
+function mgMult(ct){return mgGroup(ct)==='over'?3.2:2.1;}
+
+function mgOnResult(won,pnl,ct){
+  MG.totalPnl=+(MG.totalPnl+pnl).toFixed(2);
+  if(won){
+    MG.wins++;MG.streak=0;
+    MG.current=MG.base;
+  } else {
+    MG.losses++;MG.streak++;
+    const max=parseFloat(document.getElementById('maxStake')?.value||'50');
+    const next=+(MG.current*mgMult(ct)).toFixed(2);
+    MG.current=next>max?MG.base:next;
+    if(next>max)showTradeMsg(`⚠ Max stake hit — reset to base`,'#ff8c00');
+  }
+  try{document.getElementById('stakeAmt').value=MG.current.toFixed(2);}catch(e){}
+  updMartStats();
+}
+
+function updMartStats(){
+  try{
+    document.getElementById('mgStake').textContent='$'+MG.current.toFixed(2);
+    document.getElementById('mgPnl').textContent=(MG.totalPnl>=0?'+':'')+MG.totalPnl;
+    document.getElementById('mgPnl').style.color=MG.totalPnl>=0?'#00ff88':'#ff3b5c';
+    document.getElementById('mgW').textContent=MG.wins;
+    document.getElementById('mgL').textContent=MG.losses;
+    document.getElementById('mgS').textContent=MG.streak+'L';
+    document.getElementById('mgS').style.color=MG.streak>0?'#ff3b5c':'#00ff88';
+  }catch(e){}
+}
+
+function tradeSend(o){
+  try{tradeWS&&tradeWS.readyState===1?tradeWS.send(JSON.stringify(o)):tradePendQ.push(o);}catch(e){}
+}
 
 function initTradeWS(token){
   try{
@@ -889,39 +925,46 @@ function initTradeWS(token){
       try{
         const d=JSON.parse(e.data);
         if(!d)return;
+
         if(d.msg_type==='authorize'){
-          if(d.error){showTradeMsg('❌ Invalid token: '+d.error.message,'#ff3b5c');setLoggedOut();return;}
+          if(d.error){showTradeMsg('❌ '+d.error.message,'#ff3b5c');setLoggedOut();return;}
           accountInfo=d.authorize;
+          MG.base=parseFloat(document.getElementById('stakeAmt')?.value||'1');
+          MG.current=MG.base;
           showAccountInfo(d.authorize);
           tradeSend({balance:1,subscribe:1});
         }
-        if(d.msg_type==='balance'){
-          if(d.balance)updateBalance(d.balance.balance,d.balance.currency);
+
+        if(d.msg_type==='balance'&&d.balance){
+          updateBalance(d.balance.balance,d.balance.currency);
         }
+
         if(d.msg_type==='buy'){
-          if(d.error){showTradeMsg('❌ Trade failed: '+d.error.message,'#ff3b5c');return;}
+          if(d.error){showTradeMsg('❌ '+d.error.message,'#ff3b5c');return;}
           const c=d.buy;
-          showTradeMsg(`✓ Trade placed! Contract #${c.contract_id} · Cost: ${c.buy_price} ${accountInfo?.currency||'USD'}`,'#00ff88');
-          openContracts[c.contract_id]={id:c.contract_id,price:c.buy_price};
+          showTradeMsg(`⚡ Placed #${c.contract_id} · $${c.buy_price}`,'#00ff88');
+          openContracts[c.contract_id]={id:c.contract_id,buy_price:c.buy_price,contract_type:d.echo_req?.parameters?.contract_type||'',underlying:d.echo_req?.parameters?.symbol||''};
           tradeSend({proposal_open_contract:1,contract_id:c.contract_id,subscribe:1});
           refreshPositions();
         }
+
         if(d.msg_type==='proposal_open_contract'&&d.proposal_open_contract){
           const c=d.proposal_open_contract;
+          openContracts[c.contract_id]={...openContracts[c.contract_id],...c};
           if(c.is_sold){
             const pnl=+(c.sell_price-c.buy_price).toFixed(2);
-            showTradeMsg(`${pnl>=0?'✓ WIN':'✗ LOSS'} Contract #${c.contract_id} · P&L: ${pnl>=0?'+':''}${pnl} ${c.currency}`,(pnl>=0?'#00ff88':'#ff3b5c'));
+            const won=pnl>=0;
+            const ct=openContracts[c.contract_id]?.contract_type||'';
+            mgOnResult(won,pnl,ct);
+            showTradeMsg(`${won?'✓ WIN +$'+pnl:'✗ LOSS $'+Math.abs(pnl)} → Next stake: $${MG.current.toFixed(2)}`,won?'#00ff88':'#ff3b5c');
             delete openContracts[c.contract_id];
-            refreshPositions();
-          } else {
-            openContracts[c.contract_id]={...openContracts[c.contract_id],...c};
-            refreshPositions();
           }
+          refreshPositions();
         }
       }catch(e){}
     };
     tradeWS.onerror=()=>{tradeWSok=false;};
-    tradeWS.onclose=()=>{tradeWSok=false;};
+    tradeWS.onclose=()=>{tradeWSok=false;setTimeout(()=>{if(apiToken)initTradeWS(apiToken);},3000);};
   }catch(e){}
 }
 
@@ -930,16 +973,15 @@ function showAccountInfo(auth){
   document.getElementById('tradeAccount').style.display='block';
   document.getElementById('accName').textContent=auth.fullname||auth.loginid||'Account';
   document.getElementById('accId').textContent=auth.loginid||'';
-  document.getElementById('accBal').textContent=(auth.balance||0)+' '+(auth.currency||'USD');
+  document.getElementById('accBal').textContent=parseFloat(auth.balance||0).toFixed(2)+' '+(auth.currency||'USD');
   document.getElementById('accType').textContent=auth.is_virtual?'DEMO':'REAL';
   document.getElementById('accType').style.color=auth.is_virtual?'#ffd700':'#00ff88';
-  // Show trade buttons everywhere
-  document.querySelectorAll('.trade-btn-wrap').forEach(w=>w.style.display='block');
-  showTradeMsg('✓ Connected to your Deriv account','#00ff88');
+  document.querySelectorAll('.trade-btn-wrap').forEach(w=>w.style.display='flex');
+  showTradeMsg('✓ Account connected — ready to trade','#00ff88');
 }
 
 function updateBalance(bal,cur){
-  document.getElementById('accBal').textContent=parseFloat(bal).toFixed(2)+' '+(cur||'USD');
+  try{document.getElementById('accBal').textContent=parseFloat(bal).toFixed(2)+' '+(cur||'USD');}catch(e){}
 }
 
 function setLoggedOut(){
@@ -947,161 +989,244 @@ function setLoggedOut(){
   document.getElementById('tradeLogin').style.display='block';
   document.getElementById('tradeAccount').style.display='none';
   document.querySelectorAll('.trade-btn-wrap').forEach(w=>w.style.display='none');
-  document.getElementById('apiTokenInput').value='';
+  try{document.getElementById('apiTokenInput').value='';}catch(e){}
 }
 
 function doLogin(){
   const tok=document.getElementById('apiTokenInput').value.trim();
-  if(!tok||tok.length<10){showTradeMsg('Please enter a valid API token','#ff3b5c');return;}
+  if(!tok||tok.length<8){showTradeMsg('Enter a valid API token','#ff3b5c');return;}
   apiToken=tok;
-  showTradeMsg('⟳ Connecting to your account...','#ffd700');
+  showTradeMsg('⟳ Connecting...','#ffd700');
   initTradeWS(tok);
 }
 
 function doLogout(){
   if(tradeWS)try{tradeWS.close();}catch(e){}
   setLoggedOut();
-  showTradeMsg('Logged out','#ffd700');
 }
 
 function showTradeMsg(msg,col){
-  const el=document.getElementById('tradeMsg');
-  el.textContent=msg;el.style.color=col||'#00d4ff';
-  el.style.display='block';
-  clearTimeout(el._t);
-  if(!msg.startsWith('✓ Connected'))el._t=setTimeout(()=>{el.style.display='none';},6000);
+  try{
+    const el=document.getElementById('tradeMsg');
+    el.textContent=msg;el.style.color=col||'#00d4ff';el.style.display='block';
+    clearTimeout(el._t);
+    el._t=setTimeout(()=>{el.style.display='none';},7000);
+  }catch(e){}
 }
 
 function refreshPositions(){
   try{
     const wrap=document.getElementById('openPositions');
     const ids=Object.keys(openContracts);
-    if(!ids.length){wrap.innerHTML='<div style="font-family:var(--mn);font-size:9px;color:var(--dm);padding:8px">No open positions</div>';return;}
+    if(!ids.length){wrap.innerHTML='<span style="color:var(--dm);font-size:9px">No open positions</span>';return;}
     wrap.innerHTML=ids.map(id=>{
       const c=openContracts[id];
-      const pnl=c.profit!==undefined?+c.profit:null;
-      return`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid rgba(28,50,72,.4);font-family:var(--mn);font-size:9px;">
-        <div><div style="color:var(--tx)">#${id}</div><div style="color:var(--dm)">${c.contract_type||'—'} · ${c.underlying||''}</div></div>
-        <div style="text-align:right"><div style="color:#00d4ff">${c.buy_price||'—'} ${c.currency||''}</div>${pnl!==null?`<div style="color:${pnl>=0?'#00ff88':'#ff3b5c'}">${pnl>=0?'+':''}${pnl}</div>`:''}</div>
+      const pnl=c.profit!==undefined?+(+c.profit).toFixed(2):null;
+      const col=pnl===null?'var(--dm)':pnl>=0?'#00ff88':'#ff3b5c';
+      return`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(28,50,72,.4);font-family:var(--mn);font-size:9px;">
+        <div><span style="color:var(--tx)">${c.contract_type||'—'}</span> <span style="color:var(--dm)">${SYM[c.underlying]||c.underlying||''}</span></div>
+        <div style="text-align:right"><span style="color:#00d4ff">$${c.buy_price||'—'}</span>${pnl!==null?` <span style="color:${col}">${pnl>=0?'+':''}${pnl}</span>`:''}</div>
       </div>`;
     }).join('');
   }catch(e){}
 }
 
-// Place trade function
-function placeTrade(contractType, symbol, duration, durationUnit, barrier){
-  if(!tradeWSok||!accountInfo){showTradeMsg('Please login first to place trades','#ff3b5c');document.getElementById('tradePanel').scrollIntoView({behavior:'smooth'});return;}
-  const stake=parseFloat(document.getElementById('stakeAmt').value)||1;
-  if(stake<0.35){showTradeMsg('Minimum stake is 0.35','#ff3b5c');return;}
-  const req={buy:1,price:stake,parameters:{contract_type:contractType,symbol:symbol,duration:duration,duration_unit:durationUnit,basis:'stake',currency:accountInfo.currency||'USD'}};
+// ── LIGHTNING FAST INSTANT TRADE ──
+function instantTrade(contractType,symbol,duration,durationUnit,barrier){
+  if(!tradeWSok||!accountInfo){
+    showTradeMsg('Login to place trades','#ff3b5c');
+    try{document.getElementById('tradePanel').scrollIntoView({behavior:'smooth'});}catch(e){}
+    return;
+  }
+  const stake=MG.current;
+  if(stake<0.35){showTradeMsg('Min stake $0.35','#ff3b5c');return;}
+  // BUILD AND FIRE IMMEDIATELY — zero delay
+  const req={buy:1,price:stake,parameters:{
+    contract_type:contractType,symbol:symbol,
+    duration:duration,duration_unit:durationUnit,
+    basis:'stake',currency:accountInfo.currency||'USD'
+  }};
   if(barrier!==undefined&&barrier!==null)req.parameters.barrier=barrier;
-  tradeSend(req);
-  showTradeMsg(`⟳ Placing ${contractType} on ${SYM[symbol]||symbol}...`,'#ffd700');
+  tradeSend(req); // fires in <50ms
+  showTradeMsg(`⚡ ${contractType} · ${SYM[symbol]||symbol} · $${stake}`,'#00d4ff');
 }
 
-// Map signal to Deriv contract params
-function getRFTradeParams(){
+// ── TRADE FROM CURRENT SIGNAL ──
+function tradeRF(){
   const sig=document.getElementById('rfSv').textContent;
   const tix=parseInt(document.getElementById('rfTicks').textContent)||5;
-  if(sig==='RISE')return{type:'CALL',sym:rfInst,dur:tix,unit:'t'};
-  if(sig==='FALL')return{type:'PUT',sym:rfInst,dur:tix,unit:'t'};
-  return null;
+  if(sig==='RISE')instantTrade('CALL',rfInst,tix,'t');
+  else if(sig==='FALL')instantTrade('PUT',rfInst,tix,'t');
+  else showTradeMsg('No signal — analyse first','#ff3b5c');
 }
 
-function getDTradeParams(){
+function tradeD(){
   const dir=document.getElementById('dDir').textContent;
-  const ent=document.getElementById('dEnt').textContent;
-  if(dir==='WAIT'||ent==='—')return null;
-  const barrier=parseInt(ent);
-  if(dir==='OVER')return{type:'DIGITOVER',sym:dInst,dur:1,unit:'t',barrier};
-  if(dir==='UNDER')return{type:'DIGITUNDER',sym:dInst,dur:1,unit:'t',barrier};
-  return null;
+  const ent=parseInt(document.getElementById('dEnt').textContent);
+  const runs=parseInt(document.getElementById('dRns').textContent)||1;
+  if(dir==='OVER')instantTrade('DIGITOVER',dInst,runs,'t',ent);
+  else if(dir==='UNDER')instantTrade('DIGITUNDER',dInst,runs,'t',ent);
+  else showTradeMsg('No signal — analyse first','#ff3b5c');
 }
 
-function getDMTradeParams(){
+function tradeDM(){
   const type=document.getElementById('dmDir').textContent;
-  const dig=document.getElementById('dmDig').textContent;
-  if(type==='WAIT'||dig==='—')return null;
-  const barrier=parseInt(dig);
-  if(type==='DIFFERS')return{type:'DIGITDIFF',sym:dmInst,dur:1,unit:'t',barrier};
-  if(type==='MATCHES')return{type:'DIGITMATCH',sym:dmInst,dur:1,unit:'t',barrier};
-  return null;
+  const dig=parseInt(document.getElementById('dmDig').textContent);
+  const runs=parseInt(document.getElementById('dmRns').textContent)||1;
+  if(type==='DIFFERS')instantTrade('DIGITDIFF',dmInst,runs,'t',dig);
+  else if(type==='MATCHES')instantTrade('DIGITMATCH',dmInst,runs,'t',dig);
+  else showTradeMsg('No signal — analyse first','#ff3b5c');
 }
 
-// Inject trade panel HTML into page
+// ── SCANNER TRADE (instant from scan result) ──
+function scanTrade(dir,inst,barrier,runs){
+  if(!tradeWSok||!accountInfo){showTradeMsg('Login first','#ff3b5c');return;}
+  let ct;
+  if(dir==='OVER')ct='DIGITOVER';
+  else if(dir==='UNDER')ct='DIGITUNDER';
+  else if(dir==='DIFFERS')ct='DIGITDIFF';
+  else if(dir==='MATCHES')ct='DIGITMATCH';
+  else if(dir==='RISE')ct='CALL';
+  else if(dir==='FALL')ct='PUT';
+  else{showTradeMsg('No valid signal','#ff3b5c');return;}
+  instantTrade(ct,inst,runs||1,'t',barrier);
+}
+
+// ── INJECT TRADE UI ──
 function injectTradingUI(){
-  // Trade panel in header area
   const panel=document.createElement('div');
   panel.id='tradePanel';
-  panel.style.cssText='position:relative;z-index:1;';
   panel.innerHTML=`
-  <div style="background:linear-gradient(135deg,rgba(0,212,255,.06),rgba(0,255,136,.04));border-bottom:2px solid var(--bd);padding:12px 14px;">
-    <div style="font-family:var(--dp);font-size:11px;font-weight:700;letter-spacing:3px;color:var(--ac);margin-bottom:10px;">⬡ TRADING ACCOUNT</div>
-    <!-- LOGIN FORM -->
-    <div id="tradeLogin">
-      <div style="font-family:var(--mn);font-size:9px;color:var(--dm);margin-bottom:7px;line-height:1.7;">Enter your Deriv API token (Read+Trade). Token stays in your browser only.</div>
-      <div style="display:flex;gap:7px;">
-        <input id="apiTokenInput" type="password" placeholder="Paste your API token here"
-          style="flex:1;background:var(--p2);border:1px solid var(--bd);color:var(--tx);font-family:var(--mn);font-size:10px;padding:8px 10px;border-radius:5px;outline:none;"
-          onkeydown="if(event.key==='Enter')doLogin()">
-        <button onclick="doLogin()" style="padding:8px 16px;background:rgba(0,212,255,.1);border:1.5px solid var(--ac);color:var(--ac);font-family:var(--dp);font-size:13px;font-weight:700;letter-spacing:2px;border-radius:5px;cursor:pointer;">LOGIN</button>
-      </div>
-      <div style="font-family:var(--mn);font-size:8px;color:var(--dm);margin-top:5px;">Get token at app.deriv.com/account/api-token · Select Read + Trade scopes only</div>
-    </div>
-    <!-- ACCOUNT INFO -->
-    <div id="tradeAccount" style="display:none">
-      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
-        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-          <div style="background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.2);border-radius:5px;padding:6px 12px;">
-            <div style="font-family:var(--mn);font-size:8px;color:var(--dm)">BALANCE</div>
-            <div style="font-family:var(--dp);font-size:22px;font-weight:900;color:#00ff88" id="accBal">—</div>
-          </div>
-          <div>
-            <div style="font-family:var(--dp);font-size:16px;font-weight:700;color:var(--tx)" id="accName">—</div>
-            <div style="font-family:var(--mn);font-size:9px;color:var(--dm)" id="accId">—</div>
-            <div style="font-family:var(--dp);font-size:11px;font-weight:700;letter-spacing:2px;" id="accType">—</div>
-          </div>
-        </div>
-        <div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;">
-          <div style="font-family:var(--mn);font-size:9px;color:var(--dm)">STAKE:</div>
-          <input id="stakeAmt" type="number" value="1" min="0.35" step="0.5"
-            style="width:70px;background:var(--p2);border:1px solid var(--bd);color:var(--tx);font-family:var(--mn);font-size:11px;padding:6px 8px;border-radius:5px;text-align:center;">
-          <button onclick="doLogout()" style="padding:6px 12px;background:rgba(255,59,92,.08);border:1px solid rgba(255,59,92,.3);color:#ff3b5c;font-family:var(--mn);font-size:9px;border-radius:4px;cursor:pointer;">LOGOUT</button>
-        </div>
-      </div>
-      <!-- OPEN POSITIONS -->
-      <div style="margin-top:10px;">
-        <div style="font-family:var(--dp);font-size:10px;font-weight:700;letter-spacing:2px;color:var(--dm);margin-bottom:5px;">OPEN POSITIONS</div>
-        <div id="openPositions" style="font-family:var(--mn);font-size:9px;color:var(--dm);padding:8px 0">No open positions</div>
-      </div>
-    </div>
-    <div id="tradeMsg" style="display:none;font-family:var(--mn);font-size:10px;margin-top:8px;padding:6px 10px;background:rgba(0,0,0,.2);border-radius:4px;"></div>
-  </div>`;
+  <div style="background:linear-gradient(135deg,rgba(0,212,255,.07),rgba(0,255,136,.04));border-bottom:2px solid var(--bd);padding:12px 14px;position:relative;z-index:1;">
+    <div style="font-family:var(--dp);font-size:11px;font-weight:700;letter-spacing:3px;color:#00d4ff;margin-bottom:10px;">⚡ TRADING ACCOUNT</div>
 
-  // Insert after banner
+    <!-- LOGIN -->
+    <div id="tradeLogin">
+      <div style="font-family:var(--mn);font-size:9px;color:var(--dm);margin-bottom:7px;line-height:1.7">Enter Deriv API token (Read+Trade scopes). Stays in your browser only — never shared.</div>
+      <div style="display:flex;gap:7px;">
+        <input id="apiTokenInput" type="password" placeholder="Paste API token here"
+          style="flex:1;background:var(--p2);border:1.5px solid var(--bd);color:var(--tx);font-family:var(--mn);font-size:10px;padding:8px 10px;border-radius:5px;outline:none;"
+          onkeydown="if(event.key==='Enter')doLogin()">
+        <button onclick="doLogin()" style="padding:8px 18px;background:rgba(0,212,255,.1);border:2px solid #00d4ff;color:#00d4ff;font-family:var(--dp);font-size:14px;font-weight:700;letter-spacing:2px;border-radius:5px;cursor:pointer;white-space:nowrap;">LOGIN</button>
+      </div>
+      <div style="font-family:var(--mn);font-size:8px;color:var(--dm);margin-top:5px;">Create token at app.deriv.com/account/api-token · Select Read + Trade only</div>
+    </div>
+
+    <!-- ACCOUNT -->
+    <div id="tradeAccount" style="display:none">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-start;margin-bottom:10px;">
+        <div style="background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.2);border-radius:6px;padding:8px 14px;">
+          <div style="font-family:var(--mn);font-size:8px;color:var(--dm)">BALANCE</div>
+          <div style="font-family:var(--dp);font-size:26px;font-weight:900;color:#00ff88" id="accBal">—</div>
+          <div style="font-family:var(--dp);font-size:11px;font-weight:700;letter-spacing:2px;margin-top:2px" id="accType">—</div>
+        </div>
+        <div style="flex:1;min-width:120px;">
+          <div style="font-family:var(--dp);font-size:16px;font-weight:700;color:var(--tx)" id="accName">—</div>
+          <div style="font-family:var(--mn);font-size:9px;color:var(--dm)" id="accId">—</div>
+          <div style="display:flex;gap:6px;align-items:center;margin-top:8px;flex-wrap:wrap;">
+            <div style="font-family:var(--mn);font-size:9px;color:var(--dm)">BASE $</div>
+            <input id="stakeAmt" type="number" value="1" min="0.35" step="0.5"
+              style="width:65px;background:var(--p2);border:1px solid var(--bd);color:var(--tx);font-family:var(--mn);font-size:11px;padding:5px 7px;border-radius:5px;text-align:center;"
+              onchange="MG.base=parseFloat(this.value)||1;MG.current=MG.base;updMartStats();">
+            <div style="font-family:var(--mn);font-size:9px;color:var(--dm)">MAX $</div>
+            <input id="maxStake" type="number" value="50" min="1"
+              style="width:65px;background:var(--p2);border:1px solid var(--bd);color:var(--tx);font-family:var(--mn);font-size:11px;padding:5px 7px;border-radius:5px;text-align:center;">
+            <button onclick="doLogout()" style="padding:5px 10px;background:rgba(255,59,92,.08);border:1px solid rgba(255,59,92,.3);color:#ff3b5c;font-family:var(--mn);font-size:9px;border-radius:4px;cursor:pointer;">LOGOUT</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- MARTINGALE STATS -->
+      <div style="background:rgba(0,0,0,.2);border:1px solid var(--bd);border-radius:6px;padding:8px 12px;margin-bottom:8px;">
+        <div style="font-family:var(--dp);font-size:10px;font-weight:700;letter-spacing:2px;color:var(--dm);margin-bottom:6px;">MARTINGALE TRACKER · OVER/DIFFERS×3.2 · UNDER/MATCHES×2.1</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <div style="text-align:center;min-width:50px"><div style="font-family:var(--mn);font-size:8px;color:var(--dm)">NEXT STAKE</div><div style="font-family:var(--dp);font-size:20px;font-weight:900;color:#ffd700" id="mgStake">$1.00</div></div>
+          <div style="text-align:center;min-width:50px"><div style="font-family:var(--mn);font-size:8px;color:var(--dm)">P&amp;L</div><div style="font-family:var(--dp);font-size:20px;font-weight:900" id="mgPnl">$0</div></div>
+          <div style="text-align:center;min-width:40px"><div style="font-family:var(--mn);font-size:8px;color:var(--dm)">WINS</div><div style="font-family:var(--dp);font-size:20px;font-weight:900;color:#00ff88" id="mgW">0</div></div>
+          <div style="text-align:center;min-width:40px"><div style="font-family:var(--mn);font-size:8px;color:var(--dm)">LOSSES</div><div style="font-family:var(--dp);font-size:20px;font-weight:900;color:#ff3b5c" id="mgL">0</div></div>
+          <div style="text-align:center;min-width:40px"><div style="font-family:var(--mn);font-size:8px;color:var(--dm)">STREAK</div><div style="font-family:var(--dp);font-size:20px;font-weight:900" id="mgS">0L</div></div>
+          <button onclick="MG.current=MG.base;document.getElementById('stakeAmt').value=MG.base;updMartStats();showTradeMsg('Martingale reset','#ffd700');" style="align-self:center;padding:5px 10px;background:rgba(255,215,0,.08);border:1px solid rgba(255,215,0,.3);color:#ffd700;font-family:var(--mn);font-size:8px;border-radius:4px;cursor:pointer;">RESET</button>
+        </div>
+      </div>
+
+      <!-- OPEN POSITIONS -->
+      <div style="background:rgba(0,0,0,.15);border:1px solid var(--bd);border-radius:6px;padding:8px 10px;">
+        <div style="font-family:var(--dp);font-size:10px;font-weight:700;letter-spacing:2px;color:var(--dm);margin-bottom:4px;">OPEN POSITIONS</div>
+        <div id="openPositions"><span style="color:var(--dm);font-family:var(--mn);font-size:9px">No open positions</span></div>
+      </div>
+    </div>
+
+    <div id="tradeMsg" style="display:none;font-family:var(--mn);font-size:10px;margin-top:8px;padding:6px 10px;background:rgba(0,0,0,.25);border-radius:4px;letter-spacing:.5px;"></div>
+  </div>`;
   const banner=document.getElementById('banner');
   banner.parentNode.insertBefore(panel,banner.nextSibling);
 
-  // Add trade buttons to RF tab
-  const rfCard=document.getElementById('rfCard');
-  const rfTrade=document.createElement('div');
-  rfTrade.className='trade-btn-wrap';rfTrade.style.display='none';rfTrade.style.marginTop='10px';
-  rfTrade.innerHTML=`<button onclick="(function(){const p=getRFTradeParams();if(!p){showTradeMsg('Analyse market first to get signal','#ff3b5c');return;}placeTrade(p.type,p.sym,p.dur,p.unit);})()" style="width:100%;padding:12px;background:rgba(0,255,136,.1);border:2px solid #00ff88;color:#00ff88;font-family:var(--dp);font-size:15px;font-weight:700;letter-spacing:3px;border-radius:6px;cursor:pointer;">▶ PLACE RISE/FALL TRADE</button>`;
-  rfCard.appendChild(rfTrade);
+  // RF trade button
+  const rfBtns=document.createElement('div');
+  rfBtns.className='trade-btn-wrap';rfBtns.style.cssText='display:none;margin-top:8px;gap:8px;';
+  rfBtns.innerHTML=`<button onclick="tradeRF()" style="flex:1;padding:13px;background:rgba(0,255,136,.1);border:2px solid #00ff88;color:#00ff88;font-family:var(--dp);font-size:16px;font-weight:900;letter-spacing:3px;border-radius:6px;cursor:pointer;transition:all .1s;" onmousedown="this.style.background='rgba(0,255,136,.25)'" onmouseup="this.style.background='rgba(0,255,136,.1)'">⚡ PLACE TRADE NOW</button>`;
+  document.getElementById('rfCard').appendChild(rfBtns);
 
-  // Add trade button to digits tab - after signal condition panel
-  const dCond=document.getElementById('dCond').closest('.p');
-  const dTrade=document.createElement('div');
-  dTrade.className='trade-btn-wrap';dTrade.style.cssText='display:none;margin-bottom:12px;';
-  dTrade.innerHTML=`<button onclick="(function(){const p=getDTradeParams();if(!p){showTradeMsg('Analyse digits first','#ff3b5c');return;}placeTrade(p.type,p.sym,p.dur,p.unit,p.barrier);})()" style="width:100%;padding:12px;background:rgba(0,255,136,.1);border:2px solid #00ff88;color:#00ff88;font-family:var(--dp);font-size:15px;font-weight:700;letter-spacing:3px;border-radius:6px;cursor:pointer;">▶ PLACE OVER/UNDER TRADE</button>`;
-  dCond.after(dTrade);
+  // Digit trade button — after dBtn
+  const dBtns=document.createElement('div');
+  dBtns.className='trade-btn-wrap';dBtns.style.cssText='display:none;margin-bottom:12px;gap:8px;';
+  dBtns.innerHTML=`<button onclick="tradeD()" style="flex:1;padding:13px;background:rgba(0,255,136,.1);border:2px solid #00ff88;color:#00ff88;font-family:var(--dp);font-size:16px;font-weight:900;letter-spacing:3px;border-radius:6px;cursor:pointer;" onmousedown="this.style.background='rgba(0,255,136,.25)'" onmouseup="this.style.background='rgba(0,255,136,.1)'">⚡ PLACE OVER/UNDER</button>`;
+  document.getElementById('dBtn').insertAdjacentElement('afterend',dBtns);
 
-  // Add trade button to differ/match tab
-  const dmCond=document.getElementById('dmCond').closest('.p');
-  const dmTrade=document.createElement('div');
-  dmTrade.className='trade-btn-wrap';dmTrade.style.cssText='display:none;margin-bottom:12px;';
-  dmTrade.innerHTML=`<button onclick="(function(){const p=getDMTradeParams();if(!p){showTradeMsg('Analyse differ/match first','#ff3b5c');return;}placeTrade(p.type,p.sym,p.dur,p.unit,p.barrier);})()" style="width:100%;padding:12px;background:rgba(179,136,255,.1);border:2px solid #b388ff;color:#b388ff;font-family:var(--dp);font-size:15px;font-weight:700;letter-spacing:3px;border-radius:6px;cursor:pointer;">▶ PLACE DIFFER/MATCH TRADE</button>`;
-  dmCond.after(dmTrade);
+  // DM trade button
+  const dmBtns=document.createElement('div');
+  dmBtns.className='trade-btn-wrap';dmBtns.style.cssText='display:none;margin-bottom:12px;gap:8px;';
+  dmBtns.innerHTML=`<button onclick="tradeDM()" style="flex:1;padding:13px;background:rgba(179,136,255,.1);border:2px solid #b388ff;color:#b388ff;font-family:var(--dp);font-size:16px;font-weight:900;letter-spacing:3px;border-radius:6px;cursor:pointer;" onmousedown="this.style.background='rgba(179,136,255,.25)'" onmouseup="this.style.background='rgba(179,136,255,.1)'">⚡ PLACE DIFFER/MATCH</button>`;
+  document.getElementById('dmBtn').insertAdjacentElement('afterend',dmBtns);
+}
+
+// Auto-scan every 30s when scanner tab is open
+setInterval(()=>{try{if(document.getElementById('tab-sc').classList.contains('on'))runScan();}catch(e){}},30000);
+
+function renderScan(results){
+  try{
+    const wrap=document.getElementById('scResults');wrap.innerHTML='';
+    const best=results.find(x=>x.r.dir!=='WAIT');
+    if(best){
+      const bp=document.getElementById('bestPanel');bp.style.display='block';
+      const col=getCol(best.r.dir);
+      const tradeBtn=`<button onclick="scanTrade('${best.r.dir}','${best.inst}',${best.r.ent},${best.r.runs})" class="scan-trade-btn" style="display:none;width:100%;margin-top:10px;padding:13px;background:rgba(0,212,255,.1);border:2px solid #00d4ff;color:#00d4ff;font-family:var(--dp);font-size:16px;font-weight:900;letter-spacing:3px;border-radius:6px;cursor:pointer;">⚡ TRADE BEST SIGNAL NOW</button>`;
+      document.getElementById('bestContent').innerHTML=`
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+          <div style="font-family:var(--mn);font-size:13px;color:var(--tx)">${SYM[best.inst]}</div>
+          <div style="font-family:var(--dp);font-size:38px;font-weight:900;color:${col}">${best.r.dir}</div>
+          <div style="font-family:var(--dp);font-size:38px;font-weight:900;color:#00d4ff">${best.r.ent!==null?best.r.ent:'—'}</div>
+          <div style="flex:1;min-width:110px"><div style="display:flex;justify-content:space-between;font-family:var(--mn);font-size:9px;color:var(--dm);margin-bottom:3px"><span>CONFIDENCE</span><span style="color:${col}">${best.r.conf}%</span></div><div style="height:4px;background:var(--bd);border-radius:2px;overflow:hidden"><div style="height:100%;width:${best.r.conf}%;background:${col};border-radius:2px"></div></div></div>
+          ${chkFav(best)?'<div style="font-family:var(--mn);font-size:9px;background:rgba(255,215,0,.1);color:#ffd700;border:1px solid rgba(255,215,0,.25);padding:3px 9px;border-radius:3px;">★ YOUR FAV</div>':''}
+          ${best.live?'<span class="livebadge">LIVE</span>':'<span class="simbadge">SIM</span>'}
+        </div>
+        <div style="font-family:var(--mn);font-size:10px;color:var(--dm);margin-top:7px;line-height:1.7">${best.r.cond}</div>
+        <div style="font-family:var(--mn);font-size:9px;color:#ffd700;margin-top:4px">Runs: ${best.r.runs} · Ticks: ${best.r.runs} · Digit: ${best.r.ent!==null?best.r.ent:'—'}${best.mode==='ou'?' · Low: '+best.r.lp+'% · High: '+best.r.hp+'%':''}</div>
+        ${tradeBtn}`;
+      // Show trade btn if logged in
+      document.querySelectorAll('.scan-trade-btn').forEach(b=>b.style.display=accountInfo?'block':'none');
+    }
+    const hdr=document.createElement('div');hdr.style.cssText='font-family:var(--mn);font-size:9px;color:var(--dm);letter-spacing:2px;padding:4px 0 8px;text-transform:uppercase;';hdr.textContent='All Markets — Ranked by Confidence';wrap.appendChild(hdr);
+    results.forEach((x,rank)=>{
+      const{inst,r,live,mode}=x,isW=r.dir==='WAIT';
+      const col=getCol(r.dir),cls=r.dir==='OVER'?'over':r.dir==='UNDER'?'under':r.dir==='DIFFERS'?'diff':r.dir==='MATCHES'?'match':'wait';
+      const card=document.createElement('div');card.className=`scard ${cls}${rank===0&&!isW?' top-pick':''}`;
+      const tradeCol=isW?'var(--dm)':col;
+      card.innerHTML=`
+        ${chkFav(x)?'<div class="favbadge">★ FAV</div>':`<div class="srank">#${rank+1}</div>`}
+        <div class="sinst">${SYM[inst]}${is1s(inst)?'<div style="font-family:var(--mn);font-size:8px;color:#ff8c00">⚡1s</div>':''}<div style="margin-top:2px">${live?'<span class="livebadge">LIVE</span>':'<span class="simbadge">SIM</span>'}</div></div>
+        <div><div class="sdir ${cls}">${r.dir}</div><div style="font-family:var(--mn);font-size:8px;color:var(--dm)">DIGIT</div><div class="sdg">${r.ent!==null?r.ent:'—'}</div></div>
+        <div class="sbars">
+          ${mode==='ou'?`<div class="sbrow"><div class="sblbl" style="color:#00ff88">LO</div><div class="sbbg"><div class="sbf" style="width:${r.lp}%;background:#00ff88"></div></div><div style="font-family:var(--mn);font-size:8px;color:#00ff88;min-width:26px;text-align:right">${r.lp}%</div></div><div class="sbrow"><div class="sblbl" style="color:#ff3b5c">HI</div><div class="sbbg"><div class="sbf" style="width:${r.hp}%;background:#ff3b5c"></div></div><div style="font-family:var(--mn);font-size:8px;color:#ff3b5c;min-width:26px;text-align:right">${r.hp}%</div></div>`:`<div class="sbrow"><div class="sblbl" style="color:${col}">${r.dir.slice(0,4)}</div><div class="sbbg"><div class="sbf" style="width:${r.conf}%;background:${col}"></div></div><div style="font-family:var(--mn);font-size:8px;color:${col};min-width:26px;text-align:right">${r.conf}%</div></div>`}
+          <div class="scond">${r.cond.slice(0,56)}${r.cond.length>56?'…':''}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:44px;flex-shrink:0;">
+          <div class="sconf">${isW?'—':r.conf+'%'}<br><span style="color:#ffd700">${r.runs>0?r.runs+'r':'WAIT'}</span></div>
+          ${!isW?`<button onclick="scanTrade('${r.dir}','${inst}',${r.ent},${r.runs})" class="scan-trade-btn" style="display:${accountInfo?'block':'none'};padding:4px 6px;background:rgba(${col==='#00ff88'?'0,255,136':col==='#ff3b5c'?'255,59,92':col==='#b388ff'?'179,136,255':'0,212,255'},.1);border:1px solid ${col};color:${col};font-family:var(--mn);font-size:8px;border-radius:3px;cursor:pointer;white-space:nowrap;letter-spacing:1px;">⚡TRADE</button>`:''}
+        </div>`;
+      wrap.appendChild(card);
+    });
+  }catch(e){}
 }
 
 // Init
