@@ -868,9 +868,246 @@ function renderScan(results){
 // Auto-scan every 30s when scanner tab is open
 setInterval(()=>{try{if(document.getElementById('tab-sc').classList.contains('on'))runScan();}catch(e){}},30000);
 
+// ══════════════════════════════════════════════
+// TRADING INTEGRATION
+// ══════════════════════════════════════════════
+let apiToken=null,accountInfo=null,tradeWS=null,tradeWSok=false,openContracts={};
+const tradePendQ=[];
+
+function tradeSend(o){try{tradeWS&&tradeWS.readyState===1?tradeWS.send(JSON.stringify(o)):tradePendQ.push(o);}catch(e){}}
+
+function initTradeWS(token){
+  try{
+    if(tradeWS)try{tradeWS.close();}catch(e){}
+    tradeWS=new WebSocket('wss://ws.binaryws.com/websockets/v3?app_id=1');
+    tradeWS.onopen=()=>{
+      tradeWSok=true;
+      tradeSend({authorize:token});
+      while(tradePendQ.length)try{tradeWS.send(JSON.stringify(tradePendQ.shift()));}catch(e){}
+    };
+    tradeWS.onmessage=e=>{
+      try{
+        const d=JSON.parse(e.data);
+        if(!d)return;
+        if(d.msg_type==='authorize'){
+          if(d.error){showTradeMsg('❌ Invalid token: '+d.error.message,'#ff3b5c');setLoggedOut();return;}
+          accountInfo=d.authorize;
+          showAccountInfo(d.authorize);
+          tradeSend({balance:1,subscribe:1});
+        }
+        if(d.msg_type==='balance'){
+          if(d.balance)updateBalance(d.balance.balance,d.balance.currency);
+        }
+        if(d.msg_type==='buy'){
+          if(d.error){showTradeMsg('❌ Trade failed: '+d.error.message,'#ff3b5c');return;}
+          const c=d.buy;
+          showTradeMsg(`✓ Trade placed! Contract #${c.contract_id} · Cost: ${c.buy_price} ${accountInfo?.currency||'USD'}`,'#00ff88');
+          openContracts[c.contract_id]={id:c.contract_id,price:c.buy_price};
+          tradeSend({proposal_open_contract:1,contract_id:c.contract_id,subscribe:1});
+          refreshPositions();
+        }
+        if(d.msg_type==='proposal_open_contract'&&d.proposal_open_contract){
+          const c=d.proposal_open_contract;
+          if(c.is_sold){
+            const pnl=+(c.sell_price-c.buy_price).toFixed(2);
+            showTradeMsg(`${pnl>=0?'✓ WIN':'✗ LOSS'} Contract #${c.contract_id} · P&L: ${pnl>=0?'+':''}${pnl} ${c.currency}`,(pnl>=0?'#00ff88':'#ff3b5c'));
+            delete openContracts[c.contract_id];
+            refreshPositions();
+          } else {
+            openContracts[c.contract_id]={...openContracts[c.contract_id],...c};
+            refreshPositions();
+          }
+        }
+      }catch(e){}
+    };
+    tradeWS.onerror=()=>{tradeWSok=false;};
+    tradeWS.onclose=()=>{tradeWSok=false;};
+  }catch(e){}
+}
+
+function showAccountInfo(auth){
+  document.getElementById('tradeLogin').style.display='none';
+  document.getElementById('tradeAccount').style.display='block';
+  document.getElementById('accName').textContent=auth.fullname||auth.loginid||'Account';
+  document.getElementById('accId').textContent=auth.loginid||'';
+  document.getElementById('accBal').textContent=(auth.balance||0)+' '+(auth.currency||'USD');
+  document.getElementById('accType').textContent=auth.is_virtual?'DEMO':'REAL';
+  document.getElementById('accType').style.color=auth.is_virtual?'#ffd700':'#00ff88';
+  // Show trade buttons everywhere
+  document.querySelectorAll('.trade-btn-wrap').forEach(w=>w.style.display='block');
+  showTradeMsg('✓ Connected to your Deriv account','#00ff88');
+}
+
+function updateBalance(bal,cur){
+  document.getElementById('accBal').textContent=parseFloat(bal).toFixed(2)+' '+(cur||'USD');
+}
+
+function setLoggedOut(){
+  apiToken=null;accountInfo=null;tradeWSok=false;
+  document.getElementById('tradeLogin').style.display='block';
+  document.getElementById('tradeAccount').style.display='none';
+  document.querySelectorAll('.trade-btn-wrap').forEach(w=>w.style.display='none');
+  document.getElementById('apiTokenInput').value='';
+}
+
+function doLogin(){
+  const tok=document.getElementById('apiTokenInput').value.trim();
+  if(!tok||tok.length<10){showTradeMsg('Please enter a valid API token','#ff3b5c');return;}
+  apiToken=tok;
+  showTradeMsg('⟳ Connecting to your account...','#ffd700');
+  initTradeWS(tok);
+}
+
+function doLogout(){
+  if(tradeWS)try{tradeWS.close();}catch(e){}
+  setLoggedOut();
+  showTradeMsg('Logged out','#ffd700');
+}
+
+function showTradeMsg(msg,col){
+  const el=document.getElementById('tradeMsg');
+  el.textContent=msg;el.style.color=col||'#00d4ff';
+  el.style.display='block';
+  clearTimeout(el._t);
+  if(!msg.startsWith('✓ Connected'))el._t=setTimeout(()=>{el.style.display='none';},6000);
+}
+
+function refreshPositions(){
+  try{
+    const wrap=document.getElementById('openPositions');
+    const ids=Object.keys(openContracts);
+    if(!ids.length){wrap.innerHTML='<div style="font-family:var(--mn);font-size:9px;color:var(--dm);padding:8px">No open positions</div>';return;}
+    wrap.innerHTML=ids.map(id=>{
+      const c=openContracts[id];
+      const pnl=c.profit!==undefined?+c.profit:null;
+      return`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid rgba(28,50,72,.4);font-family:var(--mn);font-size:9px;">
+        <div><div style="color:var(--tx)">#${id}</div><div style="color:var(--dm)">${c.contract_type||'—'} · ${c.underlying||''}</div></div>
+        <div style="text-align:right"><div style="color:#00d4ff">${c.buy_price||'—'} ${c.currency||''}</div>${pnl!==null?`<div style="color:${pnl>=0?'#00ff88':'#ff3b5c'}">${pnl>=0?'+':''}${pnl}</div>`:''}</div>
+      </div>`;
+    }).join('');
+  }catch(e){}
+}
+
+// Place trade function
+function placeTrade(contractType, symbol, duration, durationUnit, barrier){
+  if(!tradeWSok||!accountInfo){showTradeMsg('Please login first to place trades','#ff3b5c');document.getElementById('tradePanel').scrollIntoView({behavior:'smooth'});return;}
+  const stake=parseFloat(document.getElementById('stakeAmt').value)||1;
+  if(stake<0.35){showTradeMsg('Minimum stake is 0.35','#ff3b5c');return;}
+  const req={buy:1,price:stake,parameters:{contract_type:contractType,symbol:symbol,duration:duration,duration_unit:durationUnit,basis:'stake',currency:accountInfo.currency||'USD'}};
+  if(barrier!==undefined&&barrier!==null)req.parameters.barrier=barrier;
+  tradeSend(req);
+  showTradeMsg(`⟳ Placing ${contractType} on ${SYM[symbol]||symbol}...`,'#ffd700');
+}
+
+// Map signal to Deriv contract params
+function getRFTradeParams(){
+  const sig=document.getElementById('rfSv').textContent;
+  const tix=parseInt(document.getElementById('rfTicks').textContent)||5;
+  if(sig==='RISE')return{type:'CALL',sym:rfInst,dur:tix,unit:'t'};
+  if(sig==='FALL')return{type:'PUT',sym:rfInst,dur:tix,unit:'t'};
+  return null;
+}
+
+function getDTradeParams(){
+  const dir=document.getElementById('dDir').textContent;
+  const ent=document.getElementById('dEnt').textContent;
+  if(dir==='WAIT'||ent==='—')return null;
+  const barrier=parseInt(ent);
+  if(dir==='OVER')return{type:'DIGITOVER',sym:dInst,dur:1,unit:'t',barrier};
+  if(dir==='UNDER')return{type:'DIGITUNDER',sym:dInst,dur:1,unit:'t',barrier};
+  return null;
+}
+
+function getDMTradeParams(){
+  const type=document.getElementById('dmDir').textContent;
+  const dig=document.getElementById('dmDig').textContent;
+  if(type==='WAIT'||dig==='—')return null;
+  const barrier=parseInt(dig);
+  if(type==='DIFFERS')return{type:'DIGITDIFF',sym:dmInst,dur:1,unit:'t',barrier};
+  if(type==='MATCHES')return{type:'DIGITMATCH',sym:dmInst,dur:1,unit:'t',barrier};
+  return null;
+}
+
+// Inject trade panel HTML into page
+function injectTradingUI(){
+  // Trade panel in header area
+  const panel=document.createElement('div');
+  panel.id='tradePanel';
+  panel.style.cssText='position:relative;z-index:1;';
+  panel.innerHTML=`
+  <div style="background:linear-gradient(135deg,rgba(0,212,255,.06),rgba(0,255,136,.04));border-bottom:2px solid var(--bd);padding:12px 14px;">
+    <div style="font-family:var(--dp);font-size:11px;font-weight:700;letter-spacing:3px;color:var(--ac);margin-bottom:10px;">⬡ TRADING ACCOUNT</div>
+    <!-- LOGIN FORM -->
+    <div id="tradeLogin">
+      <div style="font-family:var(--mn);font-size:9px;color:var(--dm);margin-bottom:7px;line-height:1.7;">Enter your Deriv API token (Read+Trade). Token stays in your browser only.</div>
+      <div style="display:flex;gap:7px;">
+        <input id="apiTokenInput" type="password" placeholder="Paste your API token here"
+          style="flex:1;background:var(--p2);border:1px solid var(--bd);color:var(--tx);font-family:var(--mn);font-size:10px;padding:8px 10px;border-radius:5px;outline:none;"
+          onkeydown="if(event.key==='Enter')doLogin()">
+        <button onclick="doLogin()" style="padding:8px 16px;background:rgba(0,212,255,.1);border:1.5px solid var(--ac);color:var(--ac);font-family:var(--dp);font-size:13px;font-weight:700;letter-spacing:2px;border-radius:5px;cursor:pointer;">LOGIN</button>
+      </div>
+      <div style="font-family:var(--mn);font-size:8px;color:var(--dm);margin-top:5px;">Get token at app.deriv.com/account/api-token · Select Read + Trade scopes only</div>
+    </div>
+    <!-- ACCOUNT INFO -->
+    <div id="tradeAccount" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          <div style="background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.2);border-radius:5px;padding:6px 12px;">
+            <div style="font-family:var(--mn);font-size:8px;color:var(--dm)">BALANCE</div>
+            <div style="font-family:var(--dp);font-size:22px;font-weight:900;color:#00ff88" id="accBal">—</div>
+          </div>
+          <div>
+            <div style="font-family:var(--dp);font-size:16px;font-weight:700;color:var(--tx)" id="accName">—</div>
+            <div style="font-family:var(--mn);font-size:9px;color:var(--dm)" id="accId">—</div>
+            <div style="font-family:var(--dp);font-size:11px;font-weight:700;letter-spacing:2px;" id="accType">—</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;">
+          <div style="font-family:var(--mn);font-size:9px;color:var(--dm)">STAKE:</div>
+          <input id="stakeAmt" type="number" value="1" min="0.35" step="0.5"
+            style="width:70px;background:var(--p2);border:1px solid var(--bd);color:var(--tx);font-family:var(--mn);font-size:11px;padding:6px 8px;border-radius:5px;text-align:center;">
+          <button onclick="doLogout()" style="padding:6px 12px;background:rgba(255,59,92,.08);border:1px solid rgba(255,59,92,.3);color:#ff3b5c;font-family:var(--mn);font-size:9px;border-radius:4px;cursor:pointer;">LOGOUT</button>
+        </div>
+      </div>
+      <!-- OPEN POSITIONS -->
+      <div style="margin-top:10px;">
+        <div style="font-family:var(--dp);font-size:10px;font-weight:700;letter-spacing:2px;color:var(--dm);margin-bottom:5px;">OPEN POSITIONS</div>
+        <div id="openPositions" style="font-family:var(--mn);font-size:9px;color:var(--dm);padding:8px 0">No open positions</div>
+      </div>
+    </div>
+    <div id="tradeMsg" style="display:none;font-family:var(--mn);font-size:10px;margin-top:8px;padding:6px 10px;background:rgba(0,0,0,.2);border-radius:4px;"></div>
+  </div>`;
+
+  // Insert after banner
+  const banner=document.getElementById('banner');
+  banner.parentNode.insertBefore(panel,banner.nextSibling);
+
+  // Add trade buttons to RF tab
+  const rfCard=document.getElementById('rfCard');
+  const rfTrade=document.createElement('div');
+  rfTrade.className='trade-btn-wrap';rfTrade.style.display='none';rfTrade.style.marginTop='10px';
+  rfTrade.innerHTML=`<button onclick="(function(){const p=getRFTradeParams();if(!p){showTradeMsg('Analyse market first to get signal','#ff3b5c');return;}placeTrade(p.type,p.sym,p.dur,p.unit);})()" style="width:100%;padding:12px;background:rgba(0,255,136,.1);border:2px solid #00ff88;color:#00ff88;font-family:var(--dp);font-size:15px;font-weight:700;letter-spacing:3px;border-radius:6px;cursor:pointer;">▶ PLACE RISE/FALL TRADE</button>`;
+  rfCard.appendChild(rfTrade);
+
+  // Add trade button to digits tab - after signal condition panel
+  const dCond=document.getElementById('dCond').closest('.p');
+  const dTrade=document.createElement('div');
+  dTrade.className='trade-btn-wrap';dTrade.style.cssText='display:none;margin-bottom:12px;';
+  dTrade.innerHTML=`<button onclick="(function(){const p=getDTradeParams();if(!p){showTradeMsg('Analyse digits first','#ff3b5c');return;}placeTrade(p.type,p.sym,p.dur,p.unit,p.barrier);})()" style="width:100%;padding:12px;background:rgba(0,255,136,.1);border:2px solid #00ff88;color:#00ff88;font-family:var(--dp);font-size:15px;font-weight:700;letter-spacing:3px;border-radius:6px;cursor:pointer;">▶ PLACE OVER/UNDER TRADE</button>`;
+  dCond.after(dTrade);
+
+  // Add trade button to differ/match tab
+  const dmCond=document.getElementById('dmCond').closest('.p');
+  const dmTrade=document.createElement('div');
+  dmTrade.className='trade-btn-wrap';dmTrade.style.cssText='display:none;margin-bottom:12px;';
+  dmTrade.innerHTML=`<button onclick="(function(){const p=getDMTradeParams();if(!p){showTradeMsg('Analyse differ/match first','#ff3b5c');return;}placeTrade(p.type,p.sym,p.dur,p.unit,p.barrier);})()" style="width:100%;padding:12px;background:rgba(179,136,255,.1);border:2px solid #b388ff;color:#b388ff;font-family:var(--dp);font-size:15px;font-weight:700;letter-spacing:3px;border-radius:6px;cursor:pointer;">▶ PLACE DIFFER/MATCH TRADE</button>`;
+  dmCond.after(dmTrade);
+}
+
 // Init
 try{initWS();}catch(e){setConn('offline');}
 setTimeout(()=>{try{drawChart(getPx(rfInst));}catch(e){}},100);
+injectTradingUI();
 </script>
 
 </body>
