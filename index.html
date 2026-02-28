@@ -874,13 +874,28 @@ const tradePendQ=[];
 // Martingale state
 const MG={
   base:1,current:1,wins:0,losses:0,streak:0,totalPnl:0,
-  lastType:null // 'over_group' or 'under_group'
+  lastType:null,lastBarrier:null
 };
 
-function mgGroup(ct){return['DIGITOVER','DIGITDIFF','CALL'].includes(ct)?'over':'under';}
-function mgMult(ct){return mgGroup(ct)==='over'?3.2:2.1;}
+// CORRECT MARTINGALE RULES:
+// ×3.2 → OVER 0-3, UNDER 6-9, ALL DIFFERS, RISE(CALL), FALL(PUT)
+// ×2.1 → OVER 4 only, UNDER 5 only
+function mgMult(ct,barrier){
+  if(ct==='CALL'||ct==='PUT')return 3.2; // Rise/Fall always 3.2
+  if(ct==='DIGITDIFF')return 3.2; // All differs 3.2
+  if(ct==='DIGITOVER'){
+    // OVER 0-3 → 3.2, OVER 4 → 2.1
+    return(barrier!==null&&barrier!==undefined&&barrier<=3)?3.2:2.1;
+  }
+  if(ct==='DIGITUNDER'){
+    // UNDER 5 → 2.1, UNDER 6-9 → 3.2
+    return(barrier!==null&&barrier!==undefined&&barrier===5)?2.1:3.2;
+  }
+  if(ct==='DIGITMATCH')return 3.2; // matches 3.2
+  return 3.2; // default
+}
 
-function mgOnResult(won,pnl,ct){
+function mgOnResult(won,pnl,ct,barrier){
   MG.totalPnl=+(MG.totalPnl+pnl).toFixed(2);
   if(won){
     MG.wins++;MG.streak=0;
@@ -888,9 +903,11 @@ function mgOnResult(won,pnl,ct){
   } else {
     MG.losses++;MG.streak++;
     const max=parseFloat(document.getElementById('maxStake')?.value||'50');
-    const next=+(MG.current*mgMult(ct)).toFixed(2);
+    const mult=mgMult(ct,barrier);
+    const next=+(MG.current*mult).toFixed(2);
     MG.current=next>max?MG.base:next;
-    if(next>max)showTradeMsg(`⚠ Max stake hit — reset to base`,'#ff8c00');
+    if(next>max)showTradeMsg(`⚠ Max stake $${max} hit — reset to base $${MG.base}`,'#ff8c00');
+    else showTradeMsg(`↑ Martingale ×${mult} → next stake $${MG.current.toFixed(2)}`,'#ffd700');
   }
   try{document.getElementById('stakeAmt').value=MG.current.toFixed(2);}catch(e){}
   updMartStats();
@@ -942,8 +959,10 @@ function initTradeWS(token){
         if(d.msg_type==='buy'){
           if(d.error){showTradeMsg('❌ '+d.error.message,'#ff3b5c');return;}
           const c=d.buy;
+          const ep=d.echo_req?.parameters||{};
+          const bar=ep.barrier!==undefined?parseInt(ep.barrier):MG.lastBarrier;
           showTradeMsg(`⚡ Placed #${c.contract_id} · $${c.buy_price}`,'#00ff88');
-          openContracts[c.contract_id]={id:c.contract_id,buy_price:c.buy_price,contract_type:d.echo_req?.parameters?.contract_type||'',underlying:d.echo_req?.parameters?.symbol||''};
+          openContracts[c.contract_id]={id:c.contract_id,buy_price:c.buy_price,contract_type:ep.contract_type||MG.lastType||'',underlying:ep.symbol||'',barrier:bar,currency:accountInfo?.currency||'USD'};
           tradeSend({proposal_open_contract:1,contract_id:c.contract_id,subscribe:1});
           refreshPositions();
         }
@@ -954,8 +973,10 @@ function initTradeWS(token){
           if(c.is_sold){
             const pnl=+(c.sell_price-c.buy_price).toFixed(2);
             const won=pnl>=0;
-            const ct=openContracts[c.contract_id]?.contract_type||'';
-            mgOnResult(won,pnl,ct);
+            const oc=openContracts[c.contract_id]||{};
+            const ct=oc.contract_type||c.contract_type||''
+            const barrier=oc.barrier!==undefined?oc.barrier:null;
+            mgOnResult(won,pnl,ct,barrier);
             showTradeMsg(`${won?'✓ WIN +$'+pnl:'✗ LOSS $'+Math.abs(pnl)} → Next stake: $${MG.current.toFixed(2)}`,won?'#00ff88':'#ff3b5c');
             delete openContracts[c.contract_id];
           }
@@ -1038,17 +1059,25 @@ function instantTrade(contractType,symbol,duration,durationUnit,barrier){
     try{document.getElementById('tradePanel').scrollIntoView({behavior:'smooth'});}catch(e){}
     return;
   }
-  const stake=MG.current;
-  if(stake<0.35){showTradeMsg('Min stake $0.35','#ff3b5c');return;}
-  // BUILD AND FIRE IMMEDIATELY — zero delay
-  const req={buy:1,price:stake,parameters:{
-    contract_type:contractType,symbol:symbol,
-    duration:duration,duration_unit:durationUnit,
-    basis:'stake',currency:accountInfo.currency||'USD'
-  }};
-  if(barrier!==undefined&&barrier!==null)req.parameters.barrier=barrier;
-  tradeSend(req); // fires in <50ms
-  showTradeMsg(`⚡ ${contractType} · ${SYM[symbol]||symbol} · $${stake}`,'#00d4ff');
+  const stake=parseFloat(MG.current.toFixed(2));
+  if(!stake||stake<0.35){showTradeMsg('Min stake $0.35','#ff3b5c');return;}
+  // Store last trade info for martingale
+  MG.lastType=contractType;MG.lastBarrier=barrier!==undefined?barrier:null;
+  // BUILD AND FIRE — ultra fast, correct Deriv API format
+  const params={
+    contract_type:contractType,
+    symbol:symbol,
+    duration:duration,
+    duration_unit:durationUnit,
+    basis:'stake',
+    amount:stake,  // Deriv uses "amount" not "price" in parameters
+    currency:accountInfo.currency||'USD'
+  };
+  if(barrier!==null&&barrier!==undefined)params.barrier=String(barrier);
+  const req={buy:'1',price:stake,parameters:params};
+  tradeSend(req);
+  const mult=mgMult(contractType,barrier);
+  showTradeMsg(`⚡ ${contractType}${barrier!==null&&barrier!==undefined?' digit '+barrier:''} · ${SYM[symbol]||symbol} · $${stake} · MG×${mult}`,'#00d4ff');
 }
 
 // ── TRADE FROM CURRENT SIGNAL ──
