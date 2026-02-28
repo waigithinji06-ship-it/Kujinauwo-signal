@@ -1214,20 +1214,29 @@ function onTradeMessage(d){
 }
 
 // ── RUN QUEUE — sequential execution ──
-// Pipeline counter — tracks how many are "in flight" (opened but not closed)
-let pipelineDepth=0;
-const MAX_PIPELINE=3; // max overlapping open contracts at once
 
-function nextRun(){
-  if(runQueue.length===0){runExecuting=false;return;}
-  if(!accountInfo||!tradeWSok){setTimeout(()=>nextRun(),300);return;}
-  if(pipelineDepth>=MAX_PIPELINE){return;} // wait until one slot frees
-  runExecuting=true;
-  const run=runQueue.shift();
-  const stake=parseFloat(MG.current.toFixed(2));
+// ── TICK INTERVAL ESTIMATOR ──
+// Returns estimated ms per tick for a given instrument
+function getTickMs(sym){
+  // 1-second instruments tick every ~1000ms
+  if(sym&&sym.startsWith('1HZ'))return 1000;
+  // Standard instruments tick every ~2000ms
+  return 2000;
+}
+
+// Pipeline stagger = tick interval - 100ms (fire just before previous closes)
+function getPipelineStagger(sym){
+  return getTickMs(sym)-100; // e.g. 1HZ → 900ms, standard → 1900ms
+}
+// Pipeline counter
+let pipelineDepth=0;
+const MAX_PIPELINE=3;
+
+function firePipelineRun(run,stake){
+  if(!accountInfo||!tradeWSok)return;
   const params={
     contract_type:run.ct,symbol:run.sym,
-    duration:1,duration_unit:'t', // always 1 tick
+    duration:1,duration_unit:'t',
     basis:'stake',amount:stake,
     currency:accountInfo.currency||'USD'
   };
@@ -1235,11 +1244,40 @@ function nextRun(){
   MG.lastType=run.ct;MG.lastBarrier=run.barrier!==undefined?run.barrier:null;
   pipelineDepth++;
   tradeSend({buy:'1',price:stake,parameters:params});
-  // Pipeline: fire next run immediately after this one is sent
-  // Don't wait for close — next opens as this one is live
-  if(runQueue.length>0){
-    setTimeout(nextRun, 80); // 80ms — next fires while first is still open
+}
+
+function nextRun(){
+  if(runQueue.length===0){runExecuting=false;return;}
+  if(!accountInfo||!tradeWSok){setTimeout(()=>nextRun(),300);return;}
+  runExecuting=true;
+
+  // Collect all runs in this batch (same symbol = same stagger rhythm)
+  const allRuns=[];
+  while(runQueue.length>0&&allRuns.length<MAX_PIPELINE){
+    allRuns.push(runQueue.shift());
   }
+
+  const sym=allRuns[0].sym;
+  const stagger=getPipelineStagger(sym); // tick-locked stagger
+  const stake=parseFloat(MG.current.toFixed(2));
+
+  // Fire each run staggered by (tick_ms - 100ms)
+  // e.g. V100 1s = 900ms between each
+  // Run 1 closes just as Run 2 is opening — perfect relay
+  allRuns.forEach((run,i)=>{
+    setTimeout(()=>{
+      if(!accountInfo||!tradeWSok)return;
+      firePipelineRun(run,stake);
+    }, i * stagger);
+  });
+
+  // Allow new batch after last run fires + 1 tick
+  const lastFire=( allRuns.length-1)*stagger;
+  const tickMs=getTickMs(sym);
+  setTimeout(()=>{
+    if(runQueue.length===0)runExecuting=false;
+    else nextRun();
+  }, lastFire + tickMs + 200);
 }
 
 // ── QUEUE TRADES — the ONLY entry point ──
@@ -1743,17 +1781,31 @@ function botFire(sig){
   const stake=botStake;
   botActive=true;
   botPipeline=sig.runs;
-  botLog(`⚡ ${sig.dir}${sig.ent!==null?' '+sig.ent:''} · ${SYM[sig.inst]} · $${stake}×${sig.runs} · ${sig.conf}%`,'#00d4ff');
-  botSetStatus(`⚡ ${sig.dir} ${SYM[sig.inst]} · $${stake} · pipeline ${sig.runs}`,'#00d4ff');
-  // PIPELINE: fire runs with 80ms stagger — each opens as previous is live
+  const stagger=getPipelineStagger(sig.inst);
+  const tickMs=getTickMs(sig.inst);
+  botLog(`⚡ ${sig.dir}${sig.ent!==null?' '+sig.ent:''} · ${SYM[sig.inst]} · $${stake}×${sig.runs} · ${sig.conf}% · ${stagger}ms stagger`,'#00d4ff');
+  botSetStatus(`⚡ ${sig.dir} ${SYM[sig.inst]} · $${stake} · ${sig.runs} runs · ${tickMs}ms/tick`,'#00d4ff');
+  // TICK-LOCKED PIPELINE: each run fires (tick_ms - 100ms) after previous
+  // V100 1s example: Run1@T+0ms, Run2@T+900ms, Run3@T+1800ms
+  // Run1 closes @~1000ms, Run2 is already live @900ms — perfect relay
   for(let i=0;i<sig.runs;i++){
     setTimeout(()=>{
       if(!accountInfo||!tradeWSok||!botRunning)return;
-      const params={contract_type:sig.ct,symbol:sig.inst,duration:1,duration_unit:'t',basis:'stake',amount:stake,currency:accountInfo.currency||'USD'};
+      const params={
+        contract_type:sig.ct,symbol:sig.inst,
+        duration:1,duration_unit:'t',
+        basis:'stake',amount:stake,
+        currency:accountInfo.currency||'USD'
+      };
       if(sig.ent!==null&&sig.ent!==undefined)params.barrier=String(sig.ent);
       tradeSend({buy:'1',price:stake,parameters:params});
-    },i*80);
+    }, i*stagger);
   }
+  // Free bot for next signal after all runs complete + 1 tick buffer
+  const totalTime=(sig.runs-1)*stagger + tickMs + 300;
+  setTimeout(()=>{
+    if(botRunning&&botPipeline<=0)botActive=false;
+  }, totalTime);
 }
 
 function botTick(){
