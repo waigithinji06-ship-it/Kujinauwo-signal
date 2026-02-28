@@ -1832,6 +1832,10 @@ const BOT_CONFIGS={
 let botRunning=false,botTimer=null;
 let botPnl=0,botWins=0,botLosses=0,botStake=1;
 let botActive=false,botPipeline=0;
+let botNextSignal=null;      // pre-loaded next signal
+let botPreloading=false;     // currently scanning for next
+let botLastFireTime=0;       // timestamp of last fire
+const BOT_MIN_GAP=500;       // minimum ms between trades (avoid double-fire)
 
 function selBot(type){
   if(botRunning){showTradeMsg('Stop bot first','#ff3b5c');return;}
@@ -1881,6 +1885,21 @@ function botFindDF(){
   return best;
 }
 
+// Pre-load next signal in background while trade is open
+function botPreloadNext(){
+  if(!botRunning||botPreloading)return;
+  botPreloading=true;
+  try{
+    const cfg=BOT_CONFIGS[activeBotType];
+    const sig=cfg.findSignal();
+    botNextSignal=sig||null;
+    if(sig){
+      botSetStatus(`⟳ Trade open · Next ready: ${sig.dir}${sig.ent!==null?' '+sig.ent:''} · ${SYM[sig.inst]} · ${sig.conf}%`,'#ffd700');
+    }
+  }catch(e){botNextSignal=null;}
+  botPreloading=false;
+}
+
 function botLog(msg,col){
   try{
     const el=document.getElementById('botActivity');
@@ -1923,34 +1942,59 @@ function checkBotResult(d){
         botWins++;
         botStake=parseFloat(document.getElementById('botBase').value)||1;
         botLog(`✓ WIN +$${pnl.toFixed(2)} → reset $${botStake.toFixed(2)}`,'#00ff88');
+        try{soundWin();}catch(e){}
       } else {
         botLosses++;
         const maxS=parseFloat(document.getElementById('botMaxStake').value)||30;
         const next=+(botStake*cfg.mg).toFixed(2);
         botStake=next>maxS?(parseFloat(document.getElementById('botBase').value)||1):next;
         botLog(`✗ LOSS -$${Math.abs(pnl).toFixed(2)} → MG×${cfg.mg} → $${botStake.toFixed(2)}`,'#ff3b5c');
+        try{soundLoss();}catch(e){}
       }
       botUpdStats();
-      if(botPipeline<=0)botActive=false;
-      // Check TP/SL
+      botActive=false;botPipeline=0;
+
+      // CHECK TP/SL FIRST
       const tp=parseFloat(document.getElementById('botTP').value)||20;
       const sl=parseFloat(document.getElementById('botSL').value)||15;
-      if(botPnl>=tp){stopBot();botLog(`🎯 TP +$${tp} reached! Stopped.`,'#00ff88');try{soundTP();}catch(e){} return;}
-      if(botPnl<=-sl){stopBot();botLog(`🛑 SL -$${sl} hit! Stopped.`,'#ff3b5c');try{soundSL();}catch(e){} return;}
+      if(botPnl>=tp){stopBot();botLog(`🎯 TP +$${tp} reached!`,'#00ff88');try{soundTP();}catch(e){}return;}
+      if(botPnl<=-sl){stopBot();botLog(`🛑 SL -$${sl} hit!`,'#ff3b5c');try{soundSL();}catch(e){}return;}
+
+      // FIRE NEXT — use preloaded signal if ready, else scan now
+      if(botNextSignal){
+        // Preloaded signal ready — fire with ZERO delay
+        const nextSig=botNextSignal;
+        botNextSignal=null;
+        botLog(`→ Preloaded: ${nextSig.dir}${nextSig.ent!==null?' '+nextSig.ent:''} · ${SYM[nextSig.inst]}`,'#00d4ff');
+        setTimeout(()=>botFire(nextSig), 50); // 50ms — basically instant
+      } else {
+        // No preloaded — scan immediately (fast fallback)
+        const cfg2=BOT_CONFIGS[activeBotType];
+        const nextSig=cfg2.findSignal();
+        if(nextSig){
+          botLog(`→ Fast scan: ${nextSig.dir}${nextSig.ent!==null?' '+nextSig.ent:''} · ${SYM[nextSig.inst]}`,'#00d4ff');
+          setTimeout(()=>botFire(nextSig), 100);
+        } else {
+          botSetStatus('⟫ No signal — waiting next scan...','var(--dm)');
+        }
+      }
     }
   }
 }
 
 function botFire(sig){
   if(!accountInfo||!tradeWSok||!botRunning)return;
+  // Prevent double-fire
+  const now=Date.now();
+  if(now-botLastFireTime<BOT_MIN_GAP)return;
+  botLastFireTime=now;
   const stake=botStake;
-  botActive=true;
-  botPipeline=1; // always 1 trade at a time
+  botActive=true;botPipeline=1;
+  botNextSignal=null; // clear preloaded — will refresh after this fires
   const tickMs=getTickMs(sig.inst);
   botLog(`⚡ ${sig.dir}${sig.ent!==null?' '+sig.ent:''} · ${SYM[sig.inst]} · $${stake} · ${sig.conf}%`,'#00d4ff');
-  botSetStatus(`⚡ ${sig.dir} ${SYM[sig.inst]} · $${stake} · waiting result...`,'#00d4ff');
-  // Single trade — fires instantly at tick speed
-  if(!accountInfo||!tradeWSok||!botRunning)return;
+  botSetStatus(`⟳ Open: ${sig.dir}${sig.ent!==null?' '+sig.ent:''} · ${SYM[sig.inst]} · $${stake}`,'#ffd700');
+  // FIRE INSTANTLY
   const params={
     contract_type:sig.ct,symbol:sig.inst,
     duration:1,duration_unit:'t',
@@ -1960,11 +2004,15 @@ function botFire(sig){
   if(sig.ent!==null&&sig.ent!==undefined)params.barrier=String(sig.ent);
   tradeSend({buy:'1',price:stake,parameters:params});
   try{soundTrade();}catch(e){}
-  // Timeout fallback — if no result in 3 ticks, free bot
+  // START PRELOADING NEXT SIGNAL IMMEDIATELY while this trade is open
+  // By the time result arrives, next signal is ready to fire instantly
+  setTimeout(()=>botPreloadNext(), 200);
+  // Timeout fallback
   setTimeout(()=>{
     if(botRunning&&botActive&&botPipeline>0){
       botActive=false;botPipeline=0;
-      botLog('⚠ Trade timeout — retrying next scan','#ff8c00');
+      botNextSignal=null;
+      botLog('⚠ Timeout — rescanning','#ff8c00');
     }
   }, tickMs*3+500);
 }
@@ -1972,11 +2020,22 @@ function botFire(sig){
 function botTick(){
   if(!botRunning)return;
   if(!accountInfo||!tradeWSok){botSetStatus('⟳ Waiting for connection...','#ffd700');return;}
-  if(botActive){botSetStatus('⟳ Trades active — pipeline running...','#ffd700');return;}
+  if(botActive)return; // trade in progress — preload handles next
+  // Use preloaded signal if available
   const cfg=BOT_CONFIGS[activeBotType];
-  const sig=cfg.findSignal();
-  if(!sig){botSetStatus(`⟫ Scanning ${cfg.name}... no signal yet`,'var(--dm)');return;}
-  botFire(sig);
+  if(botNextSignal){
+    const sig=botNextSignal;botNextSignal=null;
+    botFire(sig);
+  } else {
+    const sig=cfg.findSignal();
+    if(!sig){
+      botSetStatus(`⟫ Scanning ${cfg.name}... no signal`,'var(--dm)');
+      // Keep preloading for next tick
+      setTimeout(()=>botPreloadNext(),500);
+      return;
+    }
+    botFire(sig);
+  }
 }
 
 function startBot(){
