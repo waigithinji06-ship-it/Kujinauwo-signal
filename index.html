@@ -356,11 +356,16 @@ canvas{display:block;width:100%;border-radius:4px;}
 
 <div id="tab-bot" class="tc">
   <div class="p" style="border-top:3px solid #ffd700;">
-    <div class="pt" style="color:#ffd700;">⚡ AUTO TRADING BOT</div>
-    <div style="font-family:var(--mn);font-size:10px;color:var(--dm);line-height:1.9">
-      Scans all 10 markets every 15s for best OVER (0-3) and UNDER (6-9) opportunity.<br>
-      Fires automatically. Max 3 runs × 1 tick. Martingale ×3.3 on loss.<br>
-      <b style="color:#ff3b5c">⚠ Will place real trades on your account when running.</b>
+    <div class="pt" style="color:#ffd700;">⚡ AUTO TRADING BOTS</div>
+    <div style="font-family:var(--mn);font-size:10px;color:var(--dm);line-height:1.8">
+      Each bot scans all 10 markets every 15s, picks best signal, fires pipeline trades.<br>
+      <b style="color:#ff3b5c">⚠ Places real trades. Set TP/SL carefully.</b>
+    </div>
+    <!-- Bot Selector -->
+    <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;">
+      <button id="botSelOU" onclick="selBot('ou')" style="flex:1;padding:8px;background:rgba(0,255,136,.15);border:2px solid #00ff88;color:#00ff88;font-family:var(--dp);font-size:10px;font-weight:700;letter-spacing:1px;border-radius:5px;cursor:pointer;">OVER/UNDER<br><span style="font-size:8px;opacity:.7">MG×3.3</span></button>
+      <button id="botSelEO" onclick="selBot('eo')" style="flex:1;padding:8px;background:rgba(0,212,255,.08);border:2px solid rgba(0,212,255,.4);color:var(--dm);font-family:var(--dp);font-size:10px;font-weight:700;letter-spacing:1px;border-radius:5px;cursor:pointer;">EVEN/ODD<br><span style="font-size:8px;opacity:.7">MG×2.1</span></button>
+      <button id="botSelDF" onclick="selBot('df')" style="flex:1;padding:8px;background:rgba(179,136,255,.08);border:2px solid rgba(179,136,255,.4);color:var(--dm);font-family:var(--dp);font-size:10px;font-weight:700;letter-spacing:1px;border-radius:5px;cursor:pointer;">DIFFERS<br><span style="font-size:8px;opacity:.7">MG×3.8</span></button>
     </div>
   </div>
   <!-- TP/SL Settings -->
@@ -1189,6 +1194,7 @@ function onTradeMessage(d){
     // Bot hook
     try{checkBotResult(d);}catch(e){}
     if(c.is_sold){
+      pipelineDepth=Math.max(0,pipelineDepth-1); // free pipeline slot
       const oc=openContracts[c.contract_id]||{};
       const pnl=+(parseFloat(c.sell_price)-parseFloat(c.buy_price)).toFixed(2);
       const won=pnl>=0;
@@ -1197,33 +1203,43 @@ function onTradeMessage(d){
       mgOnResult(won,pnl,ct,barrier);
       delete openContracts[c.contract_id];
       currentRunContract=null;
-      runExecuting=false;
-      // Next run fires automatically after result
-      setTimeout(()=>nextRun(),150);
+      if(runQueue.length===0)runExecuting=false;
+      // Pipeline slot freed — fire next if waiting
+      if(runQueue.length>0&&pipelineDepth<MAX_PIPELINE){
+        setTimeout(()=>nextRun(),50);
+      }
     }
     refreshPositions();
   }
 }
 
 // ── RUN QUEUE — sequential execution ──
+// Pipeline counter — tracks how many are "in flight" (opened but not closed)
+let pipelineDepth=0;
+const MAX_PIPELINE=3; // max overlapping open contracts at once
+
 function nextRun(){
   if(runQueue.length===0){runExecuting=false;return;}
-  if(!accountInfo||!tradeWSok){
-    // Wait for reconnect
-    setTimeout(()=>nextRun(),500);return;
-  }
+  if(!accountInfo||!tradeWSok){setTimeout(()=>nextRun(),300);return;}
+  if(pipelineDepth>=MAX_PIPELINE){return;} // wait until one slot frees
   runExecuting=true;
   const run=runQueue.shift();
   const stake=parseFloat(MG.current.toFixed(2));
   const params={
     contract_type:run.ct,symbol:run.sym,
-    duration:run.dur,duration_unit:run.unit,
+    duration:1,duration_unit:'t', // always 1 tick
     basis:'stake',amount:stake,
     currency:accountInfo.currency||'USD'
   };
   if(run.barrier!==null&&run.barrier!==undefined)params.barrier=String(run.barrier);
   MG.lastType=run.ct;MG.lastBarrier=run.barrier!==undefined?run.barrier:null;
+  pipelineDepth++;
   tradeSend({buy:'1',price:stake,parameters:params});
+  // Pipeline: fire next run immediately after this one is sent
+  // Don't wait for close — next opens as this one is live
+  if(runQueue.length>0){
+    setTimeout(nextRun, 80); // 80ms — next fires while first is still open
+  }
 }
 
 // ── QUEUE TRADES — the ONLY entry point ──
@@ -1597,24 +1613,81 @@ function addEOLog(r){
 }
 
 
+
 // ══════════════════════════════════════════════
-// AUTO BOT ENGINE
+// MULTI-BOT ENGINE: OVER/UNDER · EVEN/ODD · DIFFERS
 // ══════════════════════════════════════════════
-let botRunning=false,botTimer=null,botScanTimer=null;
-let botPnl=0,botWins=0,botLosses=0,botStake=1,botMG=3.3;
-let botActive=false; // currently has open trade
+let activeBotType='ou'; // 'ou', 'eo', 'df'
+
+// Bot configs
+const BOT_CONFIGS={
+  ou:{name:'OVER/UNDER',mg:3.3,findSignal:botFindOU,label:'#00ff88'},
+  eo:{name:'EVEN/ODD',mg:2.1,findSignal:botFindEO,label:'#00d4ff'},
+  df:{name:'DIFFERS',mg:3.8,findSignal:botFindDF,label:'#b388ff'}
+};
+
+let botRunning=false,botTimer=null;
+let botPnl=0,botWins=0,botLosses=0,botStake=1;
+let botActive=false,botPipeline=0;
+
+function selBot(type){
+  if(botRunning){showTradeMsg('Stop bot first','#ff3b5c');return;}
+  activeBotType=type;
+  const cols={ou:'#00ff88',eo:'#00d4ff',df:'#b388ff'};
+  const col=cols[type];
+  ['ou','eo','df'].forEach(t=>{
+    const b=document.getElementById('botSel'+t.toUpperCase());
+    if(!b)return;
+    b.style.background=t===type?`rgba(${col==='#00ff88'?'0,255,136':col==='#00d4ff'?'0,212,255':'179,136,255'},.2)`:'rgba(128,128,128,.08)';
+    b.style.borderColor=t===type?col:'rgba(128,128,128,.3)';
+    b.style.color=t===type?col:'var(--dm)';
+  });
+  const mg=BOT_CONFIGS[type].mg;
+  botLog(`Selected: ${BOT_CONFIGS[type].name} · MG×${mg}`,'#ffd700');
+}
+
+// Signal finders for each bot type
+function botFindOU(){
+  let best=null,bestConf=0;
+  ALL.forEach(inst=>{
+    const s=getDg(inst);if(!s||s.length<15)return;
+    const r=analyseOD(s,inst);if(r.dir==='WAIT')return;
+    const ok=(r.dir==='OVER'&&r.ent!==null&&r.ent<=3)||(r.dir==='UNDER'&&r.ent!==null&&r.ent>=6);
+    if(ok&&r.conf>bestConf){bestConf=r.conf;best={inst,dir:r.dir,ent:r.ent,conf:r.conf,runs:Math.min(3,r.runs||1),ct:r.dir==='OVER'?'DIGITOVER':'DIGITUNDER'};}
+  });
+  return best;
+}
+
+function botFindEO(){
+  let best=null,bestConf=0;
+  ALL.forEach(inst=>{
+    const s=getDg(inst);if(!s||s.length<15)return;
+    const r=analyseEO(s,inst);if(r.dir==='WAIT')return;
+    if(r.conf>bestConf){bestConf=r.conf;best={inst,dir:r.dir,ent:null,conf:r.conf,runs:Math.min(3,r.runs||1),ct:r.dir==='EVEN'?'DIGITEVEN':'DIGITODD'};}
+  });
+  return best;
+}
+
+function botFindDF(){
+  let best=null,bestConf=0;
+  ALL.forEach(inst=>{
+    const s=getDg(inst);if(!s||s.length<15)return;
+    const r=analyseDM(s,inst);if(r.type!=='DIFFERS')return;
+    if(r.conf>bestConf){bestConf=r.conf;best={inst,dir:'DIFFERS',ent:r.digit,conf:r.conf,runs:Math.min(3,r.runs||1),ct:'DIGITDIFF'};}
+  });
+  return best;
+}
 
 function botLog(msg,col){
   try{
     const el=document.getElementById('botActivity');
+    if(!el)return;
     const t=new Date().toTimeString().slice(0,8);
     const line=document.createElement('div');
-    line.style.color=col||'var(--dm)';
-    line.style.borderBottom='1px solid rgba(28,50,72,.3)';
-    line.style.padding='2px 0';
+    line.style.cssText=`color:${col||'var(--dm)'};border-bottom:1px solid rgba(28,50,72,.3);padding:2px 0;`;
     line.textContent=`${t} ${msg}`;
     el.insertAdjacentElement('afterbegin',line);
-    while(el.children.length>30)el.removeChild(el.lastChild);
+    while(el.children.length>40)el.removeChild(el.lastChild);
   }catch(e){}
 }
 
@@ -1630,114 +1703,95 @@ function botUpdStats(){
 }
 
 function botSetStatus(msg,col){
-  try{const el=document.getElementById('botStatus');el.textContent=msg;el.style.color=col||'var(--dm)';}catch(e){}
+  try{const el=document.getElementById('botStatus');if(el){el.textContent=msg;el.style.color=col||'var(--dm)';}}catch(e){}
 }
 
-function botFindBestSignal(){
-  // Scan all markets for OVER 0-3 or UNDER 6-9 with highest confidence
-  let best=null,bestConf=0;
-  ALL.forEach(inst=>{
-    const stream=getDg(inst);
-    if(!stream||stream.length<15)return;
-    const r=analyseOD(stream,inst);
-    if(r.dir==='WAIT')return;
-    // Only OVER 0-3 or UNDER 6-9
-    const validOver=r.dir==='OVER'&&r.ent!==null&&r.ent<=3;
-    const validUnder=r.dir==='UNDER'&&r.ent!==null&&r.ent>=6;
-    if((validOver||validUnder)&&r.conf>bestConf){
-      bestConf=r.conf;
-      best={inst,dir:r.dir,ent:r.ent,conf:r.conf,runs:Math.min(3,r.runs||1)};
+function checkBotResult(d){
+  if(!botRunning||!botActive)return;
+  if(d&&d.msg_type==='proposal_open_contract'&&d.proposal_open_contract){
+    const c=d.proposal_open_contract;
+    if(c.is_sold){
+      botPipeline=Math.max(0,botPipeline-1);
+      const pnl=+(parseFloat(c.sell_price)-parseFloat(c.buy_price)).toFixed(2);
+      const won=pnl>=0;
+      botPnl=+(botPnl+pnl).toFixed(2);
+      const cfg=BOT_CONFIGS[activeBotType];
+      if(won){
+        botWins++;
+        botStake=parseFloat(document.getElementById('botBase').value)||1;
+        botLog(`✓ WIN +$${pnl.toFixed(2)} → reset $${botStake.toFixed(2)}`,'#00ff88');
+      } else {
+        botLosses++;
+        const maxS=parseFloat(document.getElementById('botMaxStake').value)||30;
+        const next=+(botStake*cfg.mg).toFixed(2);
+        botStake=next>maxS?(parseFloat(document.getElementById('botBase').value)||1):next;
+        botLog(`✗ LOSS -$${Math.abs(pnl).toFixed(2)} → MG×${cfg.mg} → $${botStake.toFixed(2)}`,'#ff3b5c');
+      }
+      botUpdStats();
+      if(botPipeline<=0)botActive=false;
+      // Check TP/SL
+      const tp=parseFloat(document.getElementById('botTP').value)||20;
+      const sl=parseFloat(document.getElementById('botSL').value)||15;
+      if(botPnl>=tp){stopBot();botLog(`🎯 TP +$${tp} reached! Stopped.`,'#00ff88');return;}
+      if(botPnl<=-sl){stopBot();botLog(`🛑 SL -$${sl} hit! Stopped.`,'#ff3b5c');return;}
     }
-  });
-  return best;
+  }
 }
 
-function botOnTradeResult(won,pnl){
-  botActive=false;
-  botPnl=+(botPnl+pnl).toFixed(2);
-  if(won){
-    botWins++;
-    botStake=parseFloat(document.getElementById('botBase').value)||1;
-    botLog(`✓ WIN +$${pnl.toFixed(2)} → stake reset $${botStake.toFixed(2)}`,'#00ff88');
-  } else {
-    botLosses++;
-    const maxS=parseFloat(document.getElementById('botMaxStake').value)||30;
-    const next=+(botStake*botMG).toFixed(2);
-    botStake=next>maxS?parseFloat(document.getElementById('botBase').value)||1:next;
-    botLog(`✗ LOSS -$${Math.abs(pnl).toFixed(2)} → MG×${botMG} → $${botStake.toFixed(2)}`,'#ff3b5c');
+function botFire(sig){
+  if(!accountInfo||!tradeWSok||!botRunning)return;
+  const stake=botStake;
+  botActive=true;
+  botPipeline=sig.runs;
+  botLog(`⚡ ${sig.dir}${sig.ent!==null?' '+sig.ent:''} · ${SYM[sig.inst]} · $${stake}×${sig.runs} · ${sig.conf}%`,'#00d4ff');
+  botSetStatus(`⚡ ${sig.dir} ${SYM[sig.inst]} · $${stake} · pipeline ${sig.runs}`,'#00d4ff');
+  // PIPELINE: fire runs with 80ms stagger — each opens as previous is live
+  for(let i=0;i<sig.runs;i++){
+    setTimeout(()=>{
+      if(!accountInfo||!tradeWSok||!botRunning)return;
+      const params={contract_type:sig.ct,symbol:sig.inst,duration:1,duration_unit:'t',basis:'stake',amount:stake,currency:accountInfo.currency||'USD'};
+      if(sig.ent!==null&&sig.ent!==undefined)params.barrier=String(sig.ent);
+      tradeSend({buy:'1',price:stake,parameters:params});
+    },i*80);
   }
-  botUpdStats();
-  // Check TP/SL
-  const tp=parseFloat(document.getElementById('botTP').value)||20;
-  const sl=parseFloat(document.getElementById('botSL').value)||15;
-  if(botPnl>=tp){stopBot();botLog(`🎯 TAKE PROFIT +$${tp} reached! Bot stopped.`,'#00ff88');return;}
-  if(botPnl<=-sl){stopBot();botLog(`🛑 STOP LOSS -$${sl} hit! Bot stopped.`,'#ff3b5c');return;}
 }
 
 function botTick(){
   if(!botRunning)return;
-  if(!accountInfo||!tradeWSok){botSetStatus('⟳ Waiting for account connection...','#ffd700');return;}
-  if(botActive){botSetStatus('⟳ Trade open — waiting for result...','#ffd700');return;}
-  if(runExecuting||runQueue.length>0){botSetStatus('⟳ Run queue active...','#ffd700');return;}
-
-  const sig=botFindBestSignal();
-  if(!sig){botSetStatus('⟫ Scanning... no qualifying signal yet','var(--dm)');return;}
-
-  const ct=sig.dir==='OVER'?'DIGITOVER':'DIGITUNDER';
-  const stake=botStake;
-  botSetStatus(`⚡ Trading ${sig.dir} ${sig.ent} on ${SYM[sig.inst]} · $${stake} · conf ${sig.conf}%`,'#00d4ff');
-  botLog(`⚡ ${sig.dir} digit ${sig.ent} · ${SYM[sig.inst]} · $${stake} · ${sig.conf}%`,'#00d4ff');
-  botActive=true;
-
-  // Fire the runs — use bot's own stake independently of main MG
-  for(let i=0;i<sig.runs;i++){
-    setTimeout(()=>{
-      if(!accountInfo||!tradeWSok||!botRunning)return;
-      const params={contract_type:ct,symbol:sig.inst,duration:1,duration_unit:'t',basis:'stake',amount:stake,currency:accountInfo.currency||'USD'};
-      params.barrier=String(sig.ent);
-      // Tag this as a bot trade
-      const req={buy:'1',price:stake,parameters:params,passthrough:{bot:true,stake:stake}};
-      tradeSend(req);
-    },i*60);
-  }
-}
-
-// Bot result hook — called from within onTradeMessage directly (no redefinition)
-function checkBotResult(d){
-  if(d&&d.msg_type==='proposal_open_contract'&&d.proposal_open_contract){
-    const c=d.proposal_open_contract;
-    if(c.is_sold&&botRunning&&botActive){
-      const pnl=+(parseFloat(c.sell_price)-parseFloat(c.buy_price)).toFixed(2);
-      botOnTradeResult(pnl>=0,pnl);
-    }
-  }
+  if(!accountInfo||!tradeWSok){botSetStatus('⟳ Waiting for connection...','#ffd700');return;}
+  if(botActive){botSetStatus('⟳ Trades active — pipeline running...','#ffd700');return;}
+  const cfg=BOT_CONFIGS[activeBotType];
+  const sig=cfg.findSignal();
+  if(!sig){botSetStatus(`⟫ Scanning ${cfg.name}... no signal yet`,'var(--dm)');return;}
+  botFire(sig);
 }
 
 function startBot(){
-  if(!apiToken){showTradeMsg('Login with your API token first','#ff3b5c');return;}
+  if(!apiToken){showTradeMsg('Login with API token first','#ff3b5c');return;}
   if(!accountInfo){showTradeMsg('Wait for account to connect','#ffd700');return;}
-  botRunning=true;botActive=false;
+  botRunning=true;botActive=false;botPipeline=0;
   botPnl=0;botWins=0;botLosses=0;
   botStake=parseFloat(document.getElementById('botBase').value)||1;
   document.getElementById('botStartBtn').style.display='none';
   document.getElementById('botStopBtn').style.display='block';
+  const cfg=BOT_CONFIGS[activeBotType];
   const tp=document.getElementById('botTP').value;
   const sl=document.getElementById('botSL').value;
-  botLog(`🚀 Bot started — TP $${tp} · SL $${sl} · Base $${botStake} · MG×${botMG}`,'#ffd700');
-  botSetStatus('⚡ Bot running — scanning markets...','#00d4ff');
+  botLog(`🚀 ${cfg.name} Bot — TP $${tp} · SL $${sl} · Base $${botStake} · MG×${cfg.mg}`,'#ffd700');
+  botSetStatus(`⚡ ${cfg.name} running...`,'#00d4ff');
   botUpdStats();
-  // Scan every 15 seconds
   botTick();
   botTimer=setInterval(botTick,15000);
 }
 
 function stopBot(){
-  botRunning=false;
+  botRunning=false;botActive=false;botPipeline=0;
   clearInterval(botTimer);
   document.getElementById('botStartBtn').style.display='block';
   document.getElementById('botStopBtn').style.display='none';
-  botSetStatus(`Bot stopped · Final P&L: ${botPnl>=0?'+$':'-$'}${Math.abs(botPnl).toFixed(2)}`,'var(--dm)');
-  botLog(`■ Bot stopped · P&L: ${botPnl>=0?'+$':'-$'}${Math.abs(botPnl).toFixed(2)} · W:${botWins} L:${botLosses}`,'#ffd700');
+  const sign=botPnl>=0?'+':'';
+  botSetStatus(`Stopped · P&L: ${sign}$${Math.abs(botPnl).toFixed(2)} · W:${botWins} L:${botLosses}`,'var(--dm)');
+  botLog(`■ Stopped · P&L: ${sign}$${Math.abs(botPnl).toFixed(2)} · W:${botWins} L:${botLosses}`,'#ffd700');
   botUpdStats();
 }
 
