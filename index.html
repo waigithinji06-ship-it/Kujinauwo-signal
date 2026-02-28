@@ -712,8 +712,9 @@ function analyseOD(stream,inst){
   else if(sL>=5&&sD==='lo'){dir='UNDER';ent=5;conf=Math.min(70,48+sL*3);cond=`${sL}-tick LOW streak — break likely, UNDER 5.`;}
   else if(sL>=5&&sD==='hi'){dir='OVER';ent=4;conf=Math.min(70,48+sL*3);cond=`${sL}-tick HIGH streak — break likely, OVER 4.`;}
   else{dir='WAIT';ent=null;conf=0;cond=`Balanced: Low ${Math.round(lp)}% / High ${Math.round(100-lp)}% — wait for ≥8% deviation.`;}
+  // Over/Under always 1 tick — runs = number of contracts recommended
   const runs=dir==='WAIT'?0:conf>=68?(s1?3:5):conf>=58?(s1?2:3):(s1?1:2);
-  return{dir,ent,cond,conf:Math.round(conf),runs,sL,sD,lp:Math.round(lp),hp:Math.round(100-lp)};
+  return{dir,ent,cond,conf:Math.round(conf),runs,dur:1,sL,sD,lp:Math.round(lp),hp:Math.round(100-lp)};
 }
 
 let dInst='R_75',dMaxR=0,dRDone=0;
@@ -734,7 +735,7 @@ function runD(){
       document.getElementById('dCond').textContent=r.cond;document.getElementById('dCpct').textContent=r.conf+'%';
       const cf=document.getElementById('dCf');cf.style.width=r.conf+'%';cf.style.background=r.conf>65?'#00ff88':r.conf>50?'#ffd700':'#ff3b5c';
       dMaxR=r.runs;dRDone=0;
-      if(r.runs>0){buildDots('dDots',r.runs);document.getElementById('dRW').style.display='block';document.getElementById('dMb').disabled=false;document.getElementById('dMb').style.opacity='1';document.getElementById('dRN').textContent=`Up to ${r.runs} run${r.runs>1?'s':''} — 1 tick each`;startExp('d',Math.max(12,r.runs*(is1s(dInst)?4:6)));}
+      if(r.runs>0){buildDots('dDots',r.runs);document.getElementById('dRW').style.display='block';document.getElementById('dMb').disabled=false;document.getElementById('dMb').style.opacity='1';document.getElementById('dRN').textContent=`${r.runs} run${r.runs>1?'s':''} × 1 tick = ${r.runs} contracts`;startExp('d',Math.max(12,r.runs*(is1s(dInst)?4:6)));}
       else{document.getElementById('dRW').style.display='none';document.getElementById('dEW').style.display='none';if(dETi)clearInterval(dETi);}
       addDLog(r);
     }catch(e){}
@@ -1093,6 +1094,7 @@ function tradeD(){
   const runs=parseInt(document.getElementById('dRns').textContent)||1;
   if(ent==='—'||dir==='WAIT'){showTradeMsg('No signal — press ANALYSE DIGITS first','#ff3b5c');return;}
   const barrier=parseInt(ent);
+  // Always 1 tick for OVER/UNDER — each run is 1 independent contract
   if(dir==='OVER')queueTrades('DIGITOVER',dInst,1,'t',barrier,runs);
   else if(dir==='UNDER')queueTrades('DIGITUNDER',dInst,1,'t',barrier,runs);
   else showTradeMsg('No signal','#ff3b5c');
@@ -1122,7 +1124,9 @@ function scanTrade(dir,inst,barrier,runs){
   else{showTradeMsg('No valid signal','#ff3b5c');return;}
   // Scanner always trades ONE instrument — the selected one
   const b=(barrier!==null&&barrier!==undefined&&barrier!=='null')?parseInt(barrier):null;
-  queueTrades(ct,inst,runs||1,'t',b,runs||1);
+  // DIGITOVER/DIGITUNDER always 1 tick per contract
+  const dur=(ct==='DIGITOVER'||ct==='DIGITUNDER'||ct==='DIGITDIFF'||ct==='DIGITMATCH')?1:runs||1;
+  queueTrades(ct,inst,dur,'t',b,runs||1);
 }
 
 // ── ACCOUNT UI ──
