@@ -186,6 +186,7 @@ canvas{display:block;width:100%;border-radius:4px;}
   <button class="tab" onclick="swTab('dm',this)">DIFFER/MATCH</button>
   <button class="tab" onclick="swTab('eo',this)">EVEN/ODD</button>
   <button class="tab" onclick="swTab('sc',this)">SCANNER</button>
+  <button class="tab" onclick="swTab('hist',this)">HISTORY</button>
 </div>
 
 <!-- RISE/FALL -->
@@ -573,6 +574,45 @@ canvas{display:block;width:100%;border-radius:4px;}
     </table></div>
   </div>
   <div class="disc">⚠ Even/Odd ~50/50. Analysis improves edge marginally.</div>
+</div>
+
+<!-- HISTORY TAB -->
+
+<div id="tab-hist" class="tc">
+  <div class="p" style="border-top:2px solid #ffd700;">
+    <div class="pt" style="color:#ffd700;">Trade History</div>
+    <!-- Summary stats -->
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+      <div style="flex:1;min-width:70px;background:var(--p2);border:1px solid var(--bd);border-radius:5px;padding:8px;text-align:center;">
+        <div style="font-family:var(--mn);font-size:8px;color:var(--dm)">WIN RATE</div>
+        <div style="font-family:var(--dp);font-size:24px;font-weight:900;color:#00ff88" id="histWR">—</div>
+      </div>
+      <div style="flex:1;min-width:70px;background:var(--p2);border:1px solid var(--bd);border-radius:5px;padding:8px;text-align:center;">
+        <div style="font-family:var(--mn);font-size:8px;color:var(--dm)">TOTAL TRADES</div>
+        <div style="font-family:var(--dp);font-size:24px;font-weight:900;color:var(--tx)" id="histTotal">0</div>
+      </div>
+      <div style="flex:1;min-width:70px;background:var(--p2);border:1px solid var(--bd);border-radius:5px;padding:8px;text-align:center;">
+        <div style="font-family:var(--mn);font-size:8px;color:var(--dm)">SESSION P&L</div>
+        <div style="font-family:var(--dp);font-size:24px;font-weight:900;color:#00ff88" id="histPnl">$0</div>
+      </div>
+    </div>
+    <!-- Export button -->
+    <button onclick="exportCSV()" style="width:100%;padding:10px;background:rgba(255,215,0,.1);border:1.5px solid rgba(255,215,0,.4);color:#ffd700;font-family:var(--dp);font-size:13px;font-weight:700;letter-spacing:2px;border-radius:5px;cursor:pointer;margin-bottom:10px;">⬇ EXPORT CSV</button>
+    <!-- Table -->
+    <div style="overflow-x:auto;">
+      <table class="lt" style="width:100%">
+        <thead>
+          <tr>
+            <th>TIME</th><th>TYPE</th><th>INST</th><th>DIG</th><th>STAKE</th><th>P&L</th><th>RESULT</th>
+          </tr>
+        </thead>
+        <tbody id="tradeHistTbl">
+          <tr><td colspan="7" style="text-align:center;color:var(--dm);padding:20px;">No trades yet this session</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="disc">History resets on page refresh. Export CSV to save permanently.</div>
 </div>
 
 <!-- SCANNER -->
@@ -1046,7 +1086,7 @@ let currentRunContract=null; // contract_id of currently open run
 // ×3.2 → OVER 0-3, UNDER 6-9, ALL DIFFERS, RISE, FALL
 // ×2.1 → OVER 4, UNDER 5
 // ×1.5 → MATCHES (all)
-const MG={base:1,current:1,wins:0,losses:0,streak:0,totalPnl:0,lastType:null,lastBarrier:null};
+const MG={base:1,current:1,wins:0,losses:0,streak:0,totalPnl:0,lastType:null,lastBarrier:null,lastSym:null};
 
 function mgMult(ct,barrier){
   if(ct==='CALL'||ct==='PUT')return 3.2;
@@ -1065,6 +1105,7 @@ function mgOnResult(won,pnl,ct,barrier){
     MG.wins++;MG.streak=0;
     MG.current=MG.base;
     showTradeMsg(`✓ WIN +$${pnl.toFixed(2)} — stake reset to $${MG.base}`,'#00ff88');
+    try{soundWin();}catch(e){}
   } else {
     MG.losses++;MG.streak++;
     const max=parseFloat(document.getElementById('maxStake')?.value||'50');
@@ -1076,10 +1117,13 @@ function mgOnResult(won,pnl,ct,barrier){
     } else {
       MG.current=next;
       showTradeMsg(`✗ LOSS $${Math.abs(pnl).toFixed(2)} → Martingale ×${mult} → next $${next}`,'#ff3b5c');
+      try{soundLoss();}catch(e){}
     }
   }
   try{document.getElementById('stakeAmt').value=MG.current.toFixed(2);}catch(e){}
   updMartStats();
+  // Log to trade history
+  try{addTradeHistory(MG.lastType||'',MG.lastSym||'',MG.lastBarrier,parseFloat(MG.current.toFixed(2)),pnl,won);}catch(e){}
 }
 
 function updMartStats(){
@@ -1241,7 +1285,7 @@ function firePipelineRun(run,stake){
     currency:accountInfo.currency||'USD'
   };
   if(run.barrier!==null&&run.barrier!==undefined)params.barrier=String(run.barrier);
-  MG.lastType=run.ct;MG.lastBarrier=run.barrier!==undefined?run.barrier:null;
+  MG.lastType=run.ct;MG.lastBarrier=run.barrier!==undefined?run.barrier:null;MG.lastSym=run.sym;
   pipelineDepth++;
   tradeSend({buy:'1',price:stake,parameters:params});
 }
@@ -1523,6 +1567,127 @@ function injectTradingUI(){
 }
 
 
+
+
+// ── SMART BARRIER CALCULATOR ──
+// Target: 30% payout on stake (sell_price = stake * 1.30)
+// Volatility proxied from recent tick range
+function calcBarrier(sym, dir){
+  const prices=getPx(sym);
+  if(!prices||prices.length<5)return dir==='HIGHER'?'+0.01':'-0.01';
+  // Calculate recent volatility (std dev of last 20 ticks)
+  const recent=prices.slice(-20);
+  const mean=recent.reduce((a,b)=>a+b,0)/recent.length;
+  const variance=recent.reduce((a,b)=>a+(b-mean)**2,0)/recent.length;
+  const stdDev=Math.sqrt(variance);
+  // For ~30% payout, barrier should be ~0.3-0.5 std devs from current price
+  // Tighter barrier = higher payout but lower win probability
+  // 0.4 stdDev gives roughly 30-35% payout on most Deriv instruments
+  const offset=+(stdDev*0.4).toFixed(sym.includes('HZ')||prices[0]<100?4:2);
+  const minOffset=prices[prices.length-1]*0.0002; // min 0.02% of price
+  const finalOffset=Math.max(offset,minOffset).toFixed(sym.includes('HZ')||prices[0]<100?4:2);
+  return dir==='HIGHER'?`+${finalOffset}`:`-${finalOffset}`;
+}
+// ── SOUND ALERTS ──
+let audioCtx=null;
+function getAudioCtx(){
+  if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+  return audioCtx;
+}
+function playTone(freq,duration,type='sine',vol=0.3){
+  try{
+    const ctx=getAudioCtx();
+    const osc=ctx.createOscillator();
+    const gain=ctx.createGain();
+    osc.connect(gain);gain.connect(ctx.destination);
+    osc.type=type;osc.frequency.value=freq;
+    gain.gain.setValueAtTime(vol,ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+duration);
+    osc.start(ctx.currentTime);osc.stop(ctx.currentTime+duration);
+  }catch(e){}
+}
+function soundWin(){
+  // Two rising tones — pleasant win chime
+  playTone(600,0.15,'sine',0.25);
+  setTimeout(()=>playTone(900,0.25,'sine',0.25),160);
+}
+function soundLoss(){
+  // Low descending tone
+  playTone(300,0.2,'sine',0.2);
+  setTimeout(()=>playTone(200,0.3,'sine',0.2),200);
+}
+function soundTP(){
+  // Triumphant 3-tone chime
+  playTone(600,0.12,'sine',0.3);
+  setTimeout(()=>playTone(750,0.12,'sine',0.3),130);
+  setTimeout(()=>playTone(900,0.3,'sine',0.3),260);
+}
+function soundSL(){
+  // 3 descending alert tones
+  playTone(400,0.15,'sawtooth',0.2);
+  setTimeout(()=>playTone(300,0.15,'sawtooth',0.2),170);
+  setTimeout(()=>playTone(200,0.3,'sawtooth',0.2),340);
+}
+function soundTrade(){
+  // Quick click on trade fire
+  playTone(800,0.05,'square',0.1);
+}
+
+// ── TRADE HISTORY ──
+const tradeHistory=[];
+
+function addTradeHistory(ct,symbol,barrier,stake,pnl,won){
+  const entry={
+    time:new Date().toISOString(),
+    timeStr:new Date().toTimeString().slice(0,8),
+    ct,symbol:SYM[symbol]||symbol,barrier,stake,pnl,won,
+    balance:accountInfo?parseFloat(accountInfo.balance||0):0
+  };
+  tradeHistory.unshift(entry);
+  if(tradeHistory.length>200)tradeHistory.pop();
+  renderTradeHistory();
+}
+
+function renderTradeHistory(){
+  try{
+    const tb=document.getElementById('tradeHistTbl');
+    if(!tb)return;
+    tb.innerHTML=tradeHistory.slice(0,50).map(e=>`
+      <tr style="border-bottom:1px solid rgba(28,50,72,.3)">
+        <td style="color:var(--dm)">${e.timeStr}</td>
+        <td style="color:var(--tx)">${e.ct.replace('DIGIT','')}</td>
+        <td style="color:#00d4ff">${e.symbol}</td>
+        <td style="color:var(--dm)">${e.barrier!==null&&e.barrier!==undefined?e.barrier:'—'}</td>
+        <td style="color:#ffd700">$${e.stake}</td>
+        <td style="color:${e.won?'#00ff88':'#ff3b5c'}">${e.won?'+':''}$${e.pnl.toFixed(2)}</td>
+        <td style="color:${e.won?'#00ff88':'#ff3b5c'};font-weight:700">${e.won?'WIN':'LOSS'}</td>
+      </tr>`).join('');
+    // Update summary
+    const wins=tradeHistory.filter(e=>e.won).length;
+    const total=tradeHistory.length;
+    const totalPnl=tradeHistory.reduce((s,e)=>s+e.pnl,0);
+    const wr=total?Math.round(wins/total*100):0;
+    try{
+      document.getElementById('histWR').textContent=wr+'%';
+      document.getElementById('histWR').style.color=wr>=55?'#00ff88':wr>=45?'#ffd700':'#ff3b5c';
+      document.getElementById('histTotal').textContent=total;
+      document.getElementById('histPnl').textContent=(totalPnl>=0?'+$':'-$')+Math.abs(totalPnl).toFixed(2);
+      document.getElementById('histPnl').style.color=totalPnl>=0?'#00ff88':'#ff3b5c';
+    }catch(e){}
+  }catch(e){}
+}
+
+function exportCSV(){
+  if(!tradeHistory.length){showTradeMsg('No trades to export','#ff3b5c');return;}
+  const hdr='Time,Type,Symbol,Barrier,Stake,P&L,Result\n';
+  const rows=tradeHistory.map(e=>`${e.time},${e.ct},${e.symbol},${e.barrier??''},${e.stake},${e.pnl.toFixed(2)},${e.won?'WIN':'LOSS'}`).join('\n');
+  const blob=new Blob([hdr+rows],{type:'text/csv'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`DerivSignal_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  showTradeMsg(`✓ Exported ${tradeHistory.length} trades`,'#00ff88');
+}
 // ── EVEN/ODD ──
 let eoInst='R_75',eoMaxR=0,eoRDone=0,eoETi=null;
 
@@ -1770,8 +1935,8 @@ function checkBotResult(d){
       // Check TP/SL
       const tp=parseFloat(document.getElementById('botTP').value)||20;
       const sl=parseFloat(document.getElementById('botSL').value)||15;
-      if(botPnl>=tp){stopBot();botLog(`🎯 TP +$${tp} reached! Stopped.`,'#00ff88');return;}
-      if(botPnl<=-sl){stopBot();botLog(`🛑 SL -$${sl} hit! Stopped.`,'#ff3b5c');return;}
+      if(botPnl>=tp){stopBot();botLog(`🎯 TP +$${tp} reached! Stopped.`,'#00ff88');try{soundTP();}catch(e){} return;}
+      if(botPnl<=-sl){stopBot();botLog(`🛑 SL -$${sl} hit! Stopped.`,'#ff3b5c');try{soundSL();}catch(e){} return;}
     }
   }
 }
@@ -1780,32 +1945,28 @@ function botFire(sig){
   if(!accountInfo||!tradeWSok||!botRunning)return;
   const stake=botStake;
   botActive=true;
-  botPipeline=sig.runs;
-  const stagger=getPipelineStagger(sig.inst);
+  botPipeline=1; // always 1 trade at a time
   const tickMs=getTickMs(sig.inst);
-  botLog(`⚡ ${sig.dir}${sig.ent!==null?' '+sig.ent:''} · ${SYM[sig.inst]} · $${stake}×${sig.runs} · ${sig.conf}% · ${stagger}ms stagger`,'#00d4ff');
-  botSetStatus(`⚡ ${sig.dir} ${SYM[sig.inst]} · $${stake} · ${sig.runs} runs · ${tickMs}ms/tick`,'#00d4ff');
-  // TICK-LOCKED PIPELINE: each run fires (tick_ms - 100ms) after previous
-  // V100 1s example: Run1@T+0ms, Run2@T+900ms, Run3@T+1800ms
-  // Run1 closes @~1000ms, Run2 is already live @900ms — perfect relay
-  for(let i=0;i<sig.runs;i++){
-    setTimeout(()=>{
-      if(!accountInfo||!tradeWSok||!botRunning)return;
-      const params={
-        contract_type:sig.ct,symbol:sig.inst,
-        duration:1,duration_unit:'t',
-        basis:'stake',amount:stake,
-        currency:accountInfo.currency||'USD'
-      };
-      if(sig.ent!==null&&sig.ent!==undefined)params.barrier=String(sig.ent);
-      tradeSend({buy:'1',price:stake,parameters:params});
-    }, i*stagger);
-  }
-  // Free bot for next signal after all runs complete + 1 tick buffer
-  const totalTime=(sig.runs-1)*stagger + tickMs + 300;
+  botLog(`⚡ ${sig.dir}${sig.ent!==null?' '+sig.ent:''} · ${SYM[sig.inst]} · $${stake} · ${sig.conf}%`,'#00d4ff');
+  botSetStatus(`⚡ ${sig.dir} ${SYM[sig.inst]} · $${stake} · waiting result...`,'#00d4ff');
+  // Single trade — fires instantly at tick speed
+  if(!accountInfo||!tradeWSok||!botRunning)return;
+  const params={
+    contract_type:sig.ct,symbol:sig.inst,
+    duration:1,duration_unit:'t',
+    basis:'stake',amount:stake,
+    currency:accountInfo.currency||'USD'
+  };
+  if(sig.ent!==null&&sig.ent!==undefined)params.barrier=String(sig.ent);
+  tradeSend({buy:'1',price:stake,parameters:params});
+  try{soundTrade();}catch(e){}
+  // Timeout fallback — if no result in 3 ticks, free bot
   setTimeout(()=>{
-    if(botRunning&&botPipeline<=0)botActive=false;
-  }, totalTime);
+    if(botRunning&&botActive&&botPipeline>0){
+      botActive=false;botPipeline=0;
+      botLog('⚠ Trade timeout — retrying next scan','#ff8c00');
+    }
+  }, tickMs*3+500);
 }
 
 function botTick(){
