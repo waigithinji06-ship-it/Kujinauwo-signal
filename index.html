@@ -631,7 +631,7 @@ canvas{display:block;width:100%;border-radius:4px;}
 // ══════════════════════════════════════════════
 // FAST WEBSOCKET ENGINE
 // ══════════════════════════════════════════════
-const WS_URL='wss://ws.binaryws.com/websockets/v3?app_id=36544';
+const WS_URL='wss://ws.binaryws.com/websockets/v3?app_id=1';
 const SYM={R_10:'V10',R_25:'V25',R_50:'V50',R_75:'V75',R_100:'V100','1HZ10V':'V10 1s','1HZ25V':'V25 1s','1HZ50V':'V50 1s','1HZ75V':'V75 1s','1HZ100V':'V100 1s'};
 const ALL=Object.keys(SYM);
 const is1s=s=>s.startsWith('1HZ');
@@ -1102,7 +1102,7 @@ function initTradeWS(token){
   try{
     if(tradeWS){try{tradeWS.close();}catch(e){}}
     clearInterval(pingTimer);
-    tradeWS=new WebSocket('wss://ws.binaryws.com/websockets/v3?app_id=36544');
+    tradeWS=new WebSocket('wss://ws.binaryws.com/websockets/v3?app_id=1');
     tradeWS.onopen=()=>{
       tradeWSok=true;tradeReady=false;
       tradeWS.send(JSON.stringify({authorize:token}));
@@ -1118,14 +1118,11 @@ function initTradeWS(token){
     tradeWS.onclose=(e)=>{
       tradeWSok=false;tradeReady=false;
       clearInterval(pingTimer);
-      // Only auto-reconnect if we were previously connected (accountInfo set)
       if(apiToken&&accountInfo){
         setTimeout(()=>{if(apiToken&&accountInfo)initTradeWS(apiToken);},2000);
       } else if(apiToken&&!accountInfo){
-        // First connection failed - re-enable login button
         const btn=document.getElementById('loginBtn');
         if(btn){btn.disabled=false;btn.style.opacity='1';}
-        showTradeMsg('❌ Connection failed — check your token and try again','#ff3b5c');
       }
     };
   }catch(e){
@@ -1189,6 +1186,8 @@ function onTradeMessage(d){
     if(openContracts[c.contract_id]){
       openContracts[c.contract_id]={...openContracts[c.contract_id],...c};
     }
+    // Bot hook
+    try{checkBotResult(d);}catch(e){}
     if(c.is_sold){
       const oc=openContracts[c.contract_id]||{};
       const pnl=+(parseFloat(c.sell_price)-parseFloat(c.buy_price)).toFixed(2);
@@ -1360,14 +1359,15 @@ function doLogin(){
   const btn=document.getElementById('loginBtn');
   if(btn){btn.disabled=true;btn.style.opacity='.5';}
   initTradeWS(tok);
-  // Timeout — if no response in 8s, show error
+  // Timeout — if no response in 12s, show clear error
   setTimeout(()=>{
     const b=document.getElementById('loginBtn');
     if(b){b.disabled=false;b.style.opacity='1';}
-    if(!accountInfo){
-      showTradeMsg('❌ Login timeout — check token has Read+Trade scopes, then try again','#ff3b5c');
+    if(!accountInfo&&apiToken){
+      showTradeMsg('❌ Login failed — create a new token at app.deriv.com/account/api-token with Read+Trade scopes','#ff3b5c');
+      apiToken=null; // reset so user can try again cleanly
     }
-  },8000);
+  },12000);
 }
 
 function doLogout(){
@@ -1702,11 +1702,8 @@ function botTick(){
   }
 }
 
-// Hook bot into trade results
-const _origOnTradeMsg=onTradeMessage;
-function onTradeMessage(d){
-  _origOnTradeMsg(d);
-  // Check if bot trade closed
+// Bot result hook — called from within onTradeMessage directly (no redefinition)
+function checkBotResult(d){
   if(d&&d.msg_type==='proposal_open_contract'&&d.proposal_open_contract){
     const c=d.proposal_open_contract;
     if(c.is_sold&&botRunning&&botActive){
