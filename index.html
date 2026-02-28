@@ -183,6 +183,7 @@ canvas{display:block;width:100%;border-radius:4px;}
   <button class="tab on" onclick="swTab('rf',this)">RISE/FALL</button>
   <button class="tab" onclick="swTab('dg',this)">DIGITS</button>
   <button class="tab" onclick="swTab('dm',this)">DIFFER/MATCH</button>
+  <button class="tab" onclick="swTab('eo',this)">EVEN/ODD</button>
   <button class="tab" onclick="swTab('sc',this)">SCANNER</button>
 </div>
 
@@ -414,6 +415,85 @@ canvas{display:block;width:100%;border-radius:4px;}
   <div class="disc">⚠ Differs/Matches are ~50/50 probability contracts. Analysis improves edge only slightly.</div>
 </div>
 
+<!-- EVEN/ODD -->
+
+<div id="tab-eo" class="tc">
+  <div class="p pu">
+    <div class="pt">Even &amp; Odd</div>
+    <div style="font-family:var(--mn);font-size:10px;color:var(--dm);line-height:1.9">
+      <b style="color:#00d4ff">EVEN</b> — last digit is even (0,2,4,6,8).<br>
+      <b style="color:#b388ff">ODD</b> — last digit is odd (1,3,5,7,9).<br>
+      Analysis detects streaks and frequency bias.
+    </div>
+  </div>
+  <div class="p">
+    <div class="pt">Instrument</div>
+    <div class="ig"><div class="iglbl">Standard</div><div class="irow">
+      <button class="ib" onclick="selEO(this,'R_10')">V10<span class="lv"></span></button>
+      <button class="ib" onclick="selEO(this,'R_25')">V25<span class="lv"></span></button>
+      <button class="ib" onclick="selEO(this,'R_50')">V50<span class="lv"></span></button>
+      <button class="ib on" onclick="selEO(this,'R_75')">V75<span class="lv"></span></button>
+      <button class="ib" onclick="selEO(this,'R_100')">V100<span class="lv"></span></button>
+    </div></div>
+    <div class="ig" style="margin-bottom:0"><div class="iglbl" style="color:rgba(255,140,0,.7)">1 Second</div><div class="irow">
+      <button class="ib s1" onclick="selEO(this,'1HZ10V')">V10 1s<span class="lv"></span></button>
+      <button class="ib s1" onclick="selEO(this,'1HZ25V')">V25 1s<span class="lv"></span></button>
+      <button class="ib s1" onclick="selEO(this,'1HZ50V')">V50 1s<span class="lv"></span></button>
+      <button class="ib s1" onclick="selEO(this,'1HZ75V')">V75 1s<span class="lv"></span></button>
+      <button class="ib s1" onclick="selEO(this,'1HZ100V')">V100 1s<span class="lv"></span></button>
+    </div></div>
+  </div>
+  <div class="p g">
+    <div class="pt">Live Stream — <span id="eoLbl" style="color:#00d4ff">V75</span> <span id="eoLiveBadge" style="margin-left:5px"></span></div>
+    <div class="sbox"><div class="srow" id="eorow"></div></div>
+    <div style="display:flex;justify-content:space-between;margin-top:6px;">
+      <span style="font-family:var(--mn);font-size:9px;"><span style="color:#00d4ff">■</span> <span style="color:var(--dm)">Even</span> &nbsp;<span style="color:#b388ff">■</span> <span style="color:var(--dm)">Odd</span></span>
+      <span style="font-family:var(--mn);font-size:9px;color:var(--dm)">Last: <span id="eoLast" style="color:#00d4ff;font-weight:700">—</span></span>
+    </div>
+    <div style="font-family:var(--mn);font-size:9px;color:var(--dm);margin-top:4px" id="eoInfo">waiting...</div>
+  </div>
+  <div class="p">
+    <div class="pt">Frequency — Live 50 Ticks</div>
+    <div style="display:flex;gap:8px;margin-bottom:10px;">
+      <div style="flex:1;background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.15);border-radius:5px;padding:12px;text-align:center;">
+        <div style="font-family:var(--mn);font-size:8px;color:var(--dm)">EVEN (0,2,4,6,8)</div>
+        <div style="font-family:var(--dp);font-size:32px;font-weight:900;color:#00d4ff" id="eoEvenPct">—</div>
+        <div style="height:5px;background:var(--bd);border-radius:3px;overflow:hidden;margin-top:6px"><div id="eoEvenBar" style="height:100%;background:#00d4ff;border-radius:3px;width:50%"></div></div>
+      </div>
+      <div style="flex:1;background:rgba(179,136,255,.06);border:1px solid rgba(179,136,255,.15);border-radius:5px;padding:12px;text-align:center;">
+        <div style="font-family:var(--mn);font-size:8px;color:var(--dm)">ODD (1,3,5,7,9)</div>
+        <div style="font-family:var(--dp);font-size:32px;font-weight:900;color:#b388ff" id="eoOddPct">—</div>
+        <div style="height:5px;background:var(--bd);border-radius:3px;overflow:hidden;margin-top:6px"><div id="eoOddBar" style="height:100%;background:#b388ff;border-radius:3px;width:50%"></div></div>
+      </div>
+    </div>
+    <div style="font-family:var(--mn);font-size:9px;color:var(--dm)">Last 10: <span id="eoLast10" style="color:var(--tx);letter-spacing:3px">—</span></div>
+    <div style="font-family:var(--mn);font-size:9px;color:var(--dm);margin-top:4px">Streak: <span id="eoStreakTxt" style="color:#ffd700">—</span></div>
+  </div>
+  <div class="dsg" style="grid-template-columns:1fr 1fr">
+    <div class="dsc a" id="eoDirCell"><div class="dslbl">Signal</div><div class="dsv a" id="eoDir">—</div></div>
+    <div class="dsc y"><div class="dslbl">Max Runs</div><div class="dsv y" id="eoRns">—</div></div>
+  </div>
+  <div class="p">
+    <div class="pt">Signal Condition</div>
+    <div style="font-family:var(--mn);font-size:10px;color:var(--tx);line-height:1.7" id="eoCond">Press ANALYSE to generate signal</div>
+    <div class="cb" style="margin-top:8px"><div class="cbl"><span>CONFIDENCE</span><span id="eoCpct">—</span></div><div class="cbg"><div class="cbf" id="eoCf" style="width:0%"></div></div></div>
+    <div id="eoEW" style="display:none;margin-top:8px"><div class="erow"><span>EXPIRES IN</span><span id="eoEp" style="color:#ffd700">—</span></div><div class="cbg"><div id="eoEf" style="height:100%;border-radius:2px;background:#ffd700;width:100%;transition:width 1s linear"></div></div></div>
+    <div id="eoRW" style="display:none;margin-top:8px"><div class="er"><div class="dots" id="eoDots"></div><button class="mbtn" id="eoMb" onclick="eoMark()">+ RUN</button></div><div style="font-family:var(--mn);font-size:9px;color:var(--dm);margin-top:5px" id="eoRN"></div></div>
+  </div>
+  <button class="abtn" style="border-color:#00d4ff;color:#00d4ff;" onclick="runEO()" id="eoBtn">◉ ANALYSE EVEN / ODD</button>
+  <div class="scanning" id="eoScan" style="color:#00d4ff">ANALYSING...</div>
+  <div class="trade-btn-wrap" style="display:none;margin-bottom:12px;">
+    <button onclick="tradeEO()" style="width:100%;padding:13px;background:rgba(0,212,255,.1);border:2px solid #00d4ff;color:#00d4ff;font-family:var(--dp);font-size:16px;font-weight:900;letter-spacing:3px;border-radius:6px;cursor:pointer;">⚡ PLACE EVEN/ODD · ALL RUNS</button>
+  </div>
+  <div class="p"><div class="pt">Signal Log</div>
+    <div class="lw"><table class="lt">
+      <thead><tr><th>TIME</th><th>INST</th><th>TYPE</th><th>EVEN%</th><th>ODD%</th><th>RUNS</th><th>CONF</th></tr></thead>
+      <tbody id="eoLog"><tr><td colspan="7" style="text-align:center;color:var(--dm);padding:16px">No signals yet</td></tr></tbody>
+    </table></div>
+  </div>
+  <div class="disc">⚠ Even/Odd ~50/50. Analysis improves edge marginally.</div>
+</div>
+
 <!-- SCANNER -->
 
 <div id="tab-sc" class="tc">
@@ -518,6 +598,7 @@ function initWS(){
           if(s===rfInst){drawChart(px[s]);updRFLast();document.getElementById('rfTC').textContent=tc[s];}
           if(s===dInst){addStream('srow',digit);renderFreq('dfChart','dfLbl',dg[s],true);document.getElementById('dLast').textContent=digit;document.getElementById('dInfo').textContent=`${tc[s]} ticks · ${is1s(s)?'~1s':'~2s'}/tick · ${d.tick.quote}`;document.getElementById('dSpd').textContent=is1s(s)?'~1s':'~2s';}
           if(s===dmInst){addStream('dmrow',digit);renderFreq('dmdfChart','dmdfLbl',dg[s],false);document.getElementById('dmLast').textContent=digit;document.getElementById('dmInfo').textContent=`${tc[s]} ticks`;}
+          if(s===eoInst){addEOStream(digit);document.getElementById('eoLast').textContent=digit;document.getElementById('eoInfo').textContent=`${tc[s]} ticks · ${digit%2===0?'EVEN':'ODD'}`;updEOFreq(dg[s]);}
         }
       }catch(e){}
     };
@@ -662,7 +743,7 @@ function startExp(which,secs){
   const upd=()=>{const pct=rem/tot*100,col=pct>50?'#00ff88':pct>25?'#ffd700':'#ff3b5c';document.getElementById(pre+'Ep').textContent=rem+'s';document.getElementById(pre+'Ep').style.color=col;document.getElementById(pre+'Ef').style.width=pct+'%';document.getElementById(pre+'Ef').style.background=col;};
   upd();
   const iv=setInterval(()=>{rem--;if(rem<=0){clearInterval(iv);document.getElementById(pre+'Ep').textContent='EXPIRED';document.getElementById(pre+'Ep').style.color='#ff3b5c';document.getElementById(pre+'Ef').style.width='0%';document.getElementById(pre+'Mb').disabled=true;document.getElementById(pre+'Mb').style.opacity='.3';}else upd();},1000);
-  if(pre==='rf')rfETi=iv;else if(pre==='d')dETi=iv;else dmETi=iv;
+  if(pre==='rf')rfETi=iv;else if(pre==='d')dETi=iv;else if(pre==='dm')dmETi=iv;else eoETi=iv;
 }
 
 function rfMark(){try{if(rfRDone>=rfMaxR)return;document.getElementById(`rfDots_${rfRDone}`)?.classList.add('on');rfRDone++;if(rfRDone>=rfMaxR){document.getElementById('rfMb').disabled=true;document.getElementById('rfMb').style.opacity='.3';if(rfETi)clearInterval(rfETi);document.getElementById('rfEf').style.width='0%';document.getElementById('rfEp').textContent='DONE';}}catch(e){}}
@@ -807,7 +888,8 @@ function buildScanResults(){
   try{
     const ouR=ALL.map(inst=>{const e=scanQ[inst];const s=e&&e.d&&e.d.length>=10?e.d:getDg(inst);return{inst,r:analyseOD(s,inst),live:!!(e&&e.d),mode:'ou'};});
     const dmR=ALL.map(inst=>{const e=scanQ[inst];const s=e&&e.d&&e.d.length>=10?e.d:getDg(inst);const r=analyseDM(s,inst);return{inst,r:{dir:r.type,ent:r.digit,conf:r.conf,runs:r.runs,lp:0,hp:0,cond:r.cond},live:!!(e&&e.d),mode:'dm'};});
-    const all=[...ouR,...dmR].sort((a,b)=>{if(a.r.dir==='WAIT'&&b.r.dir!=='WAIT')return 1;if(b.r.dir==='WAIT'&&a.r.dir!=='WAIT')return -1;return b.r.conf-a.r.conf;});
+    const eoR=ALL.map(inst=>{const e=scanQ[inst];const s=e&&e.d&&e.d.length>=10?e.d:getDg(inst);const r=analyseEO(s,inst);return{inst,r:{dir:r.dir,ent:null,conf:r.conf,runs:r.runs,lp:r.evenPct,hp:r.oddPct,cond:r.cond},live:!!(e&&e.d),mode:'eo'};});
+    const all=[...ouR,...dmR,...eoR].sort((a,b)=>{if(a.r.dir==='WAIT'&&b.r.dir!=='WAIT')return 1;if(b.r.dir==='WAIT'&&a.r.dir!=='WAIT')return -1;return b.r.conf-a.r.conf;});
     renderScan(all);
     document.getElementById('lastScan').textContent='Last: '+new Date().toTimeString().slice(0,8);
     document.getElementById('scScan').style.display='none';
@@ -1058,22 +1140,23 @@ function nextRun(){
 // ── QUEUE TRADES — the ONLY entry point ──
 function queueTrades(contractType,symbol,duration,durationUnit,barrier,runs){
   if(!apiToken){showTradeMsg('Enter your API token first','#ff3b5c');return;}
-  // If not connected, connect first then queue
+  // DIGIT contracts ALWAYS use 1 tick — no exceptions
+  const isDigit=['DIGITOVER','DIGITUNDER','DIGITDIFF','DIGITMATCH','DIGITEVEN','DIGITODD'].includes(contractType);
+  const finalDur=isDigit?1:Math.max(1,parseInt(duration)||1);
+  const numRuns=Math.max(1,parseInt(runs)||1);
+  const mult=mgMult(contractType,barrier);
+
   if(!accountInfo){
     showTradeMsg('⟳ Connecting... trade will fire automatically','#ffd700');
     if(!tradeWSok)initTradeWS(apiToken);
-    // Queue and wait
-    const numRuns=Math.max(1,parseInt(runs)||1);
     for(let i=0;i<numRuns;i++){
-      runQueue.push({ct:contractType,sym:symbol,dur:duration,unit:durationUnit,barrier:barrier!==undefined?barrier:null});
+      runQueue.push({ct:contractType,sym:symbol,dur:finalDur,unit:'t',barrier:barrier!==undefined?barrier:null});
     }
     return;
   }
-  const numRuns=Math.max(1,parseInt(runs)||1);
-  const mult=mgMult(contractType,barrier);
-  showTradeMsg(`⚡ Queuing ${numRuns} run${numRuns>1?'s':''} · ${SYM[symbol]||symbol} · $${MG.current.toFixed(2)} · MG×${mult}`,'#00d4ff');
+  showTradeMsg(`⚡ ${numRuns} run${numRuns>1?'s':''} · ${isDigit?'1 tick each':''+finalDur+' ticks'} · ${SYM[symbol]||symbol} · $${MG.current.toFixed(2)} · ×${mult}`,'#00d4ff');
   for(let i=0;i<numRuns;i++){
-    runQueue.push({ct:contractType,sym:symbol,dur:duration,unit:durationUnit,barrier:barrier!==undefined?barrier:null});
+    runQueue.push({ct:contractType,sym:symbol,dur:finalDur,unit:'t',barrier:barrier!==undefined?barrier:null});
   }
   if(!runExecuting)nextRun();
 }
@@ -1119,14 +1202,15 @@ function scanTrade(dir,inst,barrier,runs){
   else if(dir==='UNDER')ct='DIGITUNDER';
   else if(dir==='DIFFERS')ct='DIGITDIFF';
   else if(dir==='MATCHES')ct='DIGITMATCH';
+  else if(dir==='EVEN')ct='DIGITEVEN';
+  else if(dir==='ODD')ct='DIGITODD';
   else if(dir==='RISE')ct='CALL';
   else if(dir==='FALL')ct='PUT';
   else{showTradeMsg('No valid signal','#ff3b5c');return;}
   // Scanner always trades ONE instrument — the selected one
   const b=(barrier!==null&&barrier!==undefined&&barrier!=='null')?parseInt(barrier):null;
-  // DIGITOVER/DIGITUNDER always 1 tick per contract
-  const dur=(ct==='DIGITOVER'||ct==='DIGITUNDER'||ct==='DIGITDIFF'||ct==='DIGITMATCH')?1:runs||1;
-  queueTrades(ct,inst,dur,'t',b,runs||1);
+  // queueTrades enforces 1 tick for all digit contracts internally
+  queueTrades(ct,inst,1,'t',b,runs||1);
 }
 
 // ── ACCOUNT UI ──
@@ -1281,6 +1365,134 @@ function injectTradingUI(){
   dmB.className='trade-btn-wrap';dmB.style.cssText='display:none;margin-bottom:12px;';
   dmB.innerHTML=`<button onclick="tradeDM()" style="width:100%;padding:13px;background:rgba(179,136,255,.1);border:2px solid #b388ff;color:#b388ff;font-family:var(--dp);font-size:16px;font-weight:900;letter-spacing:3px;border-radius:6px;cursor:pointer;" onmousedown="this.style.background='rgba(179,136,255,.22)'" onmouseup="this.style.background='rgba(179,136,255,.1)'">⚡ PLACE DIFFER/MATCH · ALL RUNS</button>`;
   document.getElementById('dmBtn').insertAdjacentElement('afterend',dmB);
+}
+
+
+// ── EVEN/ODD ──
+let eoInst='R_75',eoMaxR=0,eoRDone=0,eoETi=null;
+
+function selEO(el,s){
+  document.querySelectorAll('#tab-eo .ib').forEach(b=>b.classList.remove('on'));
+  el.classList.add('on');eoInst=s;
+  document.getElementById('eoLbl').textContent=SYM[s];
+  document.getElementById('eoLiveBadge').innerHTML=hd[s]?'<span class="livebadge">LIVE</span>':'<span class="simbadge">SIM</span>';
+  seedStream('eorow',getDg(s).map(d=>d)); // reuse srow logic
+  updEOFreq(getDg(s));
+  subInst(s);
+}
+
+function addEOStream(d){
+  try{
+    const row=document.getElementById('eorow');
+    const el=document.createElement('div');
+    el.className='sd new';
+    el.style.background=d%2===0?'rgba(0,212,255,.15)':'rgba(179,136,255,.15)';
+    el.style.border=`1px solid ${d%2===0?'rgba(0,212,255,.4)':'rgba(179,136,255,.4)'}`;
+    el.style.color=d%2===0?'#00d4ff':'#b388ff';
+    el.textContent=d;
+    row.appendChild(el);
+    while(row.children.length>35)row.removeChild(row.firstChild);
+    row.parentElement.scrollLeft=row.parentElement.scrollWidth;
+  }catch(e){}
+}
+
+function updEOFreq(stream){
+  try{
+    if(!stream||!stream.length)return;
+    const total=stream.length;
+    const evenC=stream.filter(d=>d%2===0).length;
+    const ep=Math.round(evenC/total*100),op=100-ep;
+    document.getElementById('eoEvenPct').textContent=ep+'%';
+    document.getElementById('eoOddPct').textContent=op+'%';
+    document.getElementById('eoEvenBar').style.width=ep+'%';
+    document.getElementById('eoOddBar').style.width=op+'%';
+    const last10=stream.slice(-10);
+    document.getElementById('eoLast10').textContent=last10.map(d=>d%2===0?'E':'O').join(' ');
+    const lastD=stream[stream.length-1];
+    let streak=0;
+    for(let i=stream.length-1;i>=0;i--){if((stream[i]%2===0)===(lastD%2===0))streak++;else break;}
+    document.getElementById('eoStreakTxt').textContent=streak+'× '+(lastD%2===0?'EVEN':'ODD');
+  }catch(e){}
+}
+
+function analyseEO(stream,inst){
+  if(!stream||stream.length<10)return{dir:'WAIT',conf:0,runs:0,cond:'Need more ticks...',evenPct:50,oddPct:50,streak:0};
+  const total=stream.length,evenC=stream.filter(d=>d%2===0).length;
+  const ep=evenC/total*100,op=100-ep,dev=ep-50;
+  const lastD=stream[stream.length-1];
+  let streak=0;
+  for(let i=stream.length-1;i>=0;i--){if((stream[i]%2===0)===(lastD%2===0))streak++;else break;}
+  const lastType=lastD%2===0?'EVEN':'ODD';
+  const s1=is1s(inst);
+  let dir,conf,cond;
+  if(streak>=6){dir=lastType==='EVEN'?'ODD':'EVEN';conf=Math.min(68,50+streak*3);cond=`${streak}× ${lastType} streak — break to ${dir} likely.`;}
+  else if(Math.abs(dev)>=10){dir=dev>0?'ODD':'EVEN';conf=Math.min(70,50+Math.abs(dev)*1.2);cond=`${Math.round(ep)}% Even / ${Math.round(op)}% Odd — ${dir} reversion favoured.`;}
+  else if(streak>=4){dir=lastType==='EVEN'?'ODD':'EVEN';conf=Math.min(62,48+streak*2);cond=`${streak}× ${lastType} — ${dir} signal forming.`;}
+  else{dir='WAIT';conf=0;cond=`Balanced ${Math.round(ep)}% Even / ${Math.round(op)}% Odd — no signal yet.`;}
+  const runs=dir==='WAIT'?0:conf>=62?(s1?3:4):conf>=55?(s1?2:3):(s1?1:2);
+  return{dir,conf:Math.round(conf),runs,cond,evenPct:Math.round(ep),oddPct:Math.round(op),streak};
+}
+
+function runEO(){
+  const btn=document.getElementById('eoBtn'),scn=document.getElementById('eoScan');
+  btn.disabled=true;btn.style.opacity='.35';scn.style.display='block';
+  setTimeout(()=>{
+    try{
+      const stream=getDg(eoInst);updEOFreq(stream);
+      const r=analyseEO(stream,eoInst);
+      const isEven=r.dir==='EVEN',col=isEven?'#00d4ff':'#b388ff';
+      document.getElementById('eoDir').textContent=r.dir;
+      document.getElementById('eoDir').className=`dsv ${isEven?'a':r.dir==='ODD'?'pu':'y'}`;
+      document.getElementById('eoDirCell').className=`dsc ${isEven?'a':r.dir==='ODD'?'pu':'y'}`;
+      document.getElementById('eoRns').textContent=r.runs||'WAIT';
+      document.getElementById('eoRns').style.color=r.runs>=3?'#00ff88':r.runs>=2?'#ffd700':'#ff8c00';
+      document.getElementById('eoCond').textContent=r.cond;
+      document.getElementById('eoCpct').textContent=r.conf+'%';
+      const cf=document.getElementById('eoCf');cf.style.width=r.conf+'%';cf.style.background=r.dir!=='WAIT'?col:'#ff3b5c';
+      eoMaxR=r.runs;eoRDone=0;
+      if(r.runs>0){
+        buildDots('eoDots',r.runs);
+        document.getElementById('eoRW').style.display='block';
+        document.getElementById('eoMb').disabled=false;document.getElementById('eoMb').style.opacity='1';
+        document.getElementById('eoRN').textContent=`${r.runs} run${r.runs>1?'s':''} × 1 tick`;
+        startExp('eo',Math.max(10,r.runs*(is1s(eoInst)?3:5)));
+      } else {
+        document.getElementById('eoRW').style.display='none';document.getElementById('eoEW').style.display='none';
+        if(eoETi)clearInterval(eoETi);
+      }
+      addEOLog(r);
+    }catch(e){}
+    scn.style.display='none';btn.disabled=false;btn.style.opacity='1';
+  },250);
+}
+
+function eoMark(){
+  try{
+    if(eoRDone>=eoMaxR)return;
+    document.getElementById(`eoDots_${eoRDone}`)?.classList.add('on');
+    eoRDone++;
+    if(eoRDone>=eoMaxR){document.getElementById('eoMb').disabled=true;document.getElementById('eoMb').style.opacity='.3';if(eoETi)clearInterval(eoETi);document.getElementById('eoEf').style.width='0%';document.getElementById('eoEp').textContent='DONE';}
+  }catch(e){}
+}
+
+function tradeEO(){
+  const dir=document.getElementById('eoDir').textContent;
+  const runs=parseInt(document.getElementById('eoRns').textContent)||1;
+  if(dir==='WAIT'||dir==='—'){showTradeMsg('No signal — press ANALYSE EVEN/ODD first','#ff3b5c');return;}
+  if(dir==='EVEN')queueTrades('DIGITEVEN',eoInst,1,'t',null,runs);
+  else if(dir==='ODD')queueTrades('DIGITODD',eoInst,1,'t',null,runs);
+}
+
+function addEOLog(r){
+  try{
+    const tb=document.getElementById('eoLog');
+    if(tb.querySelector('td[colspan]'))tb.innerHTML='';
+    const col=r.dir==='EVEN'?'style="color:#00d4ff"':r.dir==='ODD'?'style="color:#b388ff"':'class="wt"';
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${new Date().toTimeString().slice(0,8)}</td><td>${SYM[eoInst]}</td><td ${col}>${r.dir}</td><td style="color:#00d4ff">${r.evenPct}%</td><td style="color:#b388ff">${r.oddPct}%</td><td style="color:#ffd700">${r.runs}</td><td>${r.conf}%</td>`;
+    tb.insertAdjacentElement('afterbegin',tr);
+    if(tb.children.length>8)tb.removeChild(tb.lastChild);
+  }catch(e){}
 }
 
 // Auto-scan every 30s
