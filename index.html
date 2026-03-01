@@ -359,7 +359,7 @@ canvas{display:block;width:100%;border-radius:4px;}
   <div class="p" style="border-top:3px solid #ffd700;">
     <div class="pt" style="color:#ffd700;">⚡ AUTO TRADING BOTS</div>
     <div style="font-family:var(--mn);font-size:10px;color:var(--dm);line-height:1.8">
-      Each bot scans all 10 markets every 15s, picks best signal, fires pipeline trades.<br>
+      Bot runs isolated — top tracker freezes. One trade at a time. Full history below.<br>
       <b style="color:#ff3b5c">⚠ Places real trades. Set TP/SL carefully.</b>
     </div>
     <!-- Bot Selector -->
@@ -429,8 +429,40 @@ canvas{display:block;width:100%;border-radius:4px;}
   </div>
   <!-- Bot Activity Log -->
   <div class="p" id="botLogPanel">
-    <div class="pt">Bot Activity</div>
-    <div id="botActivity" style="font-family:var(--mn);font-size:9px;color:var(--dm);max-height:160px;overflow-y:auto;line-height:2;">Bot not started yet.</div>
+    <div class="pt">Bot Activity <span style="font-size:8px;color:var(--dm);font-family:var(--mn)">(live log)</span></div>
+    <div id="botActivity" style="font-family:var(--mn);font-size:9px;color:var(--dm);max-height:140px;overflow-y:auto;line-height:2;">Bot not started yet.</div>
+  </div>
+  <!-- Bot Trade History -->
+  <div class="p">
+    <div class="pt">Bot Trade History</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+      <div style="flex:1;background:var(--p2);border:1px solid var(--bd);border-radius:5px;padding:7px;text-align:center;">
+        <div style="font-family:var(--mn);font-size:8px;color:var(--dm)">WIN RATE</div>
+        <div style="font-family:var(--dp);font-size:20px;font-weight:900" id="botHistWR">—</div>
+      </div>
+      <div style="flex:1;background:var(--p2);border:1px solid var(--bd);border-radius:5px;padding:7px;text-align:center;">
+        <div style="font-family:var(--mn);font-size:8px;color:var(--dm)">TRADES</div>
+        <div style="font-family:var(--dp);font-size:20px;font-weight:900;color:var(--tx)" id="botHistTotal">0</div>
+      </div>
+      <div style="flex:1;background:var(--p2);border:1px solid var(--bd);border-radius:5px;padding:7px;text-align:center;">
+        <div style="font-family:var(--mn);font-size:8px;color:var(--dm)">P&L</div>
+        <div style="font-family:var(--dp);font-size:20px;font-weight:900;color:#00ff88" id="botHistPnl">$0</div>
+      </div>
+    </div>
+    <button onclick="exportBotCSV()" style="width:100%;padding:8px;background:rgba(255,215,0,.1);border:1.5px solid rgba(255,215,0,.4);color:#ffd700;font-family:var(--dp);font-size:12px;font-weight:700;letter-spacing:2px;border-radius:5px;cursor:pointer;margin-bottom:8px;">⬇ EXPORT BOT CSV</button>
+    <div style="overflow-x:auto;">
+      <table class="lt" style="width:100%;min-width:480px;">
+        <thead>
+          <tr>
+            <th>TIME</th><th>MODE</th><th>TYPE</th><th>INST</th>
+            <th>STAKE</th><th>P&L</th><th>RES</th><th>CONTRACT ID</th>
+          </tr>
+        </thead>
+        <tbody id="botHistTbl">
+          <tr><td colspan="8" style="text-align:center;color:var(--dm);padding:16px">No bot trades yet</td></tr>
+        </tbody>
+      </table>
+    </div>
   </div>
   <!-- Start/Stop -->
   <button id="botStartBtn" onclick="startBot()" class="abtn" style="border-color:#ffd700;color:#ffd700;">⚡ START AUTO BOT</button>
@@ -1121,6 +1153,7 @@ function mgMult(ct,barrier){
 }
 
 function mgOnResult(won,pnl,ct,barrier){
+  if(botRunning)return; // bot has its own result handler
   MG.totalPnl=+(MG.totalPnl+pnl).toFixed(2);
   if(won){
     MG.wins++;MG.streak=0;
@@ -1556,7 +1589,7 @@ function injectTradingUI(){
         </div>
       </div>
       <!-- MARTINGALE TRACKER -->
-      <div style="background:rgba(0,0,0,.2);border:1px solid var(--bd);border-radius:6px;padding:8px 12px;margin-bottom:8px;">
+      <div id="mgTrackerPanel" style="background:rgba(0,0,0,.2);border:1px solid var(--bd);border-radius:6px;padding:8px 12px;margin-bottom:8px;">
         <div style="font-family:var(--dp);font-size:9px;font-weight:700;letter-spacing:2px;color:var(--dm);margin-bottom:6px;">MG · OV0-3/RF×3.6 · DIFF×6.8 · OV4/U5×2.1 · MATCH×1.5 · E/O×2.1</div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
           <div style="text-align:center"><div style="font-family:var(--mn);font-size:8px;color:var(--dm)">NEXT STAKE</div><div style="font-family:var(--dp);font-size:22px;font-weight:900;color:#ffd700" id="mgStake">$1.00</div></div>
@@ -1568,7 +1601,7 @@ function injectTradingUI(){
         </div>
       </div>
       <!-- OPEN POSITIONS -->
-      <div style="background:rgba(0,0,0,.15);border:1px solid var(--bd);border-radius:6px;padding:8px 10px;">
+      <div id="openPosPanel" style="background:rgba(0,0,0,.15);border:1px solid var(--bd);border-radius:6px;padding:8px 10px;">
         <div style="font-family:var(--dp);font-size:10px;font-weight:700;letter-spacing:2px;color:var(--dm);margin-bottom:4px;">OPEN POSITIONS</div>
         <div id="openPositions"><span style="font-family:var(--mn);font-size:9px;color:var(--dm)">No open positions</span></div>
       </div>
@@ -1726,6 +1759,121 @@ function exportCSV(){
   a.click();
   showTradeMsg(`✓ Exported ${tradeHistory.length} trades`,'#00ff88');
 }
+
+let botRunning=false,botTimer=null;
+let botPnl=0,botWins=0,botLosses=0,botStake=1;
+let botActive=false,botPipeline=0;
+let botNextSignal=null;
+let botPreloading=false;
+let botLastFireTime=0;
+const BOT_MIN_GAP=800;
+let botCurrentContractId=null; // tracks the ONE open bot contract
+let botRecoveryMode=false;
+let botBaseStake=1;
+// Bot isolated history — completely separate from manual
+const botHistory=[];
+let botHistoryIdCounter=0;
+
+// ── BOT MODE UI CONTROL ──
+function freezeTopPanel(){
+  try{
+    const mg=document.getElementById('mgTrackerPanel');
+    const op=document.getElementById('openPosPanel');
+    if(mg){
+      mg.style.opacity='0.35';
+      mg.style.pointerEvents='none';
+      // Insert BOT MODE banner
+      if(!document.getElementById('botModeBanner')){
+        const banner=document.createElement('div');
+        banner.id='botModeBanner';
+        banner.style.cssText='position:absolute;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.6);border-radius:6px;z-index:10;';
+        banner.innerHTML='<span style="font-family:var(--dp);font-size:13px;font-weight:900;color:#ffd700;letter-spacing:3px;">⚡ BOT RUNNING</span>';
+        mg.style.position='relative';
+        mg.appendChild(banner);
+      }
+    }
+    if(op){
+      op.style.opacity='0.35';
+      op.style.pointerEvents='none';
+    }
+  }catch(e){}
+}
+
+function unfreezeTopPanel(){
+  try{
+    const mg=document.getElementById('mgTrackerPanel');
+    const op=document.getElementById('openPosPanel');
+    if(mg){
+      mg.style.opacity='1';
+      mg.style.pointerEvents='auto';
+      const b=document.getElementById('botModeBanner');
+      if(b)b.remove();
+    }
+    if(op){
+      op.style.opacity='1';
+      op.style.pointerEvents='auto';
+    }
+  }catch(e){}
+}
+
+// Bot isolated history functions
+function addBotHistory(entry){
+  botHistory.unshift(entry);
+  if(botHistory.length>200)botHistory.pop();
+  renderBotHistory();
+}
+
+function renderBotHistory(){
+  try{
+    const tb=document.getElementById('botHistTbl');
+    if(!tb)return;
+    if(!botHistory.length){
+      tb.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--dm);padding:16px">No bot trades yet</td></tr>';
+      return;
+    }
+    tb.innerHTML=botHistory.slice(0,100).map(e=>{
+      const typeLabel={DIGITOVER:'OVER',DIGITUNDER:'UNDER',DIGITDIFF:'DIFFERS',
+        DIGITMATCH:'MATCH',DIGITEVEN:'EVEN',DIGITODD:'ODD',CALL:'HIGHER',PUT:'LOWER'};
+      const tl=typeLabel[e.ct]||e.ct||'—';
+      const col=e.won?'#00ff88':'#ff3b5c';
+      const mode=e.recovery?'🔄':'✦';
+      return`<tr style="border-bottom:1px solid rgba(28,50,72,.3)">
+        <td style="color:var(--dm);font-size:9px;white-space:nowrap">${e.timeStr}</td>
+        <td style="color:#ffd700;font-size:8px">${mode}${e.recovery?'REC':'NRM'}</td>
+        <td style="color:#00d4ff;font-weight:700">${tl} ${e.barrier!==null&&e.barrier!==undefined?e.barrier:''}</td>
+        <td style="color:var(--tx)">${e.sym}</td>
+        <td style="color:#ffd700">$${parseFloat(e.stake).toFixed(2)}</td>
+        <td style="color:${col};font-weight:700">${e.won?'+':''}$${parseFloat(e.pnl).toFixed(2)}</td>
+        <td style="color:${col};font-weight:700">${e.won?'WIN':'LOSS'}</td>
+        <td style="color:var(--dm);font-size:8px;max-width:80px;overflow:hidden;text-overflow:ellipsis">${e.contractId||'—'}</td>
+      </tr>`;
+    }).join('');
+    // Update summary
+    const wins=botHistory.filter(e=>e.won).length;
+    const wr=botHistory.length?Math.round(wins/botHistory.length*100):0;
+    const pnl=botHistory.reduce((s,e)=>s+e.pnl,0);
+    try{
+      document.getElementById('botHistWR').textContent=wr+'%';
+      document.getElementById('botHistWR').style.color=wr>=60?'#00ff88':wr>=50?'#ffd700':'#ff3b5c';
+      document.getElementById('botHistTotal').textContent=botHistory.length;
+      document.getElementById('botHistPnl').textContent=(pnl>=0?'+$':'-$')+Math.abs(pnl).toFixed(2);
+      document.getElementById('botHistPnl').style.color=pnl>=0?'#00ff88':'#ff3b5c';
+    }catch(e){}
+  }catch(e){}
+}
+
+function exportBotCSV(){
+  if(!botHistory.length){showTradeMsg('No bot trades to export','#ff3b5c');return;}
+  const hdr='Time,Mode,Type,Symbol,Barrier,Stake,PnL,Result,ContractID\n';
+  const rows=botHistory.map(e=>`${e.time},${e.recovery?'RECOVERY':'NORMAL'},${e.ct},${e.sym},${e.barrier??''},${e.stake},${e.pnl.toFixed(2)},${e.won?'WIN':'LOSS'},${e.contractId||''}`).join('\n');
+  const blob=new Blob([hdr+rows],{type:'text/csv'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`BotHistory_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  showTradeMsg(`✓ Exported ${botHistory.length} bot trades`,'#00ff88');
+}
+
 // ── EVEN/ODD ──
 let eoInst='R_75',eoMaxR=0,eoRDone=0,eoETi=null;
 
@@ -1867,16 +2015,6 @@ const BOT_CONFIGS={
   df:{name:'DIFFERS',mg:6.8,findSignal:botFindDF,label:'#b388ff'}
 };
 
-let botRunning=false,botTimer=null;
-let botPnl=0,botWins=0,botLosses=0,botStake=1;
-let botActive=false,botPipeline=0;
-let botNextSignal=null;
-let botPreloading=false;
-let botLastFireTime=0;
-const BOT_MIN_GAP=500;
-// Recovery state
-let botRecoveryMode=false;   // true after a loss — look for OVER3/UNDER6
-let botBaseStake=1;          // always remember base for reset
 
 function selBot(type){
   if(botRunning){showTradeMsg('Stop bot first','#ff3b5c');return;}
@@ -2000,12 +2138,15 @@ function checkBotResult(d){
       botPnl=+(botPnl+pnl).toFixed(2);
       const cfg=BOT_CONFIGS[activeBotType];
 
-      // Use unified MG system for win/loss tracking + history
-      const mgMult_bot=botRecoveryMode?3.6:3.6; // OU bot always 3.6
+      const capturedContractId=botCurrentContractId;
+      // Clear lock FIRST
+      botCurrentContractId=null;
+      botActive=false;botPipeline=0;
+
       const maxS=parseFloat(document.getElementById('botMaxStake').value)||30;
 
       if(won){
-        botWins++;MG.wins++;MG.streak=0;
+        botWins++;
         if(botRecoveryMode){
           botRecoveryMode=false;
           try{document.getElementById('botModeLabel').textContent='✦ NORMAL · OVER2/UNDER7';document.getElementById('botModeLabel').style.color='#00ff88';}catch(e){}
@@ -2014,10 +2155,9 @@ function checkBotResult(d){
           botLog(`✓ WIN +$${pnl.toFixed(2)}`,'#00ff88');
         }
         botStake=botBaseStake;
-        MG.current=botBaseStake;
         try{soundWin();}catch(e){}
       } else {
-        botLosses++;MG.losses++;MG.streak--;
+        botLosses++;
         const next=+(botStake*3.6).toFixed(2);
         const newStake=next>maxS?botBaseStake:next;
         if(!botRecoveryMode){
@@ -2029,26 +2169,28 @@ function checkBotResult(d){
         }
         if(next>maxS){botRecoveryMode=false;botLog('⚠ Max stake → reset','#ff8c00');}
         botStake=newStake;
-        MG.current=newStake;
         try{soundLoss();}catch(e){}
       }
 
-      // Update MG total P&L and history
-      MG.totalPnl=+(MG.totalPnl+pnl).toFixed(2);
       botPnl=+(botPnl+pnl).toFixed(2);
 
-      // Log to unified trade history
-      try{addTradeHistory(MG.lastType||sig.ct,MG.lastSym||sig.inst,MG.lastBarrier,MG.lastStake||botStake,pnl,won);}catch(e){}
-
-      // Sync display
+      // Log to BOT'S OWN ISOLATED HISTORY
       try{
-        document.getElementById('stakeAmt').value=MG.current.toFixed(2);
-        updMartStats();
+        addBotHistory({
+          time:new Date().toISOString(),
+          timeStr:new Date().toTimeString().slice(0,8),
+          ct:MG.lastType||'UNKNOWN',
+          sym:SYM[MG.lastSym]||MG.lastSym||'—',
+          barrier:MG.lastBarrier!==null&&MG.lastBarrier!==undefined?MG.lastBarrier:null,
+          stake:MG.lastStake||botStake,
+          pnl:pnl,
+          won:won,
+          recovery:won?false:botRecoveryMode,
+          contractId:capturedContractId&&capturedContractId!=='pending'?capturedContractId:'—'
+        });
       }catch(e){}
 
       botUpdStats();
-      botActive=false;botPipeline=0;
-
       const modeStr=botRecoveryMode?'🔄 RECOVERY: OVER3/UNDER6':'✦ NORMAL: OVER2/UNDER7';
       botSetStatus(`${modeStr} · $${botStake.toFixed(2)} · scanning...`,'#00d4ff');
 
@@ -2078,13 +2220,15 @@ function checkBotResult(d){
 
 function botFire(sig){
   if(!accountInfo||!tradeWSok||!botRunning)return;
-  // Prevent double-fire
+  // HARD SINGLE LOCK — one trade at a time, no exceptions
+  if(botActive||botCurrentContractId){return;}
   const now=Date.now();
   if(now-botLastFireTime<BOT_MIN_GAP)return;
   botLastFireTime=now;
   const stake=botStake;
   botActive=true;botPipeline=1;
-  botNextSignal=null; // clear preloaded — will refresh after this fires
+  botCurrentContractId='pending'; // reserve slot BEFORE sending
+  botNextSignal=null;
   const tickMs=getTickMs(sig.inst);
   botLog(`⚡ ${sig.dir}${sig.ent!==null?' '+sig.ent:''} · ${SYM[sig.inst]} · $${stake} · ${sig.conf}%`,'#00d4ff');
   botSetStatus(`⟳ Open: ${sig.dir}${sig.ent!==null?' '+sig.ent:''} · ${SYM[sig.inst]} · $${stake}`,'#ffd700');
@@ -2147,6 +2291,7 @@ function startBot(){
   botBaseStake=parseFloat(document.getElementById('botBase').value)||1;
   botStake=botBaseStake;
   botRecoveryMode=false;botNextSignal=null;botPreloading=false;
+  botCurrentContractId=null;
   // Sync main MG base to bot base so martingale tracker matches
   MG.base=botBaseStake;
   MG.current=botBaseStake;
@@ -2157,6 +2302,7 @@ function startBot(){
   }catch(e){}
   document.getElementById('botStartBtn').style.display='none';
   document.getElementById('botStopBtn').style.display='block';
+  freezeTopPanel();
   const cfg=BOT_CONFIGS[activeBotType];
   const tp=document.getElementById('botTP').value;
   const sl=document.getElementById('botSL').value;
@@ -2175,9 +2321,11 @@ function startBot(){
 
 function stopBot(){
   botRunning=false;botActive=false;botPipeline=0;
+  botCurrentContractId=null;
   clearInterval(botTimer);
   document.getElementById('botStartBtn').style.display='block';
   document.getElementById('botStopBtn').style.display='none';
+  unfreezeTopPanel();
   const sign=botPnl>=0?'+':'';
   botSetStatus(`Stopped · P&L: ${sign}$${Math.abs(botPnl).toFixed(2)} · W:${botWins} L:${botLosses}`,'var(--dm)');
   botLog(`■ Stopped · P&L: ${sign}$${Math.abs(botPnl).toFixed(2)} · W:${botWins} L:${botLosses}`,'#ffd700');
@@ -2187,59 +2335,7 @@ function stopBot(){
 // Auto-scan every 30s
 setInterval(()=>{try{if(document.getElementById('tab-sc').classList.contains('on'))runScan();}catch(e){}},30000);
 
-function renderScan(results){
-  try{
-    const wrap=document.getElementById('scResults');wrap.innerHTML='';
-    const best=results.find(x=>x.r.dir!=='WAIT');
-    if(best){
-      const bp=document.getElementById('bestPanel');bp.style.display='block';
-      const col=getCol(best.r.dir);
-      const isLogged=!!accountInfo;
-      document.getElementById('bestContent').innerHTML=`
-        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-          <div style="font-family:var(--mn);font-size:13px;color:var(--tx)">${SYM[best.inst]}</div>
-          <div style="font-family:var(--dp);font-size:38px;font-weight:900;color:${col}">${best.r.dir}</div>
-          <div style="font-family:var(--dp);font-size:38px;font-weight:900;color:#00d4ff">${best.r.ent!==null?best.r.ent:'—'}</div>
-          <div style="flex:1;min-width:110px">
-            <div style="display:flex;justify-content:space-between;font-family:var(--mn);font-size:9px;color:var(--dm);margin-bottom:3px"><span>CONFIDENCE</span><span style="color:${col}">${best.r.conf}%</span></div>
-            <div style="height:4px;background:var(--bd);border-radius:2px;overflow:hidden"><div style="height:100%;width:${best.r.conf}%;background:${col};border-radius:2px"></div></div>
-          </div>
-          ${chkFav(best)?'<div style="font-family:var(--mn);font-size:9px;background:rgba(255,215,0,.1);color:#ffd700;border:1px solid rgba(255,215,0,.25);padding:3px 9px;border-radius:3px;">★ FAV</div>':''}
-          ${best.live?'<span class="livebadge">LIVE</span>':'<span class="simbadge">SIM</span>'}
-        </div>
-        <div style="font-family:var(--mn);font-size:10px;color:var(--dm);margin-top:6px;line-height:1.7">${best.r.cond}</div>
-        <div style="font-family:var(--mn);font-size:9px;color:#ffd700;margin-top:3px">Runs: ${best.r.runs} · Digit: ${best.r.ent!==null?best.r.ent:'—'}${best.mode==='ou'?' · Low:'+best.r.lp+'% Hi:'+best.r.hp+'%':''}</div>
-        <button onclick="scanTrade('${best.r.dir}','${best.inst}',${best.r.ent},${best.r.runs})" class="scan-trade-btn"
-          style="display:${isLogged?'block':'none'};width:100%;margin-top:10px;padding:13px;background:rgba(0,212,255,.1);border:2px solid #00d4ff;color:#00d4ff;font-family:var(--dp);font-size:16px;font-weight:900;letter-spacing:3px;border-radius:6px;cursor:pointer;"
-          onmousedown="this.style.background='rgba(0,212,255,.22)'" onmouseup="this.style.background='rgba(0,212,255,.1)'">⚡ TRADE BEST SIGNAL · ${best.r.runs} RUN${best.r.runs>1?'S':''}</button>`;
-    }
-    const hdr=document.createElement('div');
-    hdr.style.cssText='font-family:var(--mn);font-size:9px;color:var(--dm);letter-spacing:2px;padding:4px 0 8px;text-transform:uppercase;';
-    hdr.textContent='All Markets — Ranked by Confidence';wrap.appendChild(hdr);
 
-    results.forEach((x,rank)=>{
-      const{inst,r,live,mode}=x,isW=r.dir==='WAIT';
-      const col=getCol(r.dir),cls=r.dir==='OVER'?'over':r.dir==='UNDER'?'under':r.dir==='DIFFERS'?'diff':r.dir==='MATCHES'?'match':'wait';
-      const card=document.createElement('div');
-      card.className=`scard ${cls}${rank===0&&!isW?' top-pick':''}`;
-      const bVal=r.ent!==null?r.ent:'null';
-      card.innerHTML=`
-        ${chkFav(x)?'<div class="favbadge">★ FAV</div>':`<div class="srank">#${rank+1}</div>`}
-        <div class="sinst">${SYM[inst]}${is1s(inst)?'<div style="font-family:var(--mn);font-size:8px;color:#ff8c00">⚡1s</div>':''}<div style="margin-top:2px">${live?'<span class="livebadge">LIVE</span>':'<span class="simbadge">SIM</span>'}</div></div>
-        <div><div class="sdir ${cls}">${r.dir}</div><div style="font-family:var(--mn);font-size:8px;color:var(--dm)">DIGIT</div><div class="sdg">${r.ent!==null?r.ent:'—'}</div></div>
-        <div class="sbars">
-          ${mode==='ou'?`<div class="sbrow"><div class="sblbl" style="color:#00ff88">LO</div><div class="sbbg"><div class="sbf" style="width:${r.lp}%;background:#00ff88"></div></div><div style="font-family:var(--mn);font-size:8px;color:#00ff88;min-width:26px;text-align:right">${r.lp}%</div></div><div class="sbrow"><div class="sblbl" style="color:#ff3b5c">HI</div><div class="sbbg"><div class="sbf" style="width:${r.hp}%;background:#ff3b5c"></div></div><div style="font-family:var(--mn);font-size:8px;color:#ff3b5c;min-width:26px;text-align:right">${r.hp}%</div></div>`:`<div class="sbrow"><div class="sblbl" style="color:${col}">${r.dir.slice(0,4)}</div><div class="sbbg"><div class="sbf" style="width:${r.conf}%;background:${col}"></div></div><div style="font-family:var(--mn);font-size:8px;color:${col};min-width:26px;text-align:right">${r.conf}%</div></div>`}
-          <div class="scond">${r.cond.slice(0,56)}${r.cond.length>56?'…':''}</div>
-        </div>
-        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;min-width:44px;">
-          <div class="sconf">${isW?'—':r.conf+'%'}<br><span style="color:#ffd700">${r.runs>0?r.runs+'r':'WAIT'}</span></div>
-          ${!isW?`<button onclick="scanTrade('${r.dir}','${inst}',${bVal},${r.runs})" class="scan-trade-btn"
-            style="display:${accountInfo?'block':'none'};padding:5px 7px;background:rgba(0,212,255,.1);border:1.5px solid #00d4ff;color:#00d4ff;font-family:var(--mn);font-size:8px;border-radius:4px;cursor:pointer;white-space:nowrap;letter-spacing:1px;">⚡${r.runs}R</button>`:''}
-        </div>`;
-      wrap.appendChild(card);
-    });
-  }catch(e){}
-}
 
 // Init
 try{initWS();}catch(e){setConn('offline');}
