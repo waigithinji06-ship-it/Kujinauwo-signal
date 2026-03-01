@@ -388,9 +388,10 @@ canvas{display:block;width:100%;border-radius:4px;}
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;">
       <div style="flex:1;min-width:120px;">
-        <div style="font-family:var(--mn);font-size:9px;color:var(--dm);margin-bottom:5px;">BASE STAKE ($)</div>
+        <div style="font-family:var(--mn);font-size:9px;color:var(--dm);margin-bottom:5px;">BASE STAKE ($) <span style="color:#00d4ff">— syncs with main MG on start</span></div>
         <input id="botBase" type="number" value="1" min="0.35" step="0.5"
-          style="width:100%;background:var(--p2);border:1.5px solid rgba(255,215,0,.3);color:#ffd700;font-family:var(--dp);font-size:22px;font-weight:900;padding:8px 10px;border-radius:5px;text-align:center;">
+          style="width:100%;background:var(--p2);border:1.5px solid rgba(255,215,0,.3);color:#ffd700;font-family:var(--dp);font-size:22px;font-weight:900;padding:8px 10px;border-radius:5px;text-align:center;"
+          onchange="MG.base=parseFloat(this.value)||1;MG.current=MG.base;document.getElementById('stakeAmt').value=MG.base.toFixed(2);updMartStats();">
       </div>
       <div style="flex:1;min-width:120px;">
         <div style="font-family:var(--mn);font-size:9px;color:var(--dm);margin-bottom:5px;">MAX STAKE ($)</div>
@@ -402,6 +403,7 @@ canvas{display:block;width:100%;border-radius:4px;}
   <!-- Bot Stats -->
   <div class="p" id="botStatsPanel">
     <div class="pt">Bot Performance</div>
+    <div style="font-family:var(--mn);font-size:8px;color:rgba(0,212,255,.6);margin-bottom:6px;">BOT SESSION ONLY — resets each start. Main MG tracker above is lifetime.</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
       <div style="flex:1;min-width:70px;background:var(--p2);border:1px solid var(--bd);border-radius:5px;padding:8px;text-align:center;">
         <div style="font-family:var(--mn);font-size:8px;color:var(--dm)">BOT P&L</div>
@@ -419,6 +421,9 @@ canvas{display:block;width:100%;border-radius:4px;}
         <div style="font-family:var(--mn);font-size:8px;color:var(--dm)">NEXT STAKE</div>
         <div style="font-family:var(--dp);font-size:22px;font-weight:900;color:#ffd700" id="botNextStake">$1</div>
       </div>
+    </div>
+    <div style="font-family:var(--mn);font-size:8px;color:var(--dm);margin-bottom:4px;">
+      MODE: <span id="botModeLabel" style="color:#00ff88">NORMAL · OVER2/UNDER7</span>
     </div>
     <div style="font-family:var(--mn);font-size:9px;padding:6px 10px;background:rgba(0,0,0,.2);border-radius:4px;" id="botStatus">Bot stopped</div>
   </div>
@@ -1076,6 +1081,20 @@ function renderScan(results){
 // ══════════════════════════════════════════════════════
 let apiToken=null,accountInfo=null,tradeWS=null,tradeWSok=false,tradeReady=false;
 let openContracts={};
+let contractOpenTimes={}; // track when each contract was opened
+
+// Auto-cleanup ghost contracts every 10s
+setInterval(()=>{
+  const now=Date.now();
+  Object.keys(contractOpenTimes).forEach(id=>{
+    if(now-contractOpenTimes[id]>30000){ // 30s timeout
+      // Force remove from open positions
+      delete openContracts[id];
+      delete contractOpenTimes[id];
+    }
+  });
+  renderOpenPos();
+},10000);
 const tradePendQ=[];
 let pingTimer=null;
 
@@ -1088,7 +1107,7 @@ let currentRunContract=null; // contract_id of currently open run
 // ×3.2 → OVER 0-3, UNDER 6-9, ALL DIFFERS, RISE, FALL
 // ×2.1 → OVER 4, UNDER 5
 // ×1.5 → MATCHES (all)
-const MG={base:1,current:1,wins:0,losses:0,streak:0,totalPnl:0,lastType:null,lastBarrier:null,lastSym:null};
+const MG={base:1,current:1,wins:0,losses:0,streak:0,totalPnl:0,lastType:null,lastBarrier:null,lastSym:null,lastStake:0};
 
 function mgMult(ct,barrier){
   if(ct==='CALL'||ct==='PUT')return 3.2;
@@ -1124,8 +1143,14 @@ function mgOnResult(won,pnl,ct,barrier){
   }
   try{document.getElementById('stakeAmt').value=MG.current.toFixed(2);}catch(e){}
   updMartStats();
-  // Log to trade history
-  try{addTradeHistory(MG.lastType||'',MG.lastSym||'',MG.lastBarrier,parseFloat(MG.current.toFixed(2)),pnl,won);}catch(e){}
+  // Log to trade history — use captured values from buy time
+  try{
+    const ct=MG.lastType||'UNKNOWN';
+    const sym=MG.lastSym||'';
+    const bar=MG.lastBarrier;
+    const stk=MG.lastStake||parseFloat(MG.current.toFixed(2));
+    addTradeHistory(ct,sym,bar,stk,pnl,won);
+  }catch(e){}
 }
 
 function updMartStats(){
@@ -1240,7 +1265,8 @@ function onTradeMessage(d){
     // Bot hook
     try{checkBotResult(d);}catch(e){}
     if(c.is_sold){
-      pipelineDepth=Math.max(0,pipelineDepth-1); // free pipeline slot
+      pipelineDepth=Math.max(0,pipelineDepth-1);
+      delete contractOpenTimes[c.contract_id]; // remove from timeout tracker
       const oc=openContracts[c.contract_id]||{};
       const pnl=+(parseFloat(c.sell_price)-parseFloat(c.buy_price)).toFixed(2);
       const won=pnl>=0;
@@ -1287,7 +1313,8 @@ function firePipelineRun(run,stake){
     currency:accountInfo.currency||'USD'
   };
   if(run.barrier!==null&&run.barrier!==undefined)params.barrier=String(run.barrier);
-  MG.lastType=run.ct;MG.lastBarrier=run.barrier!==undefined?run.barrier:null;MG.lastSym=run.sym;
+  MG.lastType=run.ct;MG.lastBarrier=run.barrier!==undefined?run.barrier:null;
+  MG.lastSym=run.sym;MG.lastStake=stake;
   pipelineDepth++;
   tradeSend({buy:'1',price:stake,parameters:params});
 }
@@ -1654,13 +1681,20 @@ function renderTradeHistory(){
   try{
     const tb=document.getElementById('tradeHistTbl');
     if(!tb)return;
+    const typeLabel=ct=>{
+      if(!ct||ct==='UNKNOWN')return'—';
+      const map={DIGITOVER:'OVER',DIGITUNDER:'UNDER',DIGITDIFF:'DIFFERS',
+                 DIGITMATCH:'MATCH',DIGITEVEN:'EVEN',DIGITODD:'ODD',
+                 CALL:'HIGHER',PUT:'LOWER'};
+      return map[ct]||ct.replace('DIGIT','');
+    };
     tb.innerHTML=tradeHistory.slice(0,50).map(e=>`
       <tr style="border-bottom:1px solid rgba(28,50,72,.3)">
-        <td style="color:var(--dm)">${e.timeStr}</td>
-        <td style="color:var(--tx)">${e.ct.replace('DIGIT','')}</td>
-        <td style="color:#00d4ff">${e.symbol}</td>
-        <td style="color:var(--dm)">${e.barrier!==null&&e.barrier!==undefined?e.barrier:'—'}</td>
-        <td style="color:#ffd700">$${e.stake}</td>
+        <td style="color:var(--dm);font-size:9px">${e.timeStr}</td>
+        <td style="color:#00d4ff;font-weight:700">${typeLabel(e.ct)}</td>
+        <td style="color:var(--tx)">${e.symbol||'—'}</td>
+        <td style="color:#ffd700">${e.barrier!==null&&e.barrier!==undefined?e.barrier:'—'}</td>
+        <td style="color:#ffd700">$${parseFloat(e.stake||0).toFixed(2)}</td>
         <td style="color:${e.won?'#00ff88':'#ff3b5c'}">${e.won?'+':''}$${e.pnl.toFixed(2)}</td>
         <td style="color:${e.won?'#00ff88':'#ff3b5c'};font-weight:700">${e.won?'WIN':'LOSS'}</td>
       </tr>`).join('');
@@ -1968,6 +2002,7 @@ function checkBotResult(d){
         // Win in recovery → back to normal mode
         if(botRecoveryMode){
           botRecoveryMode=false;
+          try{document.getElementById('botModeLabel').textContent='✦ NORMAL · OVER2/UNDER7';document.getElementById('botModeLabel').style.color='#00ff88';}catch(e){}
           botLog(`✓ RECOVERY WIN +$${pnl.toFixed(2)} → back to OVER2/UNDER7`,'#00ff88');
         } else {
           botLog(`✓ WIN +$${pnl.toFixed(2)}`,'#00ff88');
@@ -1983,6 +2018,7 @@ function checkBotResult(d){
         // Enter recovery mode — switch to OVER3/UNDER6
         if(!botRecoveryMode){
           botRecoveryMode=true;
+          try{document.getElementById('botModeLabel').textContent='🔄 RECOVERY · OVER3/UNDER6';document.getElementById('botModeLabel').style.color='#ff3b5c';}catch(e){}
           botLog(`✗ LOSS -$${Math.abs(pnl).toFixed(2)} → RECOVERY MODE: OVER3/UNDER6 · $${newStake}`,'#ff3b5c');
         } else {
           botLog(`✗ LOSS -$${Math.abs(pnl).toFixed(2)} → MG×3.2 → $${newStake}`,'#ff3b5c');
@@ -2086,6 +2122,14 @@ function startBot(){
   botBaseStake=parseFloat(document.getElementById('botBase').value)||1;
   botStake=botBaseStake;
   botRecoveryMode=false;botNextSignal=null;botPreloading=false;
+  // Sync main MG base to bot base so martingale tracker matches
+  MG.base=botBaseStake;
+  MG.current=botBaseStake;
+  MG.wins=0;MG.losses=0;MG.streak=0;MG.totalPnl=0;
+  try{
+    document.getElementById('stakeAmt').value=botBaseStake.toFixed(2);
+    updMartStats();
+  }catch(e){}
   document.getElementById('botStartBtn').style.display='none';
   document.getElementById('botStopBtn').style.display='block';
   const cfg=BOT_CONFIGS[activeBotType];
