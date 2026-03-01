@@ -364,9 +364,9 @@ canvas{display:block;width:100%;border-radius:4px;}
     </div>
     <!-- Bot Selector -->
     <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;">
-      <button id="botSelOU" onclick="selBot('ou')" style="flex:1;padding:8px;background:rgba(0,255,136,.15);border:2px solid #00ff88;color:#00ff88;font-family:var(--dp);font-size:10px;font-weight:700;letter-spacing:1px;border-radius:5px;cursor:pointer;">OVER/UNDER<br><span style="font-size:8px;opacity:.7">O2/U7 → O3/U6 ×3.2</span></button>
+      <button id="botSelOU" onclick="selBot('ou')" style="flex:1;padding:8px;background:rgba(0,255,136,.15);border:2px solid #00ff88;color:#00ff88;font-family:var(--dp);font-size:10px;font-weight:700;letter-spacing:1px;border-radius:5px;cursor:pointer;">OVER/UNDER<br><span style="font-size:8px;opacity:.7">O2/U7 → O3/U6 ×3.6</span></button>
       <button id="botSelEO" onclick="selBot('eo')" style="flex:1;padding:8px;background:rgba(0,212,255,.08);border:2px solid rgba(0,212,255,.4);color:var(--dm);font-family:var(--dp);font-size:10px;font-weight:700;letter-spacing:1px;border-radius:5px;cursor:pointer;">EVEN/ODD<br><span style="font-size:8px;opacity:.7">MG×2.1</span></button>
-      <button id="botSelDF" onclick="selBot('df')" style="flex:1;padding:8px;background:rgba(179,136,255,.08);border:2px solid rgba(179,136,255,.4);color:var(--dm);font-family:var(--dp);font-size:10px;font-weight:700;letter-spacing:1px;border-radius:5px;cursor:pointer;">DIFFERS<br><span style="font-size:8px;opacity:.7">MG×3.8</span></button>
+      <button id="botSelDF" onclick="selBot('df')" style="flex:1;padding:8px;background:rgba(179,136,255,.08);border:2px solid rgba(179,136,255,.4);color:var(--dm);font-family:var(--dp);font-size:10px;font-weight:700;letter-spacing:1px;border-radius:5px;cursor:pointer;">DIFFERS<br><span style="font-size:8px;opacity:.7">MG×6.8</span></button>
     </div>
   </div>
   <!-- TP/SL Settings -->
@@ -1115,8 +1115,8 @@ function mgMult(ct,barrier){
   if(ct==='DIGITMATCH')return 1.5;
   if(ct==='DIGITEVEN')return 2.1;
   if(ct==='DIGITODD')return 2.1;
-  if(ct==='DIGITOVER')return(barrier!==null&&barrier!==undefined&&parseInt(barrier)<=3)?3.2:2.1;
-  if(ct==='DIGITUNDER')return(barrier!==null&&barrier!==undefined&&parseInt(barrier)===5)?2.1:3.2;
+  if(ct==='DIGITOVER')return(barrier!==null&&barrier!==undefined&&parseInt(barrier)<=3)?3.6:2.1;
+  if(ct==='DIGITUNDER')return(barrier!==null&&barrier!==undefined&&parseInt(barrier)===5)?2.1:3.6;
   return 3.2;
 }
 
@@ -1356,6 +1356,8 @@ function nextRun(){
 // ── QUEUE TRADES — the ONLY entry point ──
 function queueTrades(contractType,symbol,duration,durationUnit,barrier,runs){
   if(!apiToken){showTradeMsg('Enter your API token first','#ff3b5c');return;}
+  // LOCK: when bot is running, manual trades are disabled
+  if(botRunning){showTradeMsg('⚠ Bot is running — stop bot to trade manually','#ff8c00');return;}
   // DIGIT contracts ALWAYS use 1 tick — no exceptions
   const isDigit=['DIGITOVER','DIGITUNDER','DIGITDIFF','DIGITMATCH','DIGITEVEN','DIGITODD'].includes(contractType);
   const finalDur=isDigit?1:Math.max(1,parseInt(duration)||1);
@@ -1555,7 +1557,7 @@ function injectTradingUI(){
       </div>
       <!-- MARTINGALE TRACKER -->
       <div style="background:rgba(0,0,0,.2);border:1px solid var(--bd);border-radius:6px;padding:8px 12px;margin-bottom:8px;">
-        <div style="font-family:var(--dp);font-size:9px;font-weight:700;letter-spacing:2px;color:var(--dm);margin-bottom:6px;">MG · OV0-3/DIFF/RF×3.2 · OV4/U5×2.1 · MATCH×1.5 · E/O×2.1</div>
+        <div style="font-family:var(--dp);font-size:9px;font-weight:700;letter-spacing:2px;color:var(--dm);margin-bottom:6px;">MG · OV0-3/RF×3.6 · DIFF×6.8 · OV4/U5×2.1 · MATCH×1.5 · E/O×2.1</div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
           <div style="text-align:center"><div style="font-family:var(--mn);font-size:8px;color:var(--dm)">NEXT STAKE</div><div style="font-family:var(--dp);font-size:22px;font-weight:900;color:#ffd700" id="mgStake">$1.00</div></div>
           <div style="text-align:center"><div style="font-family:var(--mn);font-size:8px;color:var(--dm)">P&amp;L</div><div style="font-family:var(--dp);font-size:22px;font-weight:900;color:#00ff88" id="mgPnl">+$0</div></div>
@@ -1860,9 +1862,9 @@ let activeBotType='ou'; // 'ou', 'eo', 'df'
 
 // Bot configs
 const BOT_CONFIGS={
-  ou:{name:'OVER/UNDER',mg:3.3,findSignal:botFindOU,label:'#00ff88'},
+  ou:{name:'OVER/UNDER',mg:3.6,findSignal:botFindOU,label:'#00ff88'},
   eo:{name:'EVEN/ODD',mg:2.1,findSignal:botFindEO,label:'#00d4ff'},
-  df:{name:'DIFFERS',mg:3.8,findSignal:botFindDF,label:'#b388ff'}
+  df:{name:'DIFFERS',mg:6.8,findSignal:botFindDF,label:'#b388ff'}
 };
 
 let botRunning=false,botTimer=null;
@@ -1917,6 +1919,7 @@ function botFindOU(){
 // Called on every tick from the live stream
 function botOnTick(){
   if(!botRunning||botActive)return;
+  if(runQueue.length>0){runQueue=[];} // clear any leaked manual queue
   const now=Date.now();
   if(now-botLastFireTime<BOT_MIN_GAP)return;
   botTick();
@@ -1997,40 +2000,55 @@ function checkBotResult(d){
       botPnl=+(botPnl+pnl).toFixed(2);
       const cfg=BOT_CONFIGS[activeBotType];
 
+      // Use unified MG system for win/loss tracking + history
+      const mgMult_bot=botRecoveryMode?3.6:3.6; // OU bot always 3.6
+      const maxS=parseFloat(document.getElementById('botMaxStake').value)||30;
+
       if(won){
-        botWins++;
-        // Win in recovery → back to normal mode
+        botWins++;MG.wins++;MG.streak=0;
         if(botRecoveryMode){
           botRecoveryMode=false;
           try{document.getElementById('botModeLabel').textContent='✦ NORMAL · OVER2/UNDER7';document.getElementById('botModeLabel').style.color='#00ff88';}catch(e){}
-          botLog(`✓ RECOVERY WIN +$${pnl.toFixed(2)} → back to OVER2/UNDER7`,'#00ff88');
+          botLog(`✓ RECOVERY WIN +$${pnl.toFixed(2)} → OVER2/UNDER7 · reset $${botBaseStake}`,'#00ff88');
         } else {
           botLog(`✓ WIN +$${pnl.toFixed(2)}`,'#00ff88');
         }
-        botStake=botBaseStake; // always reset to base on win
-        document.getElementById('stakeAmt').value=botStake.toFixed(2);
+        botStake=botBaseStake;
+        MG.current=botBaseStake;
         try{soundWin();}catch(e){}
       } else {
-        botLosses++;
-        const maxS=parseFloat(document.getElementById('botMaxStake').value)||30;
-        const next=+(botStake*3.2).toFixed(2); // always ×3.2 for OU bot recovery
+        botLosses++;MG.losses++;MG.streak--;
+        const next=+(botStake*3.6).toFixed(2);
         const newStake=next>maxS?botBaseStake:next;
-        // Enter recovery mode — switch to OVER3/UNDER6
         if(!botRecoveryMode){
           botRecoveryMode=true;
           try{document.getElementById('botModeLabel').textContent='🔄 RECOVERY · OVER3/UNDER6';document.getElementById('botModeLabel').style.color='#ff3b5c';}catch(e){}
-          botLog(`✗ LOSS -$${Math.abs(pnl).toFixed(2)} → RECOVERY MODE: OVER3/UNDER6 · $${newStake}`,'#ff3b5c');
+          botLog(`✗ LOSS -$${Math.abs(pnl).toFixed(2)} → RECOVERY: OVER3/UNDER6 · $${newStake}`,'#ff3b5c');
         } else {
-          botLog(`✗ LOSS -$${Math.abs(pnl).toFixed(2)} → MG×3.2 → $${newStake}`,'#ff3b5c');
+          botLog(`✗ LOSS -$${Math.abs(pnl).toFixed(2)} → MG×3.6 → $${newStake}`,'#ff3b5c');
         }
+        if(next>maxS){botRecoveryMode=false;botLog('⚠ Max stake → reset','#ff8c00');}
         botStake=newStake;
-        if(next>maxS){botRecoveryMode=false;botLog('⚠ Max stake hit — reset','#ff8c00');}
+        MG.current=newStake;
         try{soundLoss();}catch(e){}
       }
+
+      // Update MG total P&L and history
+      MG.totalPnl=+(MG.totalPnl+pnl).toFixed(2);
+      botPnl=+(botPnl+pnl).toFixed(2);
+
+      // Log to unified trade history
+      try{addTradeHistory(MG.lastType||sig.ct,MG.lastSym||sig.inst,MG.lastBarrier,MG.lastStake||botStake,pnl,won);}catch(e){}
+
+      // Sync display
+      try{
+        document.getElementById('stakeAmt').value=MG.current.toFixed(2);
+        updMartStats();
+      }catch(e){}
+
       botUpdStats();
       botActive=false;botPipeline=0;
 
-      // UPDATE STATUS
       const modeStr=botRecoveryMode?'🔄 RECOVERY: OVER3/UNDER6':'✦ NORMAL: OVER2/UNDER7';
       botSetStatus(`${modeStr} · $${botStake.toFixed(2)} · scanning...`,'#00d4ff');
 
@@ -2070,6 +2088,13 @@ function botFire(sig){
   const tickMs=getTickMs(sig.inst);
   botLog(`⚡ ${sig.dir}${sig.ent!==null?' '+sig.ent:''} · ${SYM[sig.inst]} · $${stake} · ${sig.conf}%`,'#00d4ff');
   botSetStatus(`⟳ Open: ${sig.dir}${sig.ent!==null?' '+sig.ent:''} · ${SYM[sig.inst]} · $${stake}`,'#ffd700');
+  // Set MG tracking state BEFORE firing — so history captures correctly
+  MG.lastType=sig.ct;
+  MG.lastSym=sig.inst;
+  MG.lastBarrier=sig.ent!==null&&sig.ent!==undefined?sig.ent:null;
+  MG.lastStake=stake;
+  MG.current=stake;
+
   // FIRE INSTANTLY
   const params={
     contract_type:sig.ct,symbol:sig.inst,
