@@ -1280,7 +1280,14 @@ function onTradeMessage(d){
   if(d.msg_type==='buy'){
     if(d.error){
       showTradeMsg('[ERR] Trade error: '+d.error.message,'#ff3b5c');
-      runExecuting=false;nextRun();
+      runExecuting=false;
+      // Reset bot if it was waiting for this trade
+      if(botActive&&botCurrentContractId==='pending'){
+        botActive=false;botPipeline=0;botCurrentContractId=null;
+        botLog('[ERR] Trade rejected - rescanning','#ff3b5c');
+      } else {
+        nextRun();
+      }
       return;
     }
     const c=d.buy,ep=d.echo_req?.parameters||{};
@@ -1292,6 +1299,10 @@ function onTradeMessage(d){
       contract_type:ct,underlying:ep.symbol||'',
       barrier:bar,currency:accountInfo?.currency||'USD'
     };
+    // Update bot contract ID from 'pending' to real ID
+    if(botActive&&botCurrentContractId==='pending'){
+      botCurrentContractId=c.contract_id;
+    }
     showTradeMsg(`[!] Run ${runQueue.length>0?'→ '+runQueue.length+' more waiting':''} #${c.contract_id} $${c.buy_price}`,'#00d4ff');
     tradeSend({proposal_open_contract:1,contract_id:c.contract_id,subscribe:1});
     refreshPositions();
@@ -2259,6 +2270,7 @@ function botFire(sig){
   setTimeout(()=>{
     if(botRunning&&botActive&&botPipeline>0){
       botActive=false;botPipeline=0;
+      botCurrentContractId=null;
       botNextSignal=null;
       botLog('[!] Timeout - rescanning','#ff8c00');
     }
