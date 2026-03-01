@@ -364,7 +364,7 @@ canvas{display:block;width:100%;border-radius:4px;}
     </div>
     <!-- Bot Selector -->
     <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;">
-      <button id="botSelOU" onclick="selBot('ou')" style="flex:1;padding:8px;background:rgba(0,255,136,.15);border:2px solid #00ff88;color:#00ff88;font-family:var(--dp);font-size:10px;font-weight:700;letter-spacing:1px;border-radius:5px;cursor:pointer;">OVER/UNDER<br><span style="font-size:8px;opacity:.7">MG×3.3</span></button>
+      <button id="botSelOU" onclick="selBot('ou')" style="flex:1;padding:8px;background:rgba(0,255,136,.15);border:2px solid #00ff88;color:#00ff88;font-family:var(--dp);font-size:10px;font-weight:700;letter-spacing:1px;border-radius:5px;cursor:pointer;">OVER/UNDER<br><span style="font-size:8px;opacity:.7">O2/U7 → O3/U6 ×3.2</span></button>
       <button id="botSelEO" onclick="selBot('eo')" style="flex:1;padding:8px;background:rgba(0,212,255,.08);border:2px solid rgba(0,212,255,.4);color:var(--dm);font-family:var(--dp);font-size:10px;font-weight:700;letter-spacing:1px;border-radius:5px;cursor:pointer;">EVEN/ODD<br><span style="font-size:8px;opacity:.7">MG×2.1</span></button>
       <button id="botSelDF" onclick="selBot('df')" style="flex:1;padding:8px;background:rgba(179,136,255,.08);border:2px solid rgba(179,136,255,.4);color:var(--dm);font-family:var(--dp);font-size:10px;font-weight:700;letter-spacing:1px;border-radius:5px;cursor:pointer;">DIFFERS<br><span style="font-size:8px;opacity:.7">MG×3.8</span></button>
     </div>
@@ -720,6 +720,8 @@ function initWS(){
           if(s===dInst){addStream('srow',digit);renderFreq('dfChart','dfLbl',dg[s],true);document.getElementById('dLast').textContent=digit;document.getElementById('dInfo').textContent=`${tc[s]} ticks · ${is1s(s)?'~1s':'~2s'}/tick · ${d.tick.quote}`;document.getElementById('dSpd').textContent=is1s(s)?'~1s':'~2s';}
           if(s===dmInst){addStream('dmrow',digit);renderFreq('dmdfChart','dmdfLbl',dg[s],false);document.getElementById('dmLast').textContent=digit;document.getElementById('dmInfo').textContent=`${tc[s]} ticks`;}
           if(s===eoInst){addEOStream(digit);document.getElementById('eoLast').textContent=digit;document.getElementById('eoInfo').textContent=`${tc[s]} ticks · ${digit%2===0?'EVEN':'ODD'}`;updEOFreq(dg[s]);}
+          // BOT: react to every tick — tick-speed execution
+          try{botOnTick();}catch(e){}
         }
       }catch(e){}
     };
@@ -1832,10 +1834,13 @@ const BOT_CONFIGS={
 let botRunning=false,botTimer=null;
 let botPnl=0,botWins=0,botLosses=0,botStake=1;
 let botActive=false,botPipeline=0;
-let botNextSignal=null;      // pre-loaded next signal
-let botPreloading=false;     // currently scanning for next
-let botLastFireTime=0;       // timestamp of last fire
-const BOT_MIN_GAP=500;       // minimum ms between trades (avoid double-fire)
+let botNextSignal=null;
+let botPreloading=false;
+let botLastFireTime=0;
+const BOT_MIN_GAP=500;
+// Recovery state
+let botRecoveryMode=false;   // true after a loss — look for OVER3/UNDER6
+let botBaseStake=1;          // always remember base for reset
 
 function selBot(type){
   if(botRunning){showTradeMsg('Stop bot first','#ff3b5c');return;}
@@ -1859,10 +1864,28 @@ function botFindOU(){
   ALL.forEach(inst=>{
     const s=getDg(inst);if(!s||s.length<15)return;
     const r=analyseOD(s,inst);if(r.dir==='WAIT')return;
-    const ok=(r.dir==='OVER'&&r.ent!==null&&r.ent<=3)||(r.dir==='UNDER'&&r.ent!==null&&r.ent>=6);
-    if(ok&&r.conf>bestConf){bestConf=r.conf;best={inst,dir:r.dir,ent:r.ent,conf:r.conf,runs:Math.min(3,r.runs||1),ct:r.dir==='OVER'?'DIGITOVER':'DIGITUNDER'};}
+    // Normal mode: OVER 2, UNDER 7 only
+    // Recovery mode: OVER 3, UNDER 6 only
+    let ok=false;
+    if(!botRecoveryMode){
+      ok=(r.dir==='OVER'&&r.ent===2)||(r.dir==='UNDER'&&r.ent===7);
+    } else {
+      ok=(r.dir==='OVER'&&r.ent===3)||(r.dir==='UNDER'&&r.ent===6);
+    }
+    if(ok&&r.conf>bestConf){
+      bestConf=r.conf;
+      best={inst,dir:r.dir,ent:r.ent,conf:r.conf,ct:r.dir==='OVER'?'DIGITOVER':'DIGITUNDER'};
+    }
   });
   return best;
+}
+
+// Called on every tick from the live stream
+function botOnTick(){
+  if(!botRunning||botActive)return;
+  const now=Date.now();
+  if(now-botLastFireTime<BOT_MIN_GAP)return;
+  botTick();
 }
 
 function botFindEO(){
@@ -1891,10 +1914,11 @@ function botPreloadNext(){
   botPreloading=true;
   try{
     const cfg=BOT_CONFIGS[activeBotType];
-    const sig=cfg.findSignal();
+    const sig=cfg.findSignal(); // respects botRecoveryMode automatically
     botNextSignal=sig||null;
     if(sig){
-      botSetStatus(`⟳ Trade open · Next ready: ${sig.dir}${sig.ent!==null?' '+sig.ent:''} · ${SYM[sig.inst]} · ${sig.conf}%`,'#ffd700');
+      const mode=botRecoveryMode?'🔄':'✦';
+      botSetStatus(`${mode} Open · Next: ${sig.dir} ${sig.ent} · ${SYM[sig.inst]} · ${sig.conf}%`,'#ffd700');
     }
   }catch(e){botNextSignal=null;}
   botPreloading=false;
@@ -1938,44 +1962,60 @@ function checkBotResult(d){
       const won=pnl>=0;
       botPnl=+(botPnl+pnl).toFixed(2);
       const cfg=BOT_CONFIGS[activeBotType];
+
       if(won){
         botWins++;
-        botStake=parseFloat(document.getElementById('botBase').value)||1;
-        botLog(`✓ WIN +$${pnl.toFixed(2)} → reset $${botStake.toFixed(2)}`,'#00ff88');
+        // Win in recovery → back to normal mode
+        if(botRecoveryMode){
+          botRecoveryMode=false;
+          botLog(`✓ RECOVERY WIN +$${pnl.toFixed(2)} → back to OVER2/UNDER7`,'#00ff88');
+        } else {
+          botLog(`✓ WIN +$${pnl.toFixed(2)}`,'#00ff88');
+        }
+        botStake=botBaseStake; // always reset to base on win
+        document.getElementById('stakeAmt').value=botStake.toFixed(2);
         try{soundWin();}catch(e){}
       } else {
         botLosses++;
         const maxS=parseFloat(document.getElementById('botMaxStake').value)||30;
-        const next=+(botStake*cfg.mg).toFixed(2);
-        botStake=next>maxS?(parseFloat(document.getElementById('botBase').value)||1):next;
-        botLog(`✗ LOSS -$${Math.abs(pnl).toFixed(2)} → MG×${cfg.mg} → $${botStake.toFixed(2)}`,'#ff3b5c');
+        const next=+(botStake*3.2).toFixed(2); // always ×3.2 for OU bot recovery
+        const newStake=next>maxS?botBaseStake:next;
+        // Enter recovery mode — switch to OVER3/UNDER6
+        if(!botRecoveryMode){
+          botRecoveryMode=true;
+          botLog(`✗ LOSS -$${Math.abs(pnl).toFixed(2)} → RECOVERY MODE: OVER3/UNDER6 · $${newStake}`,'#ff3b5c');
+        } else {
+          botLog(`✗ LOSS -$${Math.abs(pnl).toFixed(2)} → MG×3.2 → $${newStake}`,'#ff3b5c');
+        }
+        botStake=newStake;
+        if(next>maxS){botRecoveryMode=false;botLog('⚠ Max stake hit — reset','#ff8c00');}
         try{soundLoss();}catch(e){}
       }
       botUpdStats();
       botActive=false;botPipeline=0;
 
-      // CHECK TP/SL FIRST
+      // UPDATE STATUS
+      const modeStr=botRecoveryMode?'🔄 RECOVERY: OVER3/UNDER6':'✦ NORMAL: OVER2/UNDER7';
+      botSetStatus(`${modeStr} · $${botStake.toFixed(2)} · scanning...`,'#00d4ff');
+
+      // CHECK TP/SL
       const tp=parseFloat(document.getElementById('botTP').value)||20;
       const sl=parseFloat(document.getElementById('botSL').value)||15;
       if(botPnl>=tp){stopBot();botLog(`🎯 TP +$${tp} reached!`,'#00ff88');try{soundTP();}catch(e){}return;}
       if(botPnl<=-sl){stopBot();botLog(`🛑 SL -$${sl} hit!`,'#ff3b5c');try{soundSL();}catch(e){}return;}
 
-      // FIRE NEXT — use preloaded signal if ready, else scan now
+      // NEXT SIGNAL — preloaded or instant scan
       if(botNextSignal){
-        // Preloaded signal ready — fire with ZERO delay
-        const nextSig=botNextSignal;
-        botNextSignal=null;
-        botLog(`→ Preloaded: ${nextSig.dir}${nextSig.ent!==null?' '+nextSig.ent:''} · ${SYM[nextSig.inst]}`,'#00d4ff');
-        setTimeout(()=>botFire(nextSig), 50); // 50ms — basically instant
+        const nextSig=botNextSignal;botNextSignal=null;
+        botLog(`→ ${botRecoveryMode?'RECOVERY':'NORMAL'}: ${nextSig.dir} ${nextSig.ent} · ${SYM[nextSig.inst]}`,'#00d4ff');
+        setTimeout(()=>botFire(nextSig),50);
       } else {
-        // No preloaded — scan immediately (fast fallback)
-        const cfg2=BOT_CONFIGS[activeBotType];
-        const nextSig=cfg2.findSignal();
+        // Instant scan fallback
+        const nextSig=BOT_CONFIGS[activeBotType].findSignal();
         if(nextSig){
-          botLog(`→ Fast scan: ${nextSig.dir}${nextSig.ent!==null?' '+nextSig.ent:''} · ${SYM[nextSig.inst]}`,'#00d4ff');
-          setTimeout(()=>botFire(nextSig), 100);
+          setTimeout(()=>botFire(nextSig),80);
         } else {
-          botSetStatus('⟫ No signal — waiting next scan...','var(--dm)');
+          botSetStatus('⟫ Waiting for signal on next tick...','var(--dm)');
         }
       }
     }
@@ -2043,17 +2083,25 @@ function startBot(){
   if(!accountInfo){showTradeMsg('Wait for account to connect','#ffd700');return;}
   botRunning=true;botActive=false;botPipeline=0;
   botPnl=0;botWins=0;botLosses=0;
-  botStake=parseFloat(document.getElementById('botBase').value)||1;
+  botBaseStake=parseFloat(document.getElementById('botBase').value)||1;
+  botStake=botBaseStake;
+  botRecoveryMode=false;botNextSignal=null;botPreloading=false;
   document.getElementById('botStartBtn').style.display='none';
   document.getElementById('botStopBtn').style.display='block';
   const cfg=BOT_CONFIGS[activeBotType];
   const tp=document.getElementById('botTP').value;
   const sl=document.getElementById('botSL').value;
-  botLog(`🚀 ${cfg.name} Bot — TP $${tp} · SL $${sl} · Base $${botStake} · MG×${cfg.mg}`,'#ffd700');
-  botSetStatus(`⚡ ${cfg.name} running...`,'#00d4ff');
+  const modeInfo=activeBotType==='ou'?'Normal: OVER2/UNDER7 · Recovery: OVER3/UNDER6 ×3.2':
+    `MG×${cfg.mg}`;
+  botLog(`🚀 ${cfg.name} · TP $${tp} · SL $${sl} · Base $${botStake} · ${modeInfo}`,'#ffd700');
+  botSetStatus(`⚡ TICK-SPEED · ${cfg.name} · scanning...`,'#00d4ff');
   botUpdStats();
+  // Tick-speed: hook into live stream, no timer needed
   botTick();
-  botTimer=setInterval(botTick,15000);
+  // Fallback timer in case tick stream stalls
+  botTimer=setInterval(()=>{
+    if(botRunning&&!botActive)botTick();
+  },3000);
 }
 
 function stopBot(){
