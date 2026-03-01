@@ -1468,7 +1468,7 @@ function scanTrade(dir,inst,barrier,runs){
   else if(dir==='FALL')ct='PUT';
   else{showTradeMsg('No valid signal','#ff3b5c');return;}
   const b=(barrier!==null&&barrier!==undefined&&barrier!=='null')?parseInt(barrier):null;
-  queueTrades(ct,inst,1,'t',b,runs||1);
+  queueTrades(ct,inst,1,'t',b,1); // scanner always 1 run
 }
 
 // ── ACCOUNT UI ──
@@ -1773,11 +1773,9 @@ let botActive=false,botPipeline=0;
 let botNextSignal=null;
 let botPreloading=false;
 let botLastFireTime=0;
-const BOT_MIN_GAP=800;
 let botCurrentContractId=null; // tracks the ONE open bot contract
 let botRecoveryMode=false;
 let botBaseStake=1;
-let botCooldown=false; // blocks botOnTick while next signal is being scheduled
 // Bot isolated history - completely separate from manual
 const botHistory=[];
 let botHistoryIdCounter=0;
@@ -2064,10 +2062,8 @@ function botFindOU(){
 
 // Called on every tick from the live stream
 function botOnTick(){
-  if(!botRunning||botActive||botCooldown)return;
-  if(runQueue.length>0){runQueue=[];} // clear any leaked manual queue
-  const now=Date.now();
-  if(now-botLastFireTime<BOT_MIN_GAP)return;
+  if(!botRunning||botActive||botCurrentContractId)return;
+  if(runQueue.length>0){runQueue=[];}
   botTick();
 }
 
@@ -2208,23 +2204,19 @@ function checkBotResult(d){
       if(botPnl>=tp){stopBot();botLog(`[TP] TP +$${tp} reached!`,'#00ff88');try{soundTP();}catch(e){}return;}
       if(botPnl<=-sl){stopBot();botLog(`[SL] SL -$${sl} hit!`,'#ff3b5c');try{soundSL();}catch(e){}return;}
 
-      // NEXT SIGNAL - preloaded or instant scan
-      // Set cooldown so botOnTick doesn't fire a duplicate
-      botCooldown=true;
-      setTimeout(()=>{botCooldown=false;},1200); // clear after 1 tick
+      // NEXT SIGNAL — fire immediately, botActive lock prevents double-fire
       if(botNextSignal){
         const nextSig=botNextSignal;botNextSignal=null;
-        botLog(`→ ${botRecoveryMode?'RECOVERY':'NORMAL'}: ${nextSig.dir} ${nextSig.ent!==null?nextSig.ent:''} · ${SYM[nextSig.inst]}`,'#00d4ff');
-        setTimeout(()=>{botCooldown=false;botFire(nextSig);},50);
+        botLog(`→ ${botRecoveryMode?'REC':'NRM'}: ${nextSig.dir} ${nextSig.ent!==null?nextSig.ent:''} · ${SYM[nextSig.inst]}`,'#00d4ff');
+        botFire(nextSig); // instant — no timeout needed
       } else {
-        // Instant scan fallback
         const nextSig=BOT_CONFIGS[activeBotType].findSignal();
         if(nextSig){
-          setTimeout(()=>{botCooldown=false;botFire(nextSig);},80);
+          botFire(nextSig); // instant
         } else {
-          botCooldown=false;
           const mode=botRecoveryMode?'OVER 3-4 / UNDER 5-6':'OVER 0-2 / UNDER 7-9';
-          botSetStatus(`[>>] No signal yet · scanning ${mode}...`,'var(--dm)');
+          botSetStatus(`[>>] No signal · scanning ${mode}...`,'var(--dm)');
+          // botOnTick will pick up on next tick
         }
       }
     }
@@ -2233,11 +2225,9 @@ function checkBotResult(d){
 
 function botFire(sig){
   if(!accountInfo||!tradeWSok||!botRunning)return;
-  // HARD SINGLE LOCK - one trade at a time, no exceptions
+  // HARD SINGLE LOCK - one trade at a time
   if(botActive||botCurrentContractId){return;}
-  const now=Date.now();
-  if(now-botLastFireTime<BOT_MIN_GAP)return;
-  botLastFireTime=now;
+  botLastFireTime=Date.now();
   const stake=botStake;
   botActive=true;botPipeline=1;
   botCurrentContractId='pending'; // reserve slot BEFORE sending
@@ -2334,7 +2324,7 @@ function startBot(){
 
 function stopBot(){
   botRunning=false;botActive=false;botPipeline=0;
-  botCurrentContractId=null;botCooldown=false;
+  botCurrentContractId=null;
   clearInterval(botTimer);
   document.getElementById('botStartBtn').style.display='block';
   document.getElementById('botStopBtn').style.display='none';
