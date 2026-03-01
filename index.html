@@ -1448,6 +1448,8 @@ function tradeDM(){
 // Scanner — ONE trade, best signal only
 function scanTrade(dir,inst,barrier,runs){
   if(!apiToken){showTradeMsg('Enter API token first','#ff3b5c');return;}
+  // Scanner has its OWN fire path — independent of bot
+  if(botRunning){showTradeMsg('⚠ Bot is running — stop bot to use scanner','#ff8c00');return;}
   let ct;
   if(dir==='OVER')ct='DIGITOVER';
   else if(dir==='UNDER')ct='DIGITUNDER';
@@ -1458,9 +1460,7 @@ function scanTrade(dir,inst,barrier,runs){
   else if(dir==='RISE')ct='CALL';
   else if(dir==='FALL')ct='PUT';
   else{showTradeMsg('No valid signal','#ff3b5c');return;}
-  // Scanner always trades ONE instrument — the selected one
   const b=(barrier!==null&&barrier!==undefined&&barrier!=='null')?parseInt(barrier):null;
-  // queueTrades enforces 1 tick for all digit contracts internally
   queueTrades(ct,inst,1,'t',b,runs||1);
 }
 
@@ -1770,6 +1770,7 @@ const BOT_MIN_GAP=800;
 let botCurrentContractId=null; // tracks the ONE open bot contract
 let botRecoveryMode=false;
 let botBaseStake=1;
+let botCooldown=false; // blocks botOnTick while next signal is being scheduled
 // Bot isolated history — completely separate from manual
 const botHistory=[];
 let botHistoryIdCounter=0;
@@ -2056,7 +2057,7 @@ function botFindOU(){
 
 // Called on every tick from the live stream
 function botOnTick(){
-  if(!botRunning||botActive)return;
+  if(!botRunning||botActive||botCooldown)return;
   if(runQueue.length>0){runQueue=[];} // clear any leaked manual queue
   const now=Date.now();
   if(now-botLastFireTime<BOT_MIN_GAP)return;
@@ -2201,16 +2202,20 @@ function checkBotResult(d){
       if(botPnl<=-sl){stopBot();botLog(`🛑 SL -$${sl} hit!`,'#ff3b5c');try{soundSL();}catch(e){}return;}
 
       // NEXT SIGNAL — preloaded or instant scan
+      // Set cooldown so botOnTick doesn't fire a duplicate
+      botCooldown=true;
+      setTimeout(()=>{botCooldown=false;},1200); // clear after 1 tick
       if(botNextSignal){
         const nextSig=botNextSignal;botNextSignal=null;
-        botLog(`→ ${botRecoveryMode?'RECOVERY':'NORMAL'}: ${nextSig.dir} ${nextSig.ent} · ${SYM[nextSig.inst]}`,'#00d4ff');
-        setTimeout(()=>botFire(nextSig),50);
+        botLog(`→ ${botRecoveryMode?'RECOVERY':'NORMAL'}: ${nextSig.dir} ${nextSig.ent!==null?nextSig.ent:''} · ${SYM[nextSig.inst]}`,'#00d4ff');
+        setTimeout(()=>{botCooldown=false;botFire(nextSig);},50);
       } else {
         // Instant scan fallback
         const nextSig=BOT_CONFIGS[activeBotType].findSignal();
         if(nextSig){
-          setTimeout(()=>botFire(nextSig),80);
+          setTimeout(()=>{botCooldown=false;botFire(nextSig);},80);
         } else {
+          botCooldown=false;
           botSetStatus('⟫ Waiting for signal on next tick...','var(--dm)');
         }
       }
@@ -2321,7 +2326,7 @@ function startBot(){
 
 function stopBot(){
   botRunning=false;botActive=false;botPipeline=0;
-  botCurrentContractId=null;
+  botCurrentContractId=null;botCooldown=false;
   clearInterval(botTimer);
   document.getElementById('botStartBtn').style.display='block';
   document.getElementById('botStopBtn').style.display='none';
