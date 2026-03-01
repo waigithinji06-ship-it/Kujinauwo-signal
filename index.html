@@ -360,11 +360,38 @@ canvas{display:block;width:100%;border-radius:4px;}
     <div class="pt" style="color:#ffd700;">⚡ AUTO TRADING BOTS</div>
     <div style="font-family:var(--mn);font-size:10px;color:var(--dm);line-height:1.8">
       Bot runs isolated — top tracker freezes. One trade at a time. Full history below.<br>
-      <b style="color:#ff3b5c">⚠ Places real trades. Set TP/SL carefully.</b>
+      <b style="color:#ff3b5c">[!] Places real trades. Set TP/SL carefully.</b>
     </div>
+
+  <!-- DBOT LOADER -->
+
+  <div class="p" style="border:1.5px solid rgba(179,136,255,.3);margin-top:4px;">
+    <div style="font-family:var(--dp);font-size:11px;font-weight:700;letter-spacing:2px;color:#b388ff;margin-bottom:8px;">
+      [DB] DBOT XML LOADER
+    </div>
+    <div style="font-family:var(--mn);font-size:9px;color:var(--dm);margin-bottom:8px;line-height:1.7">
+      Load a Deriv DBot .xml strategy file. We extract the contract type, symbol and stake — then run it at tick speed through our engine.
+    </div>
+    <label style="display:block;width:100%;padding:10px;background:rgba(179,136,255,.08);border:1.5px dashed rgba(179,136,255,.4);border-radius:6px;text-align:center;cursor:pointer;font-family:var(--dp);font-size:12px;font-weight:700;color:#b388ff;margin-bottom:8px;">
+      [+] LOAD DBOT .XML FILE
+      <input type="file" accept=".xml" onchange="loadDBotXML(event)" style="display:none">
+    </label>
+    <div id="dbotStatus" style="font-family:var(--mn);font-size:9px;color:var(--dm);min-height:20px;"></div>
+    <div id="dbotParams" style="display:none;background:rgba(0,0,0,.2);border-radius:5px;padding:8px;margin-top:6px;">
+      <div style="font-family:var(--mn);font-size:8px;color:var(--dm);letter-spacing:1px;margin-bottom:6px;">PARSED STRATEGY</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;" id="dbotParamCards"></div>
+      <button onclick="runDBotStrategy()" id="dbotRunBtn"
+        style="margin-top:10px;width:100%;padding:10px;background:rgba(179,136,255,.15);border:2px solid #b388ff;color:#b388ff;font-family:var(--dp);font-size:13px;font-weight:900;letter-spacing:2px;border-radius:6px;cursor:pointer;">
+        [>] RUN DBOT STRATEGY
+      </button>
+      <button onclick="stopDBotStrategy()" id="dbotStopBtn" style="display:none;margin-top:6px;width:100%;padding:10px;background:rgba(255,59,92,.1);border:2px solid #ff3b5c;color:#ff3b5c;font-family:var(--dp);font-size:13px;font-weight:900;letter-spacing:2px;border-radius:6px;cursor:pointer;">
+        [X] STOP DBOT
+      </button>
+    </div>
+  </div>
     <!-- Bot Selector -->
     <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;">
-      <button id="botSelOU" onclick="selBot('ou')" style="flex:1;padding:8px;background:rgba(0,255,136,.15);border:2px solid #00ff88;color:#00ff88;font-family:var(--dp);font-size:10px;font-weight:700;letter-spacing:1px;border-radius:5px;cursor:pointer;">OVER/UNDER<br><span style="font-size:8px;opacity:.7">O0-2/U7-9 → O3-4/U5-6 ×3.6</span></button>
+      <button id="botSelOU" onclick="selBot('ou')" style="flex:1;padding:8px;background:rgba(0,255,136,.15);border:2px solid #00ff88;color:#00ff88;font-family:var(--dp);font-size:10px;font-weight:700;letter-spacing:1px;border-radius:5px;cursor:pointer;">OVER/UNDER<br><span style="font-size:8px;opacity:.7">O0-2/U7-9 → O3/U6 ×3.6</span></button>
       <button id="botSelEO" onclick="selBot('eo')" style="flex:1;padding:8px;background:rgba(0,212,255,.08);border:2px solid rgba(0,212,255,.4);color:var(--dm);font-family:var(--dp);font-size:10px;font-weight:700;letter-spacing:1px;border-radius:5px;cursor:pointer;">EVEN/ODD<br><span style="font-size:8px;opacity:.7">MG×2.1</span></button>
       <button id="botSelDF" onclick="selBot('df')" style="flex:1;padding:8px;background:rgba(179,136,255,.08);border:2px solid rgba(179,136,255,.4);color:var(--dm);font-family:var(--dp);font-size:10px;font-weight:700;letter-spacing:1px;border-radius:5px;cursor:pointer;">DIFFERS<br><span style="font-size:8px;opacity:.7">MG×6.8</span></button>
     </div>
@@ -2055,13 +2082,13 @@ function botFindOU(){
   ALL.forEach(inst=>{
     const s=getDg(inst);if(!s||s.length<15)return;
     const r=analyseOD(s,inst);if(r.dir==='WAIT'||r.ent===null)return;
-    // Normal mode: OVER 0-2 (strong deviation) or UNDER 7-9
-    // Recovery mode: OVER 3-4 or UNDER 5-6 (slightly weaker but good)
+    // Normal:   OVER 0,1,2  |  UNDER 7,8,9
+    // Recovery: OVER 3 only |  UNDER 6 only
     let ok=false;
     if(!botRecoveryMode){
       ok=(r.dir==='OVER'&&r.ent<=2)||(r.dir==='UNDER'&&r.ent>=7);
     } else {
-      ok=(r.dir==='OVER'&&r.ent>=3&&r.ent<=4)||(r.dir==='UNDER'&&r.ent>=5&&r.ent<=6);
+      ok=(r.dir==='OVER'&&r.ent===3)||(r.dir==='UNDER'&&r.ent===6);
     }
     if(ok&&r.conf>bestConf){
       bestConf=r.conf;
@@ -2073,6 +2100,11 @@ function botFindOU(){
 
 // Called on every tick from the live stream
 function botOnTick(){
+  // DBot hook
+  if(dbotRunning&&!botRunning&&window._dbotTickHook){
+    window._dbotTickHook();
+    return;
+  }
   if(!botRunning||botActive||botCurrentContractId)return;
   if(runQueue.length>0){runQueue=[];}
   botTick();
@@ -2164,7 +2196,7 @@ function checkBotResult(d){
         botWins++;
         if(botRecoveryMode){
           botRecoveryMode=false;
-          try{document.getElementById('botModeLabel').textContent='[NRM] NORMAL · OVER2/UNDER7';document.getElementById('botModeLabel').style.color='#00ff88';}catch(e){}
+          try{document.getElementById('botModeLabel').textContent='[NRM] NORMAL: OVER 0-2 / UNDER 7-9';document.getElementById('botModeLabel').style.color='#00ff88';}catch(e){}
           botLog(`[OK] RECOVERY WIN +$${pnl.toFixed(2)} → OVER2/UNDER7 · reset $${botBaseStake}`,'#00ff88');
         } else {
           botLog(`[OK] WIN +$${pnl.toFixed(2)}`,'#00ff88');
@@ -2177,7 +2209,7 @@ function checkBotResult(d){
         const newStake=next>maxS?botBaseStake:next;
         if(!botRecoveryMode){
           botRecoveryMode=true;
-          try{document.getElementById('botModeLabel').textContent='[REC] RECOVERY · OVER3/UNDER6';document.getElementById('botModeLabel').style.color='#ff3b5c';}catch(e){}
+          try{document.getElementById('botModeLabel').textContent='[REC] RECOVERY: OVER 3 / UNDER 6';document.getElementById('botModeLabel').style.color='#ff3b5c';}catch(e){}
           botLog(`[X] LOSS -$${Math.abs(pnl).toFixed(2)} → RECOVERY: OVER3/UNDER6 · $${newStake}`,'#ff3b5c');
         } else {
           botLog(`[X] LOSS -$${Math.abs(pnl).toFixed(2)} → MG×3.6 → $${newStake}`,'#ff3b5c');
@@ -2188,6 +2220,9 @@ function checkBotResult(d){
       }
 
       botPnl=+(botPnl+pnl).toFixed(2);
+
+      // DBot result hook
+      try{if(window._dbotResultHook&&dbotRunning)window._dbotResultHook(won,pnl,MG.lastStake);}catch(e){}
 
       // Log to BOT'S OWN ISOLATED HISTORY
       try{
@@ -2206,7 +2241,7 @@ function checkBotResult(d){
       }catch(e){}
 
       botUpdStats();
-      const modeStr=botRecoveryMode?'[REC] RECOVERY: OVER3/UNDER6':'[NRM] NORMAL: OVER2/UNDER7';
+      const modeStr=botRecoveryMode?'[REC] RECOVERY: OVER 3/UNDER 6':'[NRM] NORMAL: OVER 0-2/UNDER 7-9';
       botSetStatus(`${modeStr} · $${botStake.toFixed(2)} · scanning...`,'#00d4ff');
 
       // CHECK TP/SL
@@ -2356,6 +2391,186 @@ setInterval(()=>{try{if(document.getElementById('tab-sc').classList.contains('on
 try{initWS();}catch(e){setConn('offline');}
 setTimeout(()=>{try{drawChart(getPx(rfInst));}catch(e){}},100);
 injectTradingUI();
+
+// ══════════════════════════════════════════════════════
+// DBOT XML LOADER — parse Deriv DBot strategies
+// ══════════════════════════════════════════════════════
+let dbotStrategy=null;
+let dbotRunning=false;
+let dbotTimer=null;
+
+function loadDBotXML(event){
+  const file=event.target.files[0];
+  if(!file){return;}
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      const parser=new DOMParser();
+      const xml=parser.parseFromString(e.target.result,'text/xml');
+
+      // Extract key params from DBot XML
+      // DBot XML structure has blocks with type attributes
+      const strategy={};
+
+      // Contract type
+      const ctBlock=xml.querySelector('[type="trade_type_param"] field[name="FIELDNAME"]')||
+                    xml.querySelector('[type="contract_type"] field')||
+                    xml.querySelector('field[name="CONTRACTTYPE"]');
+      strategy.ct = ctBlock?ctBlock.textContent.trim():'DIGITOVER';
+
+      // Symbol/market
+      const symBlock=xml.querySelector('[type="market_param"] field[name="FIELDNAME"]')||
+                     xml.querySelector('field[name="MARKET_LIST"]')||
+                     xml.querySelector('field[name="SYMBOL"]');
+      strategy.sym = symBlock?symBlock.textContent.trim():'R_100';
+
+      // Stake
+      const stakeBlock=xml.querySelector('field[name="STAKE"]')||
+                       xml.querySelector('[type="purchase_param"] field')||
+                       xml.querySelector('field[name="AMOUNT"]');
+      strategy.stake = stakeBlock?parseFloat(stakeBlock.textContent.trim())||1:1;
+
+      // Duration
+      const durBlock=xml.querySelector('field[name="DURATION"]');
+      strategy.duration = durBlock?parseInt(durBlock.textContent.trim())||1:1;
+
+      // Barrier (for digit contracts)
+      const barrierBlock=xml.querySelector('field[name="BARRIER"]')||
+                         xml.querySelector('field[name="PREDICTION"]');
+      strategy.barrier = barrierBlock?barrierBlock.textContent.trim():null;
+
+      // Martingale multiplier from DBot
+      const mgBlock=xml.querySelector('field[name="MULTIPLIER"]')||
+                    xml.querySelector('field[name="LOSS_THRESHOLD"]');
+      strategy.mg = mgBlock?parseFloat(mgBlock.textContent.trim())||2.0:2.0;
+
+      dbotStrategy=strategy;
+
+      // Show parsed params
+      const cards=[
+        {label:'TYPE',   val:strategy.ct},
+        {label:'MARKET', val:SYM[strategy.sym]||strategy.sym},
+        {label:'STAKE',  val:'$'+strategy.stake.toFixed(2)},
+        {label:'BARRIER',val:strategy.barrier||'auto'},
+        {label:'MG x',   val:strategy.mg.toFixed(1)},
+      ];
+      document.getElementById('dbotParamCards').innerHTML=cards.map(c=>
+        `<div style="background:var(--p2);border:1px solid var(--bd);border-radius:5px;padding:6px 10px;text-align:center;">
+          <div style="font-family:var(--mn);font-size:8px;color:var(--dm)">${c.label}</div>
+          <div style="font-family:var(--dp);font-size:14px;font-weight:700;color:#b388ff">${c.val}</div>
+        </div>`
+      ).join('');
+
+      document.getElementById('dbotParams').style.display='block';
+      document.getElementById('dbotStatus').style.color='#00ff88';
+      document.getElementById('dbotStatus').textContent='[OK] Strategy loaded: '+file.name;
+    }catch(err){
+      document.getElementById('dbotStatus').style.color='#ff3b5c';
+      document.getElementById('dbotStatus').textContent='[ERR] Could not parse XML: '+err.message;
+    }
+  };
+  reader.readAsText(file);
+}
+
+function runDBotStrategy(){
+  if(!dbotStrategy){showTradeMsg('Load a DBot XML file first','#ff3b5c');return;}
+  if(!apiToken||!tradeWSok){showTradeMsg('Login first','#ff3b5c');return;}
+  if(botRunning){showTradeMsg('Stop the main bot first','#ff8c00');return;}
+  if(dbotRunning){return;}
+
+  dbotRunning=true;
+  let dbotStake=dbotStrategy.stake;
+  let dbotWins=0,dbotLosses=0,dbotPnl=0;
+
+  document.getElementById('dbotRunBtn').style.display='none';
+  document.getElementById('dbotStopBtn').style.display='block';
+  document.getElementById('dbotStatus').style.color='#b388ff';
+  document.getElementById('dbotStatus').textContent='[>] Running...';
+
+  // Map DBot contract types to Deriv API types
+  const ctMap={
+    'DIGITOVER':'DIGITOVER','DIGITUNDER':'DIGITUNDER',
+    'DIGITDIFF':'DIGITDIFF','DIGITMATCH':'DIGITMATCH',
+    'DIGITEVEN':'DIGITEVEN','DIGITODD':'DIGITODD',
+    'CALL':'CALL','PUT':'PUT','RISE':'CALL','FALL':'PUT',
+    'HIGHER':'CALL','LOWER':'PUT'
+  };
+  const ct=ctMap[dbotStrategy.ct.toUpperCase()]||'DIGITOVER';
+  const sym=dbotStrategy.sym||'R_100';
+  const barrier=dbotStrategy.barrier!==null&&dbotStrategy.barrier!==undefined?
+    parseInt(dbotStrategy.barrier):null;
+
+  function dbotFire(){
+    if(!dbotRunning||!tradeWSok)return;
+    // Use same single-lock system
+    if(botActive||botCurrentContractId)return;
+
+    botActive=true;botCurrentContractId='pending';
+    MG.lastType=ct; MG.lastSym=sym;
+    MG.lastBarrier=barrier; MG.lastStake=dbotStake;
+
+    const params={
+      contract_type:ct, symbol:sym,
+      duration:1, duration_unit:'t',
+      basis:'stake', amount:dbotStake,
+      currency:accountInfo.currency||'USD'
+    };
+    if(barrier!==null)params.barrier=String(barrier);
+    tradeSend({buy:'1',price:dbotStake,parameters:params});
+
+    document.getElementById('dbotStatus').textContent=
+      '[>] '+ct+' '+SYM[sym]+' $'+dbotStake.toFixed(2);
+  }
+
+  // Hook into tick stream for tick-speed execution
+  const origBotOnTick=window._dbotTickHook;
+  window._dbotTickHook=function(){
+    if(dbotRunning&&!botActive&&!botCurrentContractId&&!botRunning){
+      dbotFire();
+    }
+  };
+
+  // Result handler — DBot uses main bot result path
+  // store original handler, extend it
+  window._dbotResultHook=function(won, pnl, stake){
+    dbotPnl=+(dbotPnl+pnl).toFixed(2);
+    if(won){
+      dbotWins++;
+      dbotStake=dbotStrategy.stake; // reset to base
+      document.getElementById('dbotStatus').textContent=
+        '[OK] WIN +$'+pnl.toFixed(2)+' | P&L: '+(dbotPnl>=0?'+':'')+dbotPnl.toFixed(2);
+    } else {
+      dbotLosses++;
+      const next=+(dbotStake*dbotStrategy.mg).toFixed(2);
+      const maxS=parseFloat(document.getElementById('botMaxStake').value)||30;
+      dbotStake=next>maxS?dbotStrategy.stake:next;
+      document.getElementById('dbotStatus').textContent=
+        '[X] LOSS -$'+Math.abs(pnl).toFixed(2)+' | Next: $'+dbotStake.toFixed(2);
+    }
+    // Check TP/SL
+    const tp=parseFloat(document.getElementById('botTP').value)||20;
+    const sl=parseFloat(document.getElementById('botSL').value)||15;
+    if(dbotPnl>=tp){stopDBotStrategy();showTradeMsg('[TP] DBot TP reached!','#00ff88');return;}
+    if(dbotPnl<=-sl){stopDBotStrategy();showTradeMsg('[SL] DBot SL hit!','#ff3b5c');return;}
+  };
+
+  dbotTimer=setInterval(()=>{
+    if(window._dbotTickHook)window._dbotTickHook();
+  },500); // check every 500ms as fallback
+}
+
+function stopDBotStrategy(){
+  dbotRunning=false;
+  window._dbotTickHook=null;
+  window._dbotResultHook=null;
+  clearInterval(dbotTimer);
+  botActive=false;botCurrentContractId=null;
+  document.getElementById('dbotRunBtn').style.display='block';
+  document.getElementById('dbotStopBtn').style.display='none';
+  document.getElementById('dbotStatus').style.color='var(--dm)';
+  document.getElementById('dbotStatus').textContent='Stopped.';
+}
+
 </script>
 
 </body>
