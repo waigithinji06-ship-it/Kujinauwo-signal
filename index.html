@@ -365,11 +365,29 @@ canvas{display:block;width:100%;border-radius:4px;}
 
 ```
     <!-- Bot Selector -->
-<div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;">
-  <button id="botSelOU" onclick="selBot('ou')" style="flex:1;padding:8px;background:rgba(0,255,136,.15);border:2px solid #00ff88;color:#00ff88;font-family:var(--dp);font-size:10px;font-weight:700;letter-spacing:1px;border-radius:5px;cursor:pointer;">OVER/UNDER<br><span style="font-size:8px;opacity:.7">O0-2/U7-9 → O3/U6 ×3.6</span></button>
-  <button id="botSelEO" onclick="selBot('eo')" style="flex:1;padding:8px;background:rgba(0,212,255,.08);border:2px solid rgba(0,212,255,.4);color:var(--dm);font-family:var(--dp);font-size:10px;font-weight:700;letter-spacing:1px;border-radius:5px;cursor:pointer;">EVEN/ODD<br><span style="font-size:8px;opacity:.7">MG×2.1</span></button>
-  <button id="botSelDF" onclick="selBot('df')" style="flex:1;padding:8px;background:rgba(179,136,255,.08);border:2px solid rgba(179,136,255,.4);color:var(--dm);font-family:var(--dp);font-size:10px;font-weight:700;letter-spacing:1px;border-radius:5px;cursor:pointer;">DIFFERS<br><span style="font-size:8px;opacity:.7">MG×6.8</span></button>
-</div>
+<div style="margin-top:10px;">
+  <div style="font-family:var(--mn);font-size:8px;color:var(--dm);letter-spacing:2px;margin-bottom:6px;">OVER/UNDER STRATEGY</div>
+  <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:6px;">
+    <button id="botSel_ou1" onclick="selBot('ou1')" style="flex:1;padding:8px 4px;background:rgba(0,255,136,.1);border:2px solid #00ff88;color:#00ff88;font-family:var(--dp);font-size:9px;font-weight:700;border-radius:5px;cursor:pointer;text-align:center;">
+      O2/U7<br><span style="font-size:7px;opacity:.8">REC O3/U6 ×2.5</span>
+    </button>
+    <button id="botSel_ou2" onclick="selBot('ou2')" style="flex:1;padding:8px 4px;background:transparent;border:2px solid rgba(0,229,255,.3);color:var(--dm);font-family:var(--dp);font-size:9px;font-weight:700;border-radius:5px;cursor:pointer;text-align:center;">
+      O1/U8<br><span style="font-size:7px;opacity:.8">REC O3/U6 ×3.6</span>
+    </button>
+    <button id="botSel_ou3" onclick="selBot('ou3')" style="flex:1;padding:8px 4px;background:transparent;border:2px solid rgba(255,215,0,.3);color:var(--dm);font-family:var(--dp);font-size:9px;font-weight:700;border-radius:5px;cursor:pointer;text-align:center;">
+      O4/U5<br><span style="font-size:7px;opacity:.8">50/50 ×2.1</span>
+    </button>
+  </div>
+  <div style="font-family:var(--mn);font-size:8px;color:var(--dm);letter-spacing:2px;margin-bottom:6px;margin-top:4px;">OTHER BOTS</div>
+  <div style="display:flex;gap:5px;">
+    <button id="botSel_eo" onclick="selBot('eo')" style="flex:1;padding:8px 4px;background:transparent;border:2px solid rgba(0,212,255,.3);color:var(--dm);font-family:var(--dp);font-size:9px;font-weight:700;border-radius:5px;cursor:pointer;text-align:center;">
+      EVEN/ODD<br><span style="font-size:7px;opacity:.8">×2.1</span>
+    </button>
+    <button id="botSel_df" onclick="selBot('df')" style="flex:1;padding:8px 4px;background:transparent;border:2px solid rgba(179,136,255,.3);color:var(--dm);font-family:var(--dp);font-size:9px;font-weight:700;border-radius:5px;cursor:pointer;text-align:center;">
+      DIFFERS<br><span style="font-size:7px;opacity:.8">×6.8</span>
+    </button>
+  </div>
+</div></div>
 ```
 
   </div>
@@ -436,14 +454,51 @@ canvas{display:block;width:100%;border-radius:4px;}
     <div class="pt">Bot Activity <span style="font-size:8px;color:var(--dm);font-family:var(--mn)">(live log)</span></div>
     <div id="botActivity" style="font-family:var(--mn);font-size:9px;color:var(--dm);max-height:140px;overflow-y:auto;line-height:2;">Bot not started yet.</div>
   </div>
-  <!-- Bot Trade History -->
+  <!-- Bot Trade History — Deriv style -->
   <div class="p">
     <div class="pt">Bot Trade History</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
-      <div style="flex:1;background:var(--p2);border:1px solid var(--bd);border-radius:5px;padding:7px;text-align:center;">
-        <div style="font-family:var(--mn);font-size:8px;color:var(--dm)">WIN RATE</div>
-        <div style="font-family:var(--dp);font-size:20px;font-weight:900" id="botHistWR">—</div>
-      </div>
+    <!-- Summary stats — Deriv style -->
+    <div style="overflow-x:auto;margin-bottom:10px;">
+      <table style="width:100%;border-collapse:collapse;min-width:400px;">
+        <thead><tr style="border-bottom:2px solid var(--bd);">
+          <th style="font-family:var(--mn);font-size:8px;color:var(--dm);padding:6px 4px;text-align:left;">Total P&amp;L</th>
+          <th style="font-family:var(--mn);font-size:8px;color:var(--dm);padding:6px 4px;text-align:left;">Trades</th>
+          <th style="font-family:var(--mn);font-size:8px;color:var(--dm);padding:6px 4px;text-align:left;">Won</th>
+          <th style="font-family:var(--mn);font-size:8px;color:var(--dm);padding:6px 4px;text-align:left;">Lost</th>
+          <th style="font-family:var(--mn);font-size:8px;color:var(--dm);padding:6px 4px;text-align:left;">Largest Stake</th>
+          <th style="font-family:var(--mn);font-size:8px;color:var(--dm);padding:6px 4px;text-align:left;">Loss Streak</th>
+        </tr></thead>
+        <tbody><tr style="border-bottom:1px solid var(--bd);">
+          <td style="font-family:var(--dp);font-size:15px;font-weight:900;padding:8px 4px;color:#00ff88" id="botHistPnl">$0</td>
+          <td style="font-family:var(--dp);font-size:15px;font-weight:900;padding:8px 4px;color:var(--tx)" id="botHistTotal">0</td>
+          <td style="font-family:var(--dp);font-size:15px;font-weight:900;padding:8px 4px;color:#00ff88" id="botHistWins">0</td>
+          <td style="font-family:var(--dp);font-size:15px;font-weight:900;padding:8px 4px;color:#ff3b5c" id="botHistLost">0</td>
+          <td style="font-family:var(--dp);font-size:15px;font-weight:900;padding:8px 4px;color:#ffd700" id="botHistMaxStake">$0</td>
+          <td style="font-family:var(--dp);font-size:15px;font-weight:900;padding:8px 4px;color:#ff3b5c" id="botHistStreak">0</td>
+        </tr></tbody>
+      </table>
+    </div>
+    <!-- Export / Clear -->
+    <div style="display:flex;gap:6px;margin-bottom:10px;">
+      <button onclick="exportBotCSV()" style="flex:2;padding:8px;background:rgba(255,215,0,.1);border:1.5px solid rgba(255,215,0,.4);color:#ffd700;font-family:var(--dp);font-size:11px;font-weight:700;letter-spacing:1px;border-radius:5px;cursor:pointer;">[D] EXPORT CSV</button>
+      <button onclick="if(confirm('Clear all bot trade history?')){botHistory.length=0;renderBotHistory();}" style="flex:1;padding:8px;background:rgba(255,59,92,.08);border:1.5px solid rgba(255,59,92,.3);color:#ff3b5c;font-family:var(--dp);font-size:11px;font-weight:700;border-radius:5px;cursor:pointer;">CLEAR</button>
+    </div>
+    <!-- Trade rows -->
+    <div style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;min-width:340px;">
+        <thead><tr style="border-bottom:2px solid var(--bd);">
+          <th style="font-family:var(--mn);font-size:8px;color:var(--dm);padding:6px 8px;text-align:left;">Contract</th>
+          <th style="font-family:var(--mn);font-size:8px;color:var(--dm);padding:6px 8px;text-align:left;">Stake</th>
+          <th style="font-family:var(--mn);font-size:8px;color:var(--dm);padding:6px 8px;text-align:left;">Profit/Loss</th>
+          <th style="font-family:var(--mn);font-size:8px;color:var(--dm);padding:6px 8px;text-align:left;">Market</th>
+          <th style="font-family:var(--mn);font-size:8px;color:var(--dm);padding:6px 8px;text-align:left;">Status</th>
+        </tr></thead>
+        <tbody id="botHistTbl">
+          <tr><td colspan="5" style="text-align:center;color:var(--dm);padding:20px;font-family:var(--mn);font-size:10px;">No bot trades yet</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
       <div style="flex:1;background:var(--p2);border:1px solid var(--bd);border-radius:5px;padding:7px;text-align:center;">
         <div style="font-family:var(--mn);font-size:8px;color:var(--dm)">TRADES</div>
         <div style="font-family:var(--dp);font-size:20px;font-weight:900;color:var(--tx)" id="botHistTotal">0</div>
@@ -2029,11 +2084,13 @@ function addEOLog(r){
 // ══════════════════════════════════════════════
 // MULTI-BOT ENGINE: OVER/UNDER · EVEN/ODD · DIFFERS
 // ══════════════════════════════════════════════
-let activeBotType='ou'; // 'ou', 'eo', 'df'
+let activeBotType='ou1'; // ou1, ou2, ou3, eo, df
 
 // Bot configs
 const BOT_CONFIGS={
-  ou:{name:'OVER/UNDER',mg:3.6,findSignal:botFindOU,label:'#00ff88'},
+  ou1:{name:'O2/U7 → O3/U6',mg:2.5,findSignal:()=>botFindOUStrategy('ou1'),label:'#00ff88'},
+  ou2:{name:'O1/U8 → O3/U6',mg:3.6,findSignal:()=>botFindOUStrategy('ou2'),label:'#00e5ff'},
+  ou3:{name:'O4/U5 (50/50)',mg:2.1,findSignal:()=>botFindOUStrategy('ou3'),label:'#ffd700'},
   eo:{name:'EVEN/ODD',mg:2.1,findSignal:botFindEO,label:'#00d4ff'},
   df:{name:'DIFFERS',mg:6.8,findSignal:botFindDF,label:'#b388ff'}
 };
@@ -2042,32 +2099,43 @@ const BOT_CONFIGS={
 function selBot(type){
   if(botRunning){showTradeMsg('Stop bot first','#ff3b5c');return;}
   activeBotType=type;
-  const cols={ou:'#00ff88',eo:'#00d4ff',df:'#b388ff'};
-  const col=cols[type];
-  ['ou','eo','df'].forEach(t=>{
-    const b=document.getElementById('botSel'+t.toUpperCase());
+  const cols={ou1:'#00ff88',ou2:'#00e5ff',ou3:'#ffd700',eo:'#00d4ff',df:'#b388ff'};
+  const col=cols[type]||'#00ff88';
+  ['ou1','ou2','ou3','eo','df'].forEach(t=>{
+    const b=document.getElementById('botSel_'+t);
     if(!b)return;
-    b.style.background=t===type?`rgba(${col==='#00ff88'?'0,255,136':col==='#00d4ff'?'0,212,255':'179,136,255'},.2)`:'rgba(128,128,128,.08)';
-    b.style.borderColor=t===type?col:'rgba(128,128,128,.3)';
-    b.style.color=t===type?col:'var(--dm)';
+    const active=t===type;
+    b.style.borderColor=active?cols[t]:'rgba(255,255,255,.15)';
+    b.style.color=active?cols[t]:'var(--dm)';
+    b.style.background=active?'rgba(255,255,255,.07)':'transparent';
   });
-  const mg=BOT_CONFIGS[type].mg;
-  botLog(`Selected: ${BOT_CONFIGS[type].name} · MG×${mg}`,'#ffd700');
+  // Update recovery mode label
+  const cfg=BOT_CONFIGS[type];
+  try{
+    document.getElementById('botModeLabel').textContent=
+      '[NRM] '+cfg.name+' | MG x'+cfg.mg;
+  }catch(e){}
 }
 
-// Signal finders for each bot type
-function botFindOU(){
+function botFindOUStrategy(strat){
+  // Strategy definitions
+  // ou1: normal O2/U7, recovery O3/U6, mg 2.5
+  // ou2: normal O1/U8, recovery O3/U6, mg 3.6
+  // ou3: normal O4/U5 only (no recovery change), mg 2.1
   let best=null,bestConf=0;
   ALL.forEach(inst=>{
     const s=getDg(inst);if(!s||s.length<15)return;
     const r=analyseOD(s,inst);if(r.dir==='WAIT'||r.ent===null)return;
-    // Normal:   OVER 0,1,2  |  UNDER 7,8,9
-    // Recovery: OVER 3 only |  UNDER 6 only
     let ok=false;
-    if(!botRecoveryMode){
-      ok=(r.dir==='OVER'&&r.ent<=2)||(r.dir==='UNDER'&&r.ent>=7);
-    } else {
-      ok=(r.dir==='OVER'&&r.ent===3)||(r.dir==='UNDER'&&r.ent===6);
+    if(strat==='ou1'){
+      if(!botRecoveryMode) ok=(r.dir==='OVER'&&r.ent===2)||(r.dir==='UNDER'&&r.ent===7);
+      else ok=(r.dir==='OVER'&&r.ent===3)||(r.dir==='UNDER'&&r.ent===6);
+    } else if(strat==='ou2'){
+      if(!botRecoveryMode) ok=(r.dir==='OVER'&&r.ent===1)||(r.dir==='UNDER'&&r.ent===8);
+      else ok=(r.dir==='OVER'&&r.ent===3)||(r.dir==='UNDER'&&r.ent===6);
+    } else if(strat==='ou3'){
+      // 50/50 — trades OVER 4 or UNDER 5 only (no recovery shift)
+      ok=(r.dir==='OVER'&&r.ent===4)||(r.dir==='UNDER'&&r.ent===5);
     }
     if(ok&&r.conf>bestConf){
       bestConf=r.conf;
@@ -2076,6 +2144,8 @@ function botFindOU(){
   });
   return best;
 }
+// Keep old name as alias
+function botFindOU(){return botFindOUStrategy(activeBotType);}
 
 // Called on every tick from the live stream
 function botOnTick(){
