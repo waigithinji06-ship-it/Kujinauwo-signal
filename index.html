@@ -1323,7 +1323,8 @@ function onTradeMessage(d){
       pipelineDepth=Math.max(0,pipelineDepth-1);
       delete contractOpenTimes[c.contract_id]; // remove from timeout tracker
       const oc=openContracts[c.contract_id]||{};
-      const pnl=+(parseFloat(c.sell_price)-parseFloat(c.buy_price)).toFixed(2);
+      // Use c.profit = exact balance change from Deriv (most accurate)
+      const pnl=c.profit!==undefined?+(+c.profit).toFixed(2):+(parseFloat(c.sell_price)-parseFloat(c.buy_price)).toFixed(2);
       const won=pnl>=0;
       const ct=oc.contract_type||c.contract_type||'';
       const barrier=oc.barrier!==undefined?oc.barrier:null;
@@ -1877,7 +1878,8 @@ function renderBotHistory(){
       document.getElementById('botHistWR').textContent=wr+'%';
       document.getElementById('botHistWR').style.color=wr>=60?'#00ff88':wr>=50?'#ffd700':'#ff3b5c';
       document.getElementById('botHistTotal').textContent=botHistory.length;
-      document.getElementById('botHistPnl').textContent=(pnl>=0?'+$':'-$')+Math.abs(pnl).toFixed(2);
+      const pnlR=+pnl.toFixed(2);
+      document.getElementById('botHistPnl').textContent=(pnlR>=0?'+$':'-$')+Math.abs(pnlR).toFixed(2);
       document.getElementById('botHistPnl').style.color=pnl>=0?'#00ff88':'#ff3b5c';
     }catch(e){}
   }catch(e){}
@@ -2133,7 +2135,10 @@ function botLog(msg,col){
 
 function botUpdStats(){
   try{
-    const pnl=botPnl;
+    // Use botHistory as single source of truth so both panels always match
+    const histPnl=botHistory.length?+botHistory.reduce((s,e)=>s+e.pnl,0).toFixed(2):botPnl;
+    botPnl=histPnl; // keep botPnl in sync
+    const pnl=histPnl;
     document.getElementById('botPnl').textContent=(pnl>=0?'+$':'-$')+Math.abs(pnl).toFixed(2);
     document.getElementById('botPnl').style.color=pnl>=0?'#00ff88':'#ff3b5c';
     document.getElementById('botWins').textContent=botWins;
@@ -2152,7 +2157,8 @@ function checkBotResult(d){
     const c=d.proposal_open_contract;
     if(c.is_sold){
       botPipeline=Math.max(0,botPipeline-1);
-      const pnl=+(parseFloat(c.sell_price)-parseFloat(c.buy_price)).toFixed(2);
+      // Use c.profit = exact balance change from Deriv (most accurate)
+      const pnl=c.profit!==undefined?+(+c.profit).toFixed(2):+(parseFloat(c.sell_price)-parseFloat(c.buy_price)).toFixed(2);
       const won=pnl>=0;
       botPnl=+(botPnl+pnl).toFixed(2);
       const cfg=BOT_CONFIGS[activeBotType];
