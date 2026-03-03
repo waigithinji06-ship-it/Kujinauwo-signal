@@ -444,7 +444,7 @@ canvas{display:block;width:100%;border-radius:4px;}
       DIFFERS<br><span style="font-size:7px;opacity:.8">×6.8</span>
     </button>
   </div>
-</div></div>
+</div>
 ```
 
   </div>
@@ -2242,6 +2242,25 @@ function botTick(){
     }
     botFire(sig);
   }
+}
+
+function selBot(type){
+  if(botRunning){showTradeMsg('Stop bot first','#ff3b5c');return;}
+  activeBotType=type;
+  const cols={ou1:'#00ff88',ou2:'#00e5ff',ou3:'#ffd700',eo:'#00d4ff',df:'#b388ff'};
+  ['ou1','ou2','ou3','eo','df'].forEach(function(t){
+    const b=document.getElementById('botSel_'+t);
+    if(!b)return;
+    const on=t===type;
+    b.style.borderColor=on?cols[t]:'rgba(255,255,255,.15)';
+    b.style.color=on?cols[t]:'var(--dm)';
+    b.style.background=on?'rgba(255,255,255,.07)':'transparent';
+  });
+  try{
+    const cfg=BOT_CONFIGS[type];
+    document.getElementById('botModeLabel').textContent='[NRM] '+cfg.name+' MG x'+cfg.mg;
+    document.getElementById('botModeLabel').style.color=cols[type]||'#00ff88';
+  }catch(e){}
 }
 
 function startBot(){
