@@ -179,6 +179,63 @@ canvas{display:block;width:100%;border-radius:4px;}
   </div>
 </div>
 <div id="banner" class="connecting">⟳ Connecting to Deriv live data...</div>
+<div id="tradePanel">
+
+  <div style="background:linear-gradient(135deg,rgba(0,212,255,.07),rgba(0,255,136,.04));border-bottom:2px solid var(--bd);padding:12px 14px;position:relative;z-index:1;">
+    <div style="font-family:var(--dp);font-size:11px;font-weight:700;letter-spacing:3px;color:#00d4ff;margin-bottom:10px;">[!] TRADING ACCOUNT</div>
+    <div id="tradeLogin">
+      <div style="font-family:var(--mn);font-size:9px;color:var(--dm);margin-bottom:7px;line-height:1.7">Enter Deriv API token (Read+Trade). Stays in your browser - never shared.</div>
+      <div style="display:flex;gap:7px;">
+        <input id="apiTokenInput" type="password" placeholder="Paste API token here"
+          style="flex:1;background:var(--p2);border:1.5px solid var(--bd);color:var(--tx);font-family:var(--mn);font-size:10px;padding:8px 10px;border-radius:5px;outline:none;"
+          onkeydown="if(event.key==='Enter')doLogin()">
+        <button id="loginBtn" onclick="doLogin()" style="padding:8px 18px;background:rgba(0,212,255,.12);border:2px solid #00d4ff;color:#00d4ff;font-family:var(--dp);font-size:14px;font-weight:700;letter-spacing:2px;border-radius:5px;cursor:pointer;">LOGIN</button>
+      </div>
+      <div style="font-family:var(--mn);font-size:8px;color:var(--dm);margin-top:5px;">Get token: app.deriv.com/account/api-token · Read + Trade · Token saved in browser</div>
+    </div>
+    <div id="tradeAccount" style="display:none">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-start;margin-bottom:10px;">
+        <div style="background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.2);border-radius:6px;padding:8px 14px;min-width:140px;">
+          <div style="font-family:var(--mn);font-size:8px;color:var(--dm)">BALANCE</div>
+          <div style="font-family:var(--dp);font-size:26px;font-weight:900;color:#00ff88" id="accBal">-</div>
+          <div style="font-family:var(--dp);font-size:11px;font-weight:700;letter-spacing:2px;margin-top:1px" id="accType">-</div>
+        </div>
+        <div style="flex:1;min-width:130px;">
+          <div style="font-family:var(--dp);font-size:16px;font-weight:700;color:var(--tx)" id="accName">-</div>
+          <div style="font-family:var(--mn);font-size:9px;color:var(--dm);margin-bottom:6px" id="accId">-</div>
+          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+            <span style="font-family:var(--mn);font-size:9px;color:var(--dm)">BASE $</span>
+            <input id="stakeAmt" type="number" value="1" min="0.35" step="0.5"
+              style="width:60px;background:var(--p2);border:1px solid var(--bd);color:var(--tx);font-family:var(--mn);font-size:11px;padding:5px 7px;border-radius:5px;text-align:center;"
+              onchange="MG.base=parseFloat(this.value)||1;MG.current=MG.base;updMartStats();">
+            <span style="font-family:var(--mn);font-size:9px;color:var(--dm)">MAX $</span>
+            <input id="maxStake" type="number" value="50" min="1"
+              style="width:60px;background:var(--p2);border:1px solid var(--bd);color:var(--tx);font-family:var(--mn);font-size:11px;padding:5px 7px;border-radius:5px;text-align:center;">
+            <button onclick="doLogout()" style="padding:5px 10px;background:rgba(255,59,92,.08);border:1px solid rgba(255,59,92,.3);color:#ff3b5c;font-family:var(--mn);font-size:9px;border-radius:4px;cursor:pointer;">LOGOUT</button>
+          </div>
+        </div>
+      </div>
+      <!-- MARTINGALE TRACKER -->
+      <div id="mgTrackerPanel" style="background:rgba(0,0,0,.2);border:1px solid var(--bd);border-radius:6px;padding:8px 12px;margin-bottom:8px;">
+        <div style="font-family:var(--dp);font-size:9px;font-weight:700;letter-spacing:2px;color:var(--dm);margin-bottom:6px;">MG · OV0-3/RF×3.6 · DIFF×6.8 · OV4/U5×2.1 · MATCH×1.5 · E/O×2.1</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+          <div style="text-align:center"><div style="font-family:var(--mn);font-size:8px;color:var(--dm)">NEXT STAKE</div><div style="font-family:var(--dp);font-size:22px;font-weight:900;color:#ffd700" id="mgStake">$1.00</div></div>
+          <div style="text-align:center"><div style="font-family:var(--mn);font-size:8px;color:var(--dm)">P&amp;L</div><div style="font-family:var(--dp);font-size:22px;font-weight:900;color:#00ff88" id="mgPnl">+$0</div></div>
+          <div style="text-align:center"><div style="font-family:var(--mn);font-size:8px;color:var(--dm)">WINS</div><div style="font-family:var(--dp);font-size:22px;font-weight:900;color:#00ff88" id="mgW">0</div></div>
+          <div style="text-align:center"><div style="font-family:var(--mn);font-size:8px;color:var(--dm)">LOSSES</div><div style="font-family:var(--dp);font-size:22px;font-weight:900;color:#ff3b5c" id="mgL">0</div></div>
+          <div style="text-align:center"><div style="font-family:var(--mn);font-size:8px;color:var(--dm)">STREAK</div><div style="font-family:var(--dp);font-size:22px;font-weight:900" id="mgS">0L</div></div>
+          <button onclick="runQueue=[];runExecuting=false;MG.current=MG.base;document.getElementById('stakeAmt').value=MG.base;updMartStats();showTradeMsg('Reset','#ffd700');" style="padding:5px 10px;background:rgba(255,215,0,.08);border:1px solid rgba(255,215,0,.3);color:#ffd700;font-family:var(--mn);font-size:9px;border-radius:4px;cursor:pointer;">RESET</button>
+        </div>
+      </div>
+      <!-- OPEN POSITIONS -->
+      <div id="openPosPanel" style="background:rgba(0,0,0,.15);border:1px solid var(--bd);border-radius:6px;padding:8px 10px;">
+        <div style="font-family:var(--dp);font-size:10px;font-weight:700;letter-spacing:2px;color:var(--dm);margin-bottom:4px;">OPEN POSITIONS</div>
+        <div id="openPositions"><span style="font-family:var(--mn);font-size:9px;color:var(--dm)">No open positions</span></div>
+      </div>
+    </div>
+    <div id="tradeMsg" style="display:none;font-family:var(--mn);font-size:10px;margin-top:8px;padding:6px 10px;background:rgba(0,0,0,.25);border-radius:4px;letter-spacing:.5px;"></div>
+  </div>
+</div>
 <div class="tabs">
   <button class="tab on" onclick="swTab('rf',this)">HIGHER/LOWER</button>
   <button class="tab" onclick="swTab('dg',this)">DIGITS</button>
@@ -1618,65 +1675,7 @@ function showTradeMsg(msg,col){
 
 // ── INJECT TRADE UI ──
 function injectTradingUI(){
-  const panel=document.createElement('div');
-  panel.id='tradePanel';
-  panel.innerHTML=`
-  <div style="background:linear-gradient(135deg,rgba(0,212,255,.07),rgba(0,255,136,.04));border-bottom:2px solid var(--bd);padding:12px 14px;position:relative;z-index:1;">
-    <div style="font-family:var(--dp);font-size:11px;font-weight:700;letter-spacing:3px;color:#00d4ff;margin-bottom:10px;">[!] TRADING ACCOUNT</div>
-    <div id="tradeLogin">
-      <div style="font-family:var(--mn);font-size:9px;color:var(--dm);margin-bottom:7px;line-height:1.7">Enter Deriv API token (Read+Trade). Stays in your browser - never shared.</div>
-      <div style="display:flex;gap:7px;">
-        <input id="apiTokenInput" type="password" placeholder="Paste API token here"
-          style="flex:1;background:var(--p2);border:1.5px solid var(--bd);color:var(--tx);font-family:var(--mn);font-size:10px;padding:8px 10px;border-radius:5px;outline:none;"
-          onkeydown="if(event.key==='Enter')doLogin()">
-        <button id="loginBtn" onclick="doLogin()" style="padding:8px 18px;background:rgba(0,212,255,.12);border:2px solid #00d4ff;color:#00d4ff;font-family:var(--dp);font-size:14px;font-weight:700;letter-spacing:2px;border-radius:5px;cursor:pointer;">LOGIN</button>
-      </div>
-      <div style="font-family:var(--mn);font-size:8px;color:var(--dm);margin-top:5px;">Get token: app.deriv.com/account/api-token · Read + Trade · Token saved in browser</div>
-    </div>
-    <div id="tradeAccount" style="display:none">
-      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-start;margin-bottom:10px;">
-        <div style="background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.2);border-radius:6px;padding:8px 14px;min-width:140px;">
-          <div style="font-family:var(--mn);font-size:8px;color:var(--dm)">BALANCE</div>
-          <div style="font-family:var(--dp);font-size:26px;font-weight:900;color:#00ff88" id="accBal">-</div>
-          <div style="font-family:var(--dp);font-size:11px;font-weight:700;letter-spacing:2px;margin-top:1px" id="accType">-</div>
-        </div>
-        <div style="flex:1;min-width:130px;">
-          <div style="font-family:var(--dp);font-size:16px;font-weight:700;color:var(--tx)" id="accName">-</div>
-          <div style="font-family:var(--mn);font-size:9px;color:var(--dm);margin-bottom:6px" id="accId">-</div>
-          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
-            <span style="font-family:var(--mn);font-size:9px;color:var(--dm)">BASE $</span>
-            <input id="stakeAmt" type="number" value="1" min="0.35" step="0.5"
-              style="width:60px;background:var(--p2);border:1px solid var(--bd);color:var(--tx);font-family:var(--mn);font-size:11px;padding:5px 7px;border-radius:5px;text-align:center;"
-              onchange="MG.base=parseFloat(this.value)||1;MG.current=MG.base;updMartStats();">
-            <span style="font-family:var(--mn);font-size:9px;color:var(--dm)">MAX $</span>
-            <input id="maxStake" type="number" value="50" min="1"
-              style="width:60px;background:var(--p2);border:1px solid var(--bd);color:var(--tx);font-family:var(--mn);font-size:11px;padding:5px 7px;border-radius:5px;text-align:center;">
-            <button onclick="doLogout()" style="padding:5px 10px;background:rgba(255,59,92,.08);border:1px solid rgba(255,59,92,.3);color:#ff3b5c;font-family:var(--mn);font-size:9px;border-radius:4px;cursor:pointer;">LOGOUT</button>
-          </div>
-        </div>
-      </div>
-      <!-- MARTINGALE TRACKER -->
-      <div id="mgTrackerPanel" style="background:rgba(0,0,0,.2);border:1px solid var(--bd);border-radius:6px;padding:8px 12px;margin-bottom:8px;">
-        <div style="font-family:var(--dp);font-size:9px;font-weight:700;letter-spacing:2px;color:var(--dm);margin-bottom:6px;">MG · OV0-3/RF×3.6 · DIFF×6.8 · OV4/U5×2.1 · MATCH×1.5 · E/O×2.1</div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
-          <div style="text-align:center"><div style="font-family:var(--mn);font-size:8px;color:var(--dm)">NEXT STAKE</div><div style="font-family:var(--dp);font-size:22px;font-weight:900;color:#ffd700" id="mgStake">$1.00</div></div>
-          <div style="text-align:center"><div style="font-family:var(--mn);font-size:8px;color:var(--dm)">P&amp;L</div><div style="font-family:var(--dp);font-size:22px;font-weight:900;color:#00ff88" id="mgPnl">+$0</div></div>
-          <div style="text-align:center"><div style="font-family:var(--mn);font-size:8px;color:var(--dm)">WINS</div><div style="font-family:var(--dp);font-size:22px;font-weight:900;color:#00ff88" id="mgW">0</div></div>
-          <div style="text-align:center"><div style="font-family:var(--mn);font-size:8px;color:var(--dm)">LOSSES</div><div style="font-family:var(--dp);font-size:22px;font-weight:900;color:#ff3b5c" id="mgL">0</div></div>
-          <div style="text-align:center"><div style="font-family:var(--mn);font-size:8px;color:var(--dm)">STREAK</div><div style="font-family:var(--dp);font-size:22px;font-weight:900" id="mgS">0L</div></div>
-          <button onclick="runQueue=[];runExecuting=false;MG.current=MG.base;document.getElementById('stakeAmt').value=MG.base;updMartStats();showTradeMsg('Reset','#ffd700');" style="padding:5px 10px;background:rgba(255,215,0,.08);border:1px solid rgba(255,215,0,.3);color:#ffd700;font-family:var(--mn);font-size:9px;border-radius:4px;cursor:pointer;">RESET</button>
-        </div>
-      </div>
-      <!-- OPEN POSITIONS -->
-      <div id="openPosPanel" style="background:rgba(0,0,0,.15);border:1px solid var(--bd);border-radius:6px;padding:8px 10px;">
-        <div style="font-family:var(--dp);font-size:10px;font-weight:700;letter-spacing:2px;color:var(--dm);margin-bottom:4px;">OPEN POSITIONS</div>
-        <div id="openPositions"><span style="font-family:var(--mn);font-size:9px;color:var(--dm)">No open positions</span></div>
-      </div>
-    </div>
-    <div id="tradeMsg" style="display:none;font-family:var(--mn);font-size:10px;margin-top:8px;padding:6px 10px;background:rgba(0,0,0,.25);border-radius:4px;letter-spacing:.5px;"></div>
-  </div>`;
-  const banner=document.getElementById('banner');
-  banner.parentNode.insertBefore(panel,banner.nextSibling);
+  // Panel is now static HTML in body
   // Auto-restore saved token
   try{
     const saved=localStorage.getItem('dv_tok');
