@@ -1306,6 +1306,8 @@ function onTradeMessage(d){
     accountInfo=d.authorize;tradeReady=true;
     MG.base=parseFloat(document.getElementById('stakeAmt')?.value||'1');
     MG.current=MG.base;
+    // Save token so it survives page reload
+    try{localStorage.setItem('dv_tok',apiToken);}catch(e){}
     showAccountInfo(d.authorize);
     tradeSend({balance:1,subscribe:1});
     // Flush pending trades
@@ -1569,6 +1571,7 @@ function refreshPositions(){
 function setLoggedOut(){
   apiToken=null;accountInfo=null;tradeWSok=false;tradeReady=false;
   runQueue=[];runExecuting=false;
+  try{localStorage.removeItem('dv_tok');}catch(e){}
   document.getElementById('tradeLogin').style.display='block';
   document.getElementById('tradeAccount').style.display='none';
   document.querySelectorAll('.trade-btn-wrap').forEach(w=>w.style.display='none');
@@ -1628,7 +1631,7 @@ function injectTradingUI(){
           onkeydown="if(event.key==='Enter')doLogin()">
         <button id="loginBtn" onclick="doLogin()" style="padding:8px 18px;background:rgba(0,212,255,.12);border:2px solid #00d4ff;color:#00d4ff;font-family:var(--dp);font-size:14px;font-weight:700;letter-spacing:2px;border-radius:5px;cursor:pointer;">LOGIN</button>
       </div>
-      <div style="font-family:var(--mn);font-size:8px;color:var(--dm);margin-top:5px;">Get token: app.deriv.com/account/api-token · Select Read + Trade only</div>
+      <div style="font-family:var(--mn);font-size:8px;color:var(--dm);margin-top:5px;">Get token: app.deriv.com/account/api-token · Read + Trade · Token saved in browser</div>
     </div>
     <div id="tradeAccount" style="display:none">
       <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-start;margin-bottom:10px;">
@@ -1674,6 +1677,22 @@ function injectTradingUI(){
   </div>`;
   const banner=document.getElementById('banner');
   banner.parentNode.insertBefore(panel,banner.nextSibling);
+  // Auto-restore saved token
+  try{
+    const saved=localStorage.getItem('dv_tok');
+    if(saved){
+      const inp=document.getElementById('apiTokenInput');
+      if(inp)inp.value=saved;
+      // Auto-login with saved token
+      setTimeout(()=>{
+        if(!accountInfo&&saved){
+          apiToken=saved;
+          showTradeMsg('[~] Reconnecting saved account...','#ffd700');
+          initTradeWS(saved);
+        }
+      },800);
+    }
+  }catch(e){}
 
   // RF trade button
   const rfB=document.createElement('div');
