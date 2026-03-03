@@ -441,7 +441,7 @@ canvas{display:block;width:100%;border-radius:4px;}
       EVEN/ODD<br><span style="font-size:7px;opacity:.8">×2.1</span>
     </button>
     <button id="botSel_df" onclick="selBot('df')" style="flex:1;padding:8px 4px;background:transparent;border:2px solid rgba(179,136,255,.3);color:var(--dm);font-family:var(--dp);font-size:9px;font-weight:700;border-radius:5px;cursor:pointer;text-align:center;">
-      DIFFERS<br><span style="font-size:7px;opacity:.8">×6.8</span>
+      DIFFERS<br><span style="font-size:7px;opacity:.8">digit entry ×6.8</span>
     </button>
   </div>
 </div>
@@ -1907,7 +1907,7 @@ const BOT_CONFIGS={
   ou2:{name:'O1/U8->O3/U6',mg:3.6,findSignal:function(){return botFindOUS('ou2');},label:'#00e5ff'},
   ou3:{name:'O4/U5 50/50', mg:2.1,findSignal:function(){return botFindOUS('ou3');},label:'#ffd700'},
   eo: {name:'EVEN/ODD',    mg:2.1,findSignal:botFindEO,label:'#00d4ff'},
-  df: {name:'DIFFERS',     mg:6.8,findSignal:botFindDF,label:'#b388ff'}
+  df: {name:'DIFFERS (digit entry)',mg:6.8,findSignal:botFindDF,label:'#b388ff'}
 };
 function botFindOUS(strat){
   var best=null,bestConf=0;
@@ -1916,7 +1916,9 @@ function botFindOUS(strat){
     var r=analyseOD(s,inst);if(r.dir==='WAIT'||r.ent===null)return;
     var ok=false;
     if(strat==='ou1'){
-      if(!botRecoveryMode)ok=(r.dir==='OVER'&&r.ent===2)||(r.dir==='UNDER'&&r.ent===7);
+      // dfRecoveryMode: always use O2/U7 regardless of botRecoveryMode flag
+      if(dfRecoveryMode) ok=(r.dir==='OVER'&&r.ent===2)||(r.dir==='UNDER'&&r.ent===7);
+      else if(!botRecoveryMode) ok=(r.dir==='OVER'&&r.ent===2)||(r.dir==='UNDER'&&r.ent===7);
       else ok=(r.dir==='OVER'&&r.ent===3)||(r.dir==='UNDER'&&r.ent===6);
     }else if(strat==='ou2'){
       if(!botRecoveryMode)ok=(r.dir==='OVER'&&r.ent===1)||(r.dir==='UNDER'&&r.ent===8);
@@ -2101,9 +2103,18 @@ function checkBotResult(d){
         botWins++;
         if(botRecoveryMode){
           botRecoveryMode=false;
+          const _wasDfRec=dfRecoveryMode;
           dfRecoveryMode=false;
-          try{document.getElementById('botModeLabel').textContent='[NRM] NORMAL: OVER 0-2 / UNDER 7-9';document.getElementById('botModeLabel').style.color='#00ff88';}catch(e){}
-          botLog(`[OK] RECOVERY WIN +$${pnl.toFixed(2)} → OVER2/UNDER7 · reset $${botBaseStake}`,'#00ff88');
+          const _winCfg=BOT_CONFIGS[activeBotType];
+          try{
+            document.getElementById('botModeLabel').textContent='[NRM] '+(_winCfg?_winCfg.name:activeBotType);
+            document.getElementById('botModeLabel').style.color='#00ff88';
+          }catch(e){}
+          if(_wasDfRec){
+            botLog(`[OK] DF RECOVERY WIN +$${pnl.toFixed(2)} → back to DIFFERS · reset $${botBaseStake.toFixed(2)}`,'#00ff88');
+          } else {
+            botLog(`[OK] RECOVERY WIN +$${pnl.toFixed(2)} · reset $${botBaseStake.toFixed(2)}`,'#00ff88');
+          }
         } else {
           botLog(`[OK] WIN +$${pnl.toFixed(2)}`,'#00ff88');
         }
@@ -2120,8 +2131,12 @@ function checkBotResult(d){
           // Differs switches to OU recovery (O2/U7 with analysis entry)
           if(activeBotType==='df'){
             dfRecoveryMode=true;
-            try{document.getElementById('botModeLabel').textContent='[REC] DIFFERS→OU2/7 x3.6';document.getElementById('botModeLabel').style.color='#ff8c00';}catch(e){}
-            botLog(`[X] LOSS -$${Math.abs(pnl).toFixed(2)} → DF RECOVERY: O2/U7 x3.6 · $${newStake}`,'#ff8c00');
+            // Force MG=3.6 for DF recovery stake (overrides DF's 6.8)
+            const dfRecNext=+(botStake*3.6).toFixed(2);
+            const dfRecStake=dfRecNext>maxS?botBaseStake:dfRecNext;
+            botStake=dfRecStake; // apply corrected stake now
+            try{document.getElementById('botModeLabel').textContent='[REC] DIFFERS → O2/U7 x3.6 $'+dfRecStake.toFixed(2);document.getElementById('botModeLabel').style.color='#ff8c00';}catch(e){}
+            botLog(`[X] DIFFERS LOSS -$${Math.abs(pnl).toFixed(2)} → RECOVERY: O2/U7 x3.6 · $${dfRecStake.toFixed(2)}`,'#ff8c00');
           } else {
             try{const _rc=_cfg?_cfg.name:'';document.getElementById('botModeLabel').textContent='[REC] '+_rc;document.getElementById('botModeLabel').style.color='#ff3b5c';}catch(e){}
             botLog(`[X] LOSS -$${Math.abs(pnl).toFixed(2)} → RECOVERY x${_mg} · $${newStake}`,'#ff3b5c');
@@ -2129,8 +2144,8 @@ function checkBotResult(d){
         } else {
           botLog(`[X] LOSS -$${Math.abs(pnl).toFixed(2)} → MG x${_mg} · $${newStake}`,'#ff3b5c');
         }
-        if(next>maxS){botRecoveryMode=false;botLog('[!] Max stake → reset','#ff8c00');}
-        botStake=newStake;
+        if(next>maxS){botRecoveryMode=false;dfRecoveryMode=false;botLog('[!] Max stake → reset','#ff8c00');}
+        if(!dfRecoveryMode)botStake=newStake; // df recovery already set its own stake above
         try{soundLoss();}catch(e){}
       }
 
