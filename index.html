@@ -1162,11 +1162,29 @@ function buildScanResults(){
 function runScan(){
   const btn=document.getElementById('scBtn'),scn=document.getElementById('scScan');
   btn.disabled=true;btn.style.opacity='.35';scn.style.display='block';
-  document.getElementById('scResults').innerHTML='';document.getElementById('bestPanel').style.display='none';
-  if(!wsOk){buildScanResults();return;}
-  ALL.forEach(s=>{scanQ[s]=null;});scanTotal=ALL.length;
+  document.getElementById('scResults').innerHTML='';
+  try{document.getElementById('bestPanel').style.display='none';}catch(e){}
+  
+  // Show immediate results using buffered data (instant feedback)
+  buildScanResults();
+  
+  if(!wsOk){
+    // No WS — results already shown above
+    scn.style.display='none';
+    btn.disabled=false;btn.style.opacity='1';
+    return;
+  }
+  
+  // Also fetch fresh data and re-render when it arrives
+  ALL.forEach(s=>{scanQ[s]=null;});
+  scanTotal=ALL.length;
   ALL.forEach((s,i)=>setTimeout(()=>wsSend({ticks_history:s,count:50,end:'latest',style:'ticks',subscribe:0}),i*80));
-  setTimeout(()=>{if(document.getElementById('scScan').style.display!=='none')buildScanResults();},7000);
+  // Force final render after 5s regardless
+  setTimeout(()=>{
+    buildScanResults();
+    document.getElementById('scScan').style.display='none';
+    btn.disabled=false;btn.style.opacity='1';
+  },5000);
 }
 
 const getCol=dir=>dir==='OVER'?'#00ff88':dir==='UNDER'?'#ff3b5c':dir==='DIFFERS'?'#b388ff':dir==='MATCHES'?'#00d4ff':'#ffd700';
@@ -2010,6 +2028,21 @@ function botUpdStats(){
   }catch(e){}
 }
 
+function botLog(msg,col){
+  try{
+    const el=document.getElementById('botActivity');
+    if(!el)return;
+    const line=document.createElement('div');
+    line.style.cssText='border-bottom:1px solid rgba(255,255,255,.04);padding:2px 0;';
+    line.innerHTML='<span style="color:'+( col||'var(--dm)')+'">'+msg+'</span>';
+    // Remove placeholder text
+    if(el.textContent.trim()==='Bot not started yet.')el.innerHTML='';
+    el.insertBefore(line,el.firstChild);
+    // Keep max 80 lines
+    while(el.children.length>80)el.removeChild(el.lastChild);
+  }catch(e){}
+}
+
 function botSetStatus(msg,col){
   try{const el=document.getElementById('botStatus');if(el){el.textContent=msg;el.style.color=col||'var(--dm)';}}catch(e){}
 }
@@ -2205,6 +2238,8 @@ function startBot(){
   const sl=document.getElementById('botSL').value;
   const modeInfo=activeBotType==='ou'?'Normal: OVER2/UNDER7 · Recovery: OVER3/UNDER6 ×3.2':
     `MG×${cfg.mg}`;
+  // Clear old log
+  try{document.getElementById('botActivity').innerHTML='';}catch(e){}
   botLog(`[START] ${cfg.name} · TP $${tp} · SL $${sl} · Base $${botStake} · ${modeInfo}`,'#ffd700');
   botSetStatus(`[!] TICK-SPEED · ${cfg.name} · scanning...`,'#00d4ff');
   botUpdStats();
