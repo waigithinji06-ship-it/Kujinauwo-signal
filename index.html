@@ -1111,6 +1111,37 @@ function analyseDM(stream,inst){
   return{type,digit,cond,conf:Math.round(conf),runs,sL,lastD};
 }
 
+function analyseEO(stream,inst){
+  if(!stream||stream.length<10)return{dir:'WAIT',ent:null,conf:0,runs:0,evenPct:50,oddPct:50,cond:'Need more ticks...'};
+  const even=stream.filter(d=>d%2===0).length;
+  const odd=stream.length-even;
+  const evenPct=Math.round(even/stream.length*100);
+  const oddPct=100-evenPct;
+  const dev=Math.abs(evenPct-50);
+  // Count streaks
+  let s1=0;for(let i=stream.length-1;i>=0;i--){const isEven=stream[i]%2===0;if((evenPct>50&&isEven)||(oddPct>50&&!isEven))s1++;else break;}
+  if(dev<8)return{dir:'WAIT',ent:null,conf:0,runs:0,evenPct,oddPct,cond:'Even/Odd balance near 50/50 — no edge'};
+  const dir=evenPct>50?'EVEN':'ODD';
+  const conf=Math.min(95,50+dev*2);
+  const runs=conf>=65?(s1>=3?3:2):1;
+  return{dir,ent:null,conf:Math.round(conf),runs,evenPct,oddPct,cond:`${dir} bias: ${evenPct}% even / ${oddPct}% odd · ${s1} streak`};
+}
+
+function analyseRF(stream,inst){
+  if(!stream||stream.length<10)return{dir:'WAIT',conf:0,runs:0,cond:'Need more ticks...'};
+  // Rise/Fall based on price direction
+  let rises=0,falls=0;
+  for(let i=1;i<stream.length;i++){if(stream[i]>stream[i-1])rises++;else if(stream[i]<stream[i-1])falls++;}
+  const total=rises+falls||1;
+  const risePct=Math.round(rises/total*100);
+  const dev=Math.abs(risePct-50);
+  if(dev<10)return{dir:'WAIT',conf:0,runs:0,cond:'No clear rise/fall bias'};
+  const dir=risePct>50?'RISE':'FALL';
+  const conf=Math.min(92,50+dev*1.8);
+  return{dir,conf:Math.round(conf),runs:conf>=65?2:1,cond:`${dir} bias: ${risePct}% rises`};
+}
+
+
 function runDM(){
   const btn=document.getElementById('dmBtn'),scn=document.getElementById('dmScan');
   btn.disabled=true;btn.style.opacity='.35';scn.style.display='block';
@@ -1148,15 +1179,15 @@ function chkScan(){
 
 function buildScanResults(){
   try{
-    const ouR=ALL.map(inst=>{const e=scanQ[inst];const s=e&&e.d&&e.d.length>=10?e.d:getDg(inst);return{inst,r:analyseOD(s,inst),live:!!(e&&e.d),mode:'ou'};});
-    const dmR=ALL.map(inst=>{const e=scanQ[inst];const s=e&&e.d&&e.d.length>=10?e.d:getDg(inst);const r=analyseDM(s,inst);return{inst,r:{dir:r.type,ent:r.digit,conf:r.conf,runs:r.runs,lp:0,hp:0,cond:r.cond},live:!!(e&&e.d),mode:'dm'};});
-    const eoR=ALL.map(inst=>{const e=scanQ[inst];const s=e&&e.d&&e.d.length>=10?e.d:getDg(inst);const r=analyseEO(s,inst);return{inst,r:{dir:r.dir,ent:null,conf:r.conf,runs:r.runs,lp:r.evenPct,hp:r.oddPct,cond:r.cond},live:!!(e&&e.d),mode:'eo'};});
+    const ouR=ALL.map(inst=>{try{const e=scanQ[inst];const s=e&&e.d&&e.d.length>=10?e.d:getDg(inst);return{inst,r:analyseOD(s,inst),live:!!(e&&e.d),mode:'ou'};}catch(ex){return{inst,r:{dir:'WAIT',ent:null,conf:0,runs:0,lp:50,hp:50,cond:'Error'},live:false,mode:'ou'};}});
+    const dmR=ALL.map(inst=>{try{const e=scanQ[inst];const s=e&&e.d&&e.d.length>=10?e.d:getDg(inst);const r=analyseDM(s,inst);return{inst,r:{dir:r.type,ent:r.digit,conf:r.conf,runs:r.runs,lp:0,hp:0,cond:r.cond},live:!!(e&&e.d),mode:'dm'};}catch(ex){return{inst,r:{dir:'WAIT',ent:null,conf:0,runs:0,lp:0,hp:0,cond:'Error'},live:false,mode:'dm'};}});
+    const eoR=ALL.map(inst=>{try{const e=scanQ[inst];const s=e&&e.d&&e.d.length>=10?e.d:getDg(inst);const r=analyseEO(s,inst);return{inst,r:{dir:r.dir,ent:null,conf:r.conf,runs:r.runs,lp:r.evenPct||50,hp:r.oddPct||50,cond:r.cond},live:!!(e&&e.d),mode:'eo'};}catch(ex){return{inst,r:{dir:'WAIT',ent:null,conf:0,runs:0,lp:50,hp:50,cond:'Error'},live:false,mode:'eo'};}});
     const all=[...ouR,...dmR,...eoR].sort((a,b)=>{if(a.r.dir==='WAIT'&&b.r.dir!=='WAIT')return 1;if(b.r.dir==='WAIT'&&a.r.dir!=='WAIT')return -1;return b.r.conf-a.r.conf;});
     renderScan(all);
     document.getElementById('lastScan').textContent='Last: '+new Date().toTimeString().slice(0,8);
     document.getElementById('scScan').style.display='none';
     document.getElementById('scBtn').disabled=false;document.getElementById('scBtn').style.opacity='1';
-  }catch(e){document.getElementById('scScan').style.display='none';document.getElementById('scBtn').disabled=false;document.getElementById('scBtn').style.opacity='1';}
+  }catch(e){console.error('buildScanResults error:',e);document.getElementById('scScan').style.display='none';document.getElementById('scBtn').disabled=false;document.getElementById('scBtn').style.opacity='1';try{document.getElementById('lastScan').textContent='Scan error - check console';}catch(ex){}}
 }
 
 function runScan(){
