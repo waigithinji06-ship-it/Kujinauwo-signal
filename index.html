@@ -3,814 +3,1065 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>DerivSignal Pro</title>
-<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow+Condensed:wght@400;700;900&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>DerivSignal</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#060c12;--panel:#0c1720;--p2:#101e2c;--bd:#1c3248;
-  --ac:#00d4ff;--gn:#00ff88;--rd:#ff3b5c;--yw:#ffd700;--og:#ff8c00;--pu:#b388ff;
-  --tx:#eaf4ff;--dm:#7a9cb8;
-  --mn:'Share Tech Mono',monospace;--dp:'Barlow Condensed',sans-serif;
+  --bg:#080c10;
+  --bg2:#0d1219;
+  --bg3:#111820;
+  --card:#141c26;
+  --card2:#1a2333;
+  --border:rgba(255,255,255,.08);
+  --border2:rgba(255,255,255,.14);
+  --tx:#e8edf2;
+  --dim:#5a6a7a;
+  --dim2:#8a9aaa;
+  --green:#00e676;
+  --green2:rgba(0,230,118,.12);
+  --green3:rgba(0,230,118,.06);
+  --red:#ff3d57;
+  --red2:rgba(255,61,87,.12);
+  --cyan:#00d4ff;
+  --cyan2:rgba(0,212,255,.12);
+  --gold:#ffc107;
+  --gold2:rgba(255,193,7,.12);
+  --purple:#b388ff;
+  --purple2:rgba(179,136,255,.12);
+  --orange:#ff8a00;
+  --nav-h:64px;
+  --hdr-h:56px;
+  --f-mono:'JetBrains Mono',monospace;
+  --f-ui:'Space Grotesk',sans-serif;
 }
-*{box-sizing:border-box;margin:0;padding:0;}
-html,body{background:var(--bg);color:var(--tx);font-family:var(--dp);min-height:100vh;overflow-x:hidden;}
-body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
-  background-image:linear-gradient(rgba(0,212,255,.02) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,.02) 1px,transparent 1px);
-  background-size:32px 32px;}
-.hdr{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;
-  border-bottom:2px solid var(--bd);position:sticky;top:0;z-index:200;background:rgba(6,12,18,.99);backdrop-filter:blur(12px);}
-.logo{font-family:var(--dp);font-size:22px;font-weight:900;letter-spacing:2px;color:#fff;}
-.logo b{color:var(--ac);}
-.pill{display:flex;align-items:center;gap:5px;font-family:var(--mn);font-size:10px;padding:5px 12px;border-radius:20px;border:2px solid;transition:all .3s;letter-spacing:1px;}
-.pill.live{color:#00ff88;background:rgba(0,255,136,.12);border-color:rgba(0,255,136,.5);}
-.pill.connecting{color:#ffd700;background:rgba(255,215,0,.12);border-color:rgba(255,215,0,.5);}
-.pill.offline{color:#ff4466;background:rgba(255,59,92,.12);border-color:rgba(255,59,92,.5);}
-.ldot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
-.ldot.live{background:#00ff88;animation:gl 1.4s infinite;}
-.ldot.connecting{background:#ffd700;animation:gl .7s infinite;}
-.ldot.offline{background:#ff4466;}
-@keyframes gl{0%,100%{opacity:1;}50%{opacity:.2;}}
-.clk{font-family:var(--mn);font-size:11px;color:var(--dm);}
-#banner{font-family:var(--mn);font-size:10px;padding:7px 16px;text-align:center;letter-spacing:1px;}
-#banner.live{background:rgba(0,255,136,.07);color:#00ff88;border-bottom:1px solid rgba(0,255,136,.15);}
-#banner.connecting{background:rgba(255,215,0,.07);color:#ffd700;border-bottom:1px solid rgba(255,215,0,.15);}
-#banner.offline{background:rgba(255,59,92,.07);color:#ff4466;border-bottom:1px solid rgba(255,59,92,.15);}
-.tabs{display:flex;overflow-x:auto;background:rgba(6,12,18,.97);border-bottom:2px solid var(--bd);position:sticky;top:43px;z-index:190;}
-.tabs::-webkit-scrollbar{display:none;}
-.tab{flex:0 0 auto;padding:11px 14px;font-family:var(--dp);font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;text-align:center;color:var(--dm);border:none;background:transparent;cursor:pointer;border-bottom:3px solid transparent;transition:all .2s;white-space:nowrap;}
-.tab.on{color:var(--ac);border-bottom-color:var(--ac);}
-.tab:hover{color:var(--tx);}
-.tc{display:none;position:relative;z-index:1;padding:14px;}
-.tc.on{display:block;}
-.p{background:var(--panel);border:1px solid var(--bd);border-radius:8px;padding:14px;margin-bottom:12px;position:relative;overflow:hidden;}
-.p::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--ac),transparent);}
-.p.g::before{background:linear-gradient(90deg,#00ff88,transparent);}
-.p.y::before{background:linear-gradient(90deg,#ffd700,transparent);}
-.p.o::before{background:linear-gradient(90deg,#ff8c00,transparent);}
-.p.pu::before{background:linear-gradient(90deg,#b388ff,transparent);}
-.pt{font-family:var(--dp);font-size:11px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--dm);margin-bottom:10px;}
-.ig{margin-bottom:8px;}
-.iglbl{font-family:var(--mn);font-size:9px;letter-spacing:2px;color:var(--dm);margin-bottom:5px;text-transform:uppercase;}
-.irow{display:flex;flex-wrap:wrap;gap:5px;}
-.ib{font-family:var(--mn);font-size:10px;padding:6px 11px;background:var(--p2);border:1px solid var(--bd);color:var(--dm);border-radius:5px;cursor:pointer;transition:all .15s;position:relative;}
-.ib:hover{border-color:var(--ac);color:var(--tx);}
-.ib.on{border-color:var(--ac);color:var(--ac);background:rgba(0,212,255,.1);}
-.ib.s1{border-color:rgba(255,140,0,.3);color:rgba(255,140,0,.65);}
-.ib.s1.on{border-color:#ff8c00;color:#ff8c00;background:rgba(255,140,0,.1);}
-.ib .lv{position:absolute;top:-3px;right:-3px;width:7px;height:7px;border-radius:50%;background:#00ff88;border:1.5px solid var(--bg);display:none;}
-.ib.lv-on .lv{display:block;}
-.sc{border:1px solid var(--bd);border-radius:8px;padding:16px;margin-bottom:12px;position:relative;overflow:hidden;background:var(--panel);}
-.sc::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;}
-.sc.rise::before{background:linear-gradient(90deg,#00ff88,transparent);}
-.sc.fall::before{background:linear-gradient(90deg,#ff3b5c,transparent);}
-.sc.wait::before{background:linear-gradient(90deg,#ffd700,transparent);}
-.scbg{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-family:var(--dp);font-size:100px;font-weight:900;opacity:.05;pointer-events:none;line-height:1;}
-.sctop{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;}
-.sclbl{font-family:var(--mn);font-size:9px;letter-spacing:2px;color:var(--dm);margin-bottom:2px;}
-.sv{font-family:var(--dp);font-size:60px;font-weight:900;line-height:1;}
-.sv.rise{color:#00ff88;text-shadow:0 0 20px rgba(0,255,136,.25);}
-.sv.fall{color:#ff3b5c;text-shadow:0 0 20px rgba(255,59,92,.25);}
-.sv.wait{color:#ffd700;}
-.scr{display:flex;flex-direction:column;gap:8px;align-items:flex-end;flex-shrink:0;}
-.sl{font-family:var(--mn);font-size:8px;color:var(--dm);text-align:right;letter-spacing:1px;}
-.sv2{font-family:var(--dp);font-size:32px;font-weight:900;line-height:1;text-align:right;}
-.sdesc{font-family:var(--mn);font-size:10px;color:var(--dm);margin-top:7px;line-height:1.7;}
-.cb{margin-top:8px;}
-.cbl{display:flex;justify-content:space-between;font-family:var(--mn);font-size:9px;color:var(--dm);margin-bottom:3px;}
-.cbg{height:4px;background:var(--bd);border-radius:2px;overflow:hidden;}
-.cbf{height:100%;border-radius:2px;transition:width .5s;}
-.erow{display:flex;justify-content:space-between;font-family:var(--mn);font-size:9px;color:var(--dm);margin-top:8px;margin-bottom:3px;}
-.er{display:flex;gap:8px;margin-top:8px;align-items:center;}
-.dots{display:flex;gap:5px;flex-wrap:wrap;}
-.dot{width:20px;height:20px;border-radius:50%;border:1.5px solid #ffd700;background:transparent;transition:all .3s;}
-.dot.on{background:#ffd700;box-shadow:0 0 8px #ffd700;}
-.mbtn{font-family:var(--mn);font-size:10px;padding:6px 14px;background:transparent;border:1.5px solid #ffd700;color:#ffd700;border-radius:5px;cursor:pointer;white-space:nowrap;letter-spacing:1px;}
-.mbtn:disabled{opacity:.3;cursor:default;}
-.ir{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(28,50,72,.6);}
-.ir:last-child{border-bottom:none;}
-.in{font-family:var(--mn);font-size:10px;color:var(--dm);}
-.iv{font-family:var(--mn);font-size:10px;color:var(--tx);}
-.is{font-family:var(--dp);font-size:11px;font-weight:700;letter-spacing:1px;padding:3px 8px;border-radius:3px;}
-.is.buy{background:rgba(0,255,136,.15);color:#00ff88;}
-.is.sell{background:rgba(255,59,92,.15);color:#ff3b5c;}
-.is.neutral{background:rgba(255,215,0,.15);color:#ffd700;}
-canvas{display:block;width:100%;border-radius:4px;}
-.sbox{overflow-x:auto;-webkit-overflow-scrolling:touch;padding:6px 0;scrollbar-width:none;}
-.sbox::-webkit-scrollbar{display:none;}
-.srow{display:flex;gap:5px;width:max-content;}
-.sd{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:5px;font-family:var(--mn);font-size:14px;font-weight:700;flex-shrink:0;}
-.sd.lo{background:rgba(0,255,136,.12);color:#00ff88;border:1px solid rgba(0,255,136,.25);}
-.sd.hi{background:rgba(255,59,92,.12);color:#ff3b5c;border:1px solid rgba(255,59,92,.25);}
-@keyframes pop{0%{transform:scale(1.5);opacity:0;}100%{transform:scale(1);opacity:1;}}
-.sd.new{animation:pop .2s ease;}
-.dfwrap{display:flex;align-items:flex-end;gap:4px;height:75px;margin-bottom:4px;}
-.dfc{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;}
-.dfb{width:100%;border-radius:2px 2px 0 0;transition:height .3s;min-height:2px;}
-.dfcnt{font-family:var(--mn);font-size:9px;}
-.dflbl{display:flex;gap:4px;margin-top:2px;}
-.dflbl span{flex:1;text-align:center;font-family:var(--mn);font-size:11px;font-weight:700;}
-.dsg{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;}
-.dsc{background:var(--panel);border:1px solid var(--bd);border-radius:7px;padding:11px;text-align:center;position:relative;overflow:hidden;}
-.dsc::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
-.dsc.g::before{background:#00ff88;}.dsc.r::before{background:#ff3b5c;}
-.dsc.y::before{background:#ffd700;}.dsc.a::before{background:#00d4ff;}.dsc.pu::before{background:#b388ff;}
-.dslbl{font-family:var(--mn);font-size:8px;letter-spacing:2px;color:var(--dm);margin-bottom:3px;text-transform:uppercase;}
-.dsv{font-family:var(--dp);font-size:44px;font-weight:900;line-height:1;}
-.dsv.g{color:#00ff88;}.dsv.r{color:#ff3b5c;}.dsv.y{color:#ffd700;}.dsv.a{color:#00d4ff;}.dsv.pu{color:#b388ff;}
-.scard{background:var(--panel);border:1px solid var(--bd);border-radius:7px;padding:11px 13px;margin-bottom:8px;display:flex;align-items:center;gap:10px;position:relative;overflow:hidden;}
-.scard::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;}
-.scard.over::before{background:#00ff88;}.scard.under::before{background:#ff3b5c;}
-.scard.diff::before{background:#b388ff;}.scard.match::before{background:#00d4ff;}.scard.wait::before{background:#ffd700;}
-.scard.top-pick{border-color:rgba(0,212,255,.4);box-shadow:0 0 14px rgba(0,212,255,.1);}
-.sinst{font-family:var(--mn);font-size:11px;font-weight:700;min-width:68px;color:var(--tx);}
-.sdir{font-family:var(--dp);font-size:20px;font-weight:900;min-width:58px;}
-.sdir.over{color:#00ff88;}.sdir.under{color:#ff3b5c;}.sdir.diff{color:#b388ff;}.sdir.match{color:#00d4ff;}.sdir.wait{color:#ffd700;}
-.sdg{font-family:var(--dp);font-size:30px;font-weight:900;color:#00d4ff;min-width:28px;}
-.sbars{flex:1;min-width:0;}
-.sbrow{display:flex;gap:3px;align-items:center;margin-bottom:3px;}
-.sblbl{font-family:var(--mn);font-size:8px;color:var(--dm);min-width:28px;}
-.sbbg{flex:1;height:5px;background:var(--bd);border-radius:3px;overflow:hidden;}
-.sbf{height:100%;border-radius:3px;transition:width .4s;}
-.scond{font-family:var(--mn);font-size:8px;color:var(--dm);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.sconf{font-family:var(--mn);font-size:9px;color:var(--dm);min-width:36px;text-align:right;flex-shrink:0;}
-.srank{position:absolute;top:5px;right:9px;font-family:var(--mn);font-size:8px;color:var(--dm);}
-.favbadge{position:absolute;top:5px;right:9px;font-family:var(--mn);font-size:8px;background:rgba(255,215,0,.12);color:#ffd700;border:1px solid rgba(255,215,0,.3);padding:2px 6px;border-radius:3px;}
-.livebadge{font-family:var(--mn);font-size:8px;background:rgba(0,255,136,.12);color:#00ff88;border:1px solid rgba(0,255,136,.3);padding:1px 6px;border-radius:3px;display:inline-block;}
-.simbadge{font-family:var(--mn);font-size:8px;background:rgba(255,215,0,.1);color:#ffd700;border:1px solid rgba(255,215,0,.2);padding:1px 6px;border-radius:3px;display:inline-block;}
-.abtn{display:block;width:100%;padding:14px;background:transparent;border:2px solid var(--ac);color:var(--ac);font-family:var(--dp);font-size:16px;font-weight:700;letter-spacing:4px;text-transform:uppercase;cursor:pointer;border-radius:6px;transition:all .2s;margin-bottom:12px;}
-.abtn:hover{background:rgba(0,212,255,.08);}
-.abtn.g{border-color:#00ff88;color:#00ff88;}.abtn.g:hover{background:rgba(0,255,136,.08);}
-.abtn.o{border-color:#ff8c00;color:#ff8c00;}.abtn.o:hover{background:rgba(255,140,0,.08);}
-.abtn.pu{border-color:#b388ff;color:#b388ff;}.abtn.pu:hover{background:rgba(179,136,255,.08);}
-.abtn:disabled{opacity:.35;cursor:default;}
-.scanning{display:none;text-align:center;font-family:var(--mn);font-size:10px;letter-spacing:3px;padding:7px;animation:blink .7s infinite;}
-@keyframes blink{0%,100%{opacity:1;}50%{opacity:.1;}}
-.sg2{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:12px;}
-.scell{background:var(--p2);border:1px solid var(--bd);border-radius:6px;padding:10px;}
-.slbl{font-family:var(--mn);font-size:8px;letter-spacing:1px;color:var(--dm);margin-bottom:3px;text-transform:uppercase;}
-.sval{font-family:var(--dp);font-size:28px;font-weight:900;line-height:1;}
-.vb{display:flex;gap:3px;margin-top:6px;}
-.vbar{flex:1;height:24px;background:var(--bd);border-radius:3px;transition:all .3s;}
-.tsel{display:flex;gap:5px;flex-wrap:wrap;margin-top:6px;}
-.tbtn{flex:1;min-width:36px;padding:8px 4px;background:var(--p2);border:1px solid var(--bd);color:var(--dm);font-family:var(--mn);font-size:11px;border-radius:5px;cursor:pointer;text-align:center;transition:all .2s;}
-.tbtn:hover{border-color:var(--ac);color:var(--tx);}
-.tbtn.on{border-color:var(--ac);color:var(--ac);background:rgba(0,212,255,.1);}
-.lw{overflow-x:auto;-webkit-overflow-scrolling:touch;}
-.lt{width:100%;border-collapse:collapse;font-family:var(--mn);font-size:10px;min-width:420px;}
-.lt th{padding:6px 8px;color:var(--dm);border-bottom:1px solid var(--bd);text-align:left;font-weight:400;font-size:9px;text-transform:uppercase;white-space:nowrap;}
-.lt td{padding:7px 8px;border-bottom:1px solid rgba(28,50,72,.4);white-space:nowrap;color:var(--tx);}
-.lt tr:last-child td{border-bottom:none;}
-.win{color:#00ff88!important;}.loss{color:#ff3b5c!important;}.wt{color:#ffd700!important;}
-.two{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
-.two .p{margin-bottom:0;}
-.bestbox{background:linear-gradient(135deg,rgba(0,212,255,.07),rgba(0,255,136,.04));border:2px solid rgba(0,212,255,.3);border-radius:8px;padding:14px;margin-bottom:12px;position:relative;overflow:hidden;}
-.bestbox::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--ac),#00ff88);}
-.disc{font-family:var(--mn);font-size:9px;color:var(--dm);text-align:center;padding:14px;line-height:1.8;border-top:1px solid var(--bd);margin-top:6px;}
-@media(min-width:768px){.tc{padding:20px;}.dsg{grid-template-columns:repeat(4,1fr);}.sg2{grid-template-columns:repeat(4,1fr);}}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{background:var(--bg);color:var(--tx);font-family:var(--f-ui);min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 80% 50% at 50% -10%,rgba(0,212,255,.06),transparent),radial-gradient(ellipse 60% 40% at 90% 90%,rgba(0,230,118,.04),transparent);pointer-events:none;z-index:0;}
+
+/* ── HEADER ── */
+.hdr{position:fixed;top:0;left:0;right:0;height:var(–hdr-h);background:rgba(8,12,16,.92);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid var(–border);display:flex;align-items:center;justify-content:space-between;padding:0 16px;z-index:100;}
+.hdr-logo{font-family:var(–f-mono);font-size:16px;font-weight:700;letter-spacing:-.5px;}
+.hdr-logo span{color:var(–cyan);}
+.hdr-right{display:flex;align-items:center;gap:10px;}
+.conn-pill{display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-family:var(–f-mono);font-size:10px;font-weight:600;letter-spacing:.5px;border:1px solid;}
+.conn-pill.live{background:rgba(0,230,118,.1);border-color:rgba(0,230,118,.3);color:var(–green);}
+.conn-pill.connecting{background:rgba(255,193,7,.08);border-color:rgba(255,193,7,.25);color:var(–gold);}
+.conn-pill.offline{background:rgba(255,61,87,.08);border-color:rgba(255,61,87,.25);color:var(–red);}
+.conn-dot{width:6px;height:6px;border-radius:50%;background:currentColor;animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.hdr-clock{font-family:var(–f-mono);font-size:11px;color:var(–dim2);}
+
+/* ── BOTTOM NAV ── */
+.nav{position:fixed;bottom:0;left:0;right:0;height:var(–nav-h);background:rgba(8,12,16,.95);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid var(–border);display:flex;align-items:stretch;z-index:100;padding-bottom:env(safe-area-inset-bottom);}
+.nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;background:none;border:none;cursor:pointer;color:var(–dim);transition:color .15s;position:relative;padding:0;}
+.nav-btn.on{color:var(–cyan);}
+.nav-btn.on .nav-icon{background:var(–cyan2);}
+.nav-icon{width:36px;height:28px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:18px;transition:background .15s;}
+.nav-label{font-size:9px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;}
+.nav-bot-btn{position:relative;}
+.nav-bot-btn.on{color:var(–gold);}
+.nav-bot-btn.on .nav-icon{background:var(–gold2);}
+.bot-badge{position:absolute;top:4px;right:16px;width:8px;height:8px;background:var(–gold);border-radius:50%;border:2px solid var(–bg);display:none;}
+.bot-badge.on{display:block;animation:pulse 1.5s infinite;}
+
+/* ── PAGES ── */
+.page{position:fixed;top:var(–hdr-h);left:0;right:0;bottom:var(–nav-h);overflow-y:auto;display:none;-webkit-overflow-scrolling:touch;}
+.page.on{display:block;}
+.page-inner{padding:14px 14px calc(10px);min-height:100%;}
+
+/* ── CARDS ── */
+.card{background:var(–card);border:1px solid var(–border);border-radius:14px;padding:16px;margin-bottom:12px;position:relative;overflow:hidden;}
+.card::before{content:’’;position:absolute;inset:0;border-radius:14px;pointer-events:none;}
+.card.green-tint::before{background:linear-gradient(135deg,rgba(0,230,118,.04),transparent 60%);}
+.card.cyan-tint::before{background:linear-gradient(135deg,rgba(0,212,255,.05),transparent 60%);}
+.card.gold-tint::before{background:linear-gradient(135deg,rgba(255,193,7,.04),transparent 60%);}
+.card.purple-tint::before{background:linear-gradient(135deg,rgba(179,136,255,.05),transparent 60%);}
+.card-title{font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(–dim2);margin-bottom:12px;}
+.card-title span{color:inherit;}
+
+/* ── SCANNER PAGE ── */
+.best-signal{background:linear-gradient(135deg,var(–card2),var(–card));border:1px solid var(–border2);border-radius:16px;padding:20px;margin-bottom:12px;position:relative;overflow:hidden;}
+.best-signal::after{content:‘BEST’;position:absolute;right:-10px;top:-10px;font-family:var(–f-mono);font-size:60px;font-weight:700;opacity:.04;color:var(–cyan);pointer-events:none;}
+.scan-dir{font-family:var(–f-mono);font-size:48px;font-weight:700;line-height:1;margin:4px 0;}
+.scan-inst{font-size:12px;font-weight:600;color:var(–dim2);letter-spacing:1px;margin-bottom:4px;}
+.scan-digit{font-family:var(–f-mono);font-size:36px;font-weight:700;color:var(–cyan);}
+.conf-bar{height:4px;background:var(–border);border-radius:2px;overflow:hidden;margin:10px 0;}
+.conf-fill{height:100%;border-radius:2px;transition:width .4s;}
+.conf-row{display:flex;justify-content:space-between;font-family:var(–f-mono);font-size:10px;color:var(–dim2);}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:6px;font-family:var(–f-mono);font-size:9px;font-weight:600;}
+.badge.live{background:var(–green2);color:var(–green);border:1px solid rgba(0,230,118,.2);}
+.badge.sim{background:rgba(90,106,122,.15);color:var(–dim2);border:1px solid var(–border);}
+.scan-btn{width:100%;padding:14px;border-radius:12px;border:none;background:linear-gradient(135deg,var(–cyan2),rgba(0,212,255,.05));border:1.5px solid rgba(0,212,255,.3);color:var(–cyan);font-family:var(–f-mono);font-size:13px;font-weight:700;letter-spacing:2px;cursor:pointer;transition:all .15s;}
+.scan-btn:active{transform:scale(.98);}
+.scan-btn:disabled{opacity:.4;}
+.scanning-indicator{text-align:center;padding:12px;font-family:var(–f-mono);font-size:11px;color:var(–orange);letter-spacing:2px;display:none;}
+.scan-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.scard-mini{background:var(–card2);border:1px solid var(–border);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:3px;}
+.scard-mini.top{border-color:rgba(0,212,255,.3);background:rgba(0,212,255,.04);}
+.sc-inst{font-size:10px;color:var(–dim2);font-weight:600;}
+.sc-dir{font-family:var(–f-mono);font-size:16px;font-weight:700;}
+.sc-dig{font-family:var(–f-mono);font-size:13px;color:var(–cyan);}
+.sc-conf{font-family:var(–f-mono);font-size:9px;color:var(–dim);}
+.sc-dir.over{color:var(–green);}
+.sc-dir.under{color:var(–red);}
+.sc-dir.differs{color:var(–purple);}
+.sc-dir.matches{color:var(–cyan);}
+.sc-dir.wait{color:var(–dim);}
+.sc-dir.even,.sc-dir.odd{color:var(–gold);}
+.last-scan-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+.last-scan-txt{font-family:var(–f-mono);font-size:10px;color:var(–dim);}
+.auto-badge{font-family:var(–f-mono);font-size:9px;color:var(–orange);background:rgba(255,138,0,.1);border:1px solid rgba(255,138,0,.2);padding:2px 7px;border-radius:5px;}
+
+/* ── FAVS ── */
+.fav-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;}
+.fav-box{flex:1;min-width:60px;background:var(–card2);border:1px solid var(–border);border-radius:10px;padding:8px;text-align:center;}
+.fav-lbl{font-family:var(–f-mono);font-size:9px;color:var(–dim);letter-spacing:1px;margin-bottom:3px;}
+.fav-val{font-family:var(–f-mono);font-size:26px;font-weight:700;}
+.fav-input{width:40px;background:transparent;border:none;color:inherit;font-family:var(–f-mono);font-size:24px;font-weight:700;text-align:center;outline:none;}
+
+/* ── TRADE PAGES ── */
+.inst-grid{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:4px;}
+.inst-btn{flex:1;min-width:55px;padding:8px 4px;background:var(–card2);border:1.5px solid var(–border);border-radius:8px;font-family:var(–f-mono);font-size:11px;font-weight:700;color:var(–dim2);cursor:pointer;text-align:center;transition:all .15s;position:relative;}
+.inst-btn.on{background:rgba(0,212,255,.1);border-color:var(–cyan);color:var(–cyan);}
+.inst-btn .ldot{width:5px;height:5px;border-radius:50%;background:var(–dim);position:absolute;top:4px;right:4px;}
+.inst-btn .ldot.live{background:var(–green);}
+.chart-wrap{border:1px solid var(–border);border-radius:12px;overflow:hidden;background:var(–card2);margin-bottom:12px;padding:12px;}
+.chart-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+.chart-inst{font-family:var(–f-mono);font-size:12px;font-weight:700;color:var(–tx);}
+.chart-price{font-family:var(–f-mono);font-size:20px;font-weight:700;color:var(–cyan);}
+.chart-meta{font-family:var(–f-mono);font-size:9px;color:var(–dim);}
+.signal-box{border-radius:12px;padding:16px;margin-bottom:12px;border:1.5px solid;}
+.signal-box.over{background:rgba(0,230,118,.06);border-color:rgba(0,230,118,.25);}
+.signal-box.under{background:rgba(255,61,87,.06);border-color:rgba(255,61,87,.25);}
+.signal-box.wait{background:rgba(90,106,122,.06);border-color:var(–border);}
+.signal-box.neutral{background:rgba(0,212,255,.04);border-color:rgba(0,212,255,.15);}
+.sig-dir{font-family:var(–f-mono);font-size:40px;font-weight:700;line-height:1;}
+.sig-cond{font-size:11px;color:var(–dim2);margin-top:6px;line-height:1.5;}
+.sig-note{font-family:var(–f-mono);font-size:9px;color:var(–orange);margin-top:6px;}
+.sig-meta{display:flex;gap:10px;margin-top:8px;flex-wrap:wrap;}
+.sig-chip{font-family:var(–f-mono);font-size:10px;background:var(–card2);border:1px solid var(–border);padding:3px 8px;border-radius:5px;color:var(–dim2);}
+.sig-chip span{color:var(–tx);}
+.trade-btn{width:100%;padding:15px;border-radius:12px;border:none;font-family:var(–f-mono);font-size:14px;font-weight:700;letter-spacing:1.5px;cursor:pointer;transition:all .15s;margin-bottom:6px;}
+.trade-btn:active{transform:scale(.97);}
+.trade-btn.rise{background:linear-gradient(135deg,rgba(0,230,118,.15),rgba(0,230,118,.05));border:2px solid var(–green);color:var(–green);}
+.trade-btn.fall{background:linear-gradient(135deg,rgba(255,61,87,.15),rgba(255,61,87,.05));border:2px solid var(–red);color:var(–red);}
+.trade-btn.digit{background:linear-gradient(135deg,rgba(0,212,255,.12),rgba(0,212,255,.04));border:2px solid var(–cyan);color:var(–cyan);}
+.trade-btn-row{display:flex;gap:8px;}
+.trade-btn-row .trade-btn{margin-bottom:0;}
+.trade-wrap{display:none;}
+.digit-stream{display:flex;gap:4px;flex-wrap:wrap;margin:8px 0;}
+.dg-cell{width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:6px;font-family:var(–f-mono);font-size:11px;font-weight:700;background:var(–card2);border:1px solid var(–border);transition:all .15s;}
+.dg-cell.hi{background:rgba(0,230,118,.15);border-color:rgba(0,230,118,.3);color:var(–green);}
+.dg-cell.lo{background:rgba(255,61,87,.15);border-color:rgba(255,61,87,.3);color:var(–red);}
+.dg-cell.new{background:rgba(0,212,255,.2);border-color:var(–cyan);color:var(–cyan);}
+.freq-chart{display:flex;align-items:flex-end;gap:3px;height:50px;margin:8px 0;}
+.freq-bar{flex:1;background:var(–card2);border-radius:3px 3px 0 0;min-height:4px;transition:height .3s;position:relative;}
+.freq-lbl{position:absolute;bottom:-16px;left:50%;transform:translateX(-50%);font-family:var(–f-mono);font-size:8px;color:var(–dim);}
+.freq-hi{background:rgba(0,230,118,.5)!important;}
+.freq-lo{background:rgba(255,61,87,.5)!important;}
+
+/* ── BOT PAGE (FLOATING) ── */
+.bot-page-bg{background:var(–bg);min-height:100%;}
+.bot-hero{background:linear-gradient(180deg,rgba(255,193,7,.06) 0%,transparent 60%);border-bottom:1px solid var(–border);padding:20px 14px 16px;text-align:center;position:relative;}
+.bot-hero::before{content:‘BOT’;position:absolute;font-family:var(–f-mono);font-size:120px;font-weight:700;opacity:.03;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;color:var(–gold);}
+.bot-title{font-family:var(–f-mono);font-size:22px;font-weight:700;color:var(–gold);letter-spacing:1px;}
+.bot-subtitle{font-size:11px;color:var(–dim2);margin-top:4px;}
+.bot-warn{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;background:rgba(255,61,87,.08);border:1px solid rgba(255,61,87,.2);border-radius:8px;font-family:var(–f-mono);font-size:9px;color:var(–red);margin-top:10px;}
+.strat-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px;}
+.strat-card{background:var(–card2);border:2px solid var(–border);border-radius:12px;padding:12px 8px;text-align:center;cursor:pointer;transition:all .2s;position:relative;overflow:hidden;}
+.strat-card::before{content:’’;position:absolute;inset:0;opacity:0;transition:opacity .2s;}
+.strat-card.on{transform:translateY(-2px);}
+.strat-card.ou1.on{border-color:var(–green);background:rgba(0,230,118,.06);}
+.strat-card.ou1.on::before{background:radial-gradient(ellipse at top,rgba(0,230,118,.1),transparent 70%);opacity:1;}
+.strat-card.ou2.on{border-color:var(–cyan);background:rgba(0,212,255,.06);}
+.strat-card.ou2.on::before{background:radial-gradient(ellipse at top,rgba(0,212,255,.1),transparent 70%);opacity:1;}
+.strat-card.ou3.on{border-color:var(–gold);background:rgba(255,193,7,.06);}
+.strat-card.ou3.on::before{background:radial-gradient(ellipse at top,rgba(255,193,7,.1),transparent 70%);opacity:1;}
+.strat-card.eo.on{border-color:#00bcd4;background:rgba(0,188,212,.06);}
+.strat-card.df.on{border-color:var(–purple);background:rgba(179,136,255,.06);}
+.strat-card.df.on::before{background:radial-gradient(ellipse at top,rgba(179,136,255,.1),transparent 70%);opacity:1;}
+.strat-name{font-family:var(–f-mono);font-size:13px;font-weight:700;color:var(–tx);}
+.strat-sub{font-size:9px;color:var(–dim);margin-top:3px;line-height:1.4;}
+.strat-mg{font-family:var(–f-mono);font-size:10px;color:var(–gold);margin-top:4px;}
+.bot-strat-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;}
+.bot-input-grp{background:var(–card2);border:1px solid var(–border);border-radius:10px;padding:10px 12px;}
+.bot-input-lbl{font-family:var(–f-mono);font-size:9px;color:var(–dim);letter-spacing:1px;margin-bottom:5px;}
+.bot-input{width:100%;background:transparent;border:none;color:var(–tx);font-family:var(–f-mono);font-size:22px;font-weight:700;outline:none;}
+.bot-input.tp{color:var(–green);}
+.bot-input.sl{color:var(–red);}
+.bot-input.bs{color:var(–gold);}
+.bot-input.ms{color:var(–orange);}
+.bot-stats-row{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:12px;}
+.bstat{background:var(–card2);border:1px solid var(–border);border-radius:10px;padding:10px 8px;text-align:center;}
+.bstat-lbl{font-family:var(–f-mono);font-size:8px;color:var(–dim);letter-spacing:.5px;margin-bottom:3px;}
+.bstat-val{font-family:var(–f-mono);font-size:20px;font-weight:700;}
+.bot-mode-bar{background:var(–card2);border:1px solid var(–border);border-radius:10px;padding:8px 12px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;}
+.bot-mode-lbl{font-family:var(–f-mono);font-size:10px;color:var(–dim);}
+.bot-mode-val{font-family:var(–f-mono);font-size:11px;font-weight:700;}
+.bot-status-bar{background:var(–card2);border:1px solid var(–border);border-radius:10px;padding:10px 14px;margin-bottom:12px;font-family:var(–f-mono);font-size:11px;}
+.bot-run-btn{width:100%;padding:18px;border-radius:14px;border:none;font-family:var(–f-mono);font-size:15px;font-weight:700;letter-spacing:2px;cursor:pointer;transition:all .2s;margin-bottom:8px;position:relative;overflow:hidden;}
+.bot-run-btn::before{content:’’;position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.08),transparent);pointer-events:none;}
+.bot-run-btn.start{background:linear-gradient(135deg,rgba(255,193,7,.2),rgba(255,193,7,.08));border:2px solid var(–gold);color:var(–gold);}
+.bot-run-btn.start:active{transform:scale(.97);}
+.bot-run-btn.stop{background:linear-gradient(135deg,rgba(255,61,87,.2),rgba(255,61,87,.08));border:2px solid var(–red);color:var(–red);}
+.bot-run-btn.stop:active{transform:scale(.97);}
+.bot-log{background:var(–card2);border:1px solid var(–border);border-radius:10px;padding:10px 12px;max-height:160px;overflow-y:auto;font-family:var(–f-mono);font-size:10px;color:var(–dim2);line-height:1.8;margin-bottom:12px;}
+.bot-hist-tbl{width:100%;border-collapse:collapse;font-family:var(–f-mono);font-size:10px;}
+.bot-hist-tbl th{color:var(–dim);font-size:9px;padding:6px 8px;text-align:left;border-bottom:1px solid var(–border);font-weight:600;}
+.bot-hist-tbl td{padding:8px 8px;border-bottom:1px solid var(–border);color:var(–tx);}
+.bot-hist-tbl tr:last-child td{border-bottom:none;}
+.bot-hist-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;}
+.bhs{background:var(–card2);border:1px solid var(–border);border-radius:10px;padding:10px;text-align:center;}
+.bhs-lbl{font-family:var(–f-mono);font-size:8px;color:var(–dim);margin-bottom:3px;}
+.bhs-val{font-family:var(–f-mono);font-size:18px;font-weight:700;}
+.export-row{display:flex;gap:8px;margin-bottom:12px;}
+.exp-btn{flex:2;padding:10px;border-radius:10px;background:var(–gold2);border:1.5px solid rgba(255,193,7,.3);color:var(–gold);font-family:var(–f-mono);font-size:11px;font-weight:700;cursor:pointer;}
+.clr-btn{flex:1;padding:10px;border-radius:10px;background:var(–red2);border:1.5px solid rgba(255,61,87,.3);color:var(–red);font-family:var(–f-mono);font-size:11px;font-weight:700;cursor:pointer;}
+
+/* ── LOGIN PAGE ── */
+.login-page{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100%;padding:24px;}
+.login-logo{font-family:var(–f-mono);font-size:28px;font-weight:700;margin-bottom:6px;}
+.login-logo span{color:var(–cyan);}
+.login-tagline{font-size:12px;color:var(–dim2);margin-bottom:32px;text-align:center;}
+.login-card{background:var(–card);border:1px solid var(–border2);border-radius:18px;padding:24px;width:100%;max-width:360px;}
+.login-title{font-family:var(–f-mono);font-size:12px;letter-spacing:2px;color:var(–dim2);margin-bottom:16px;}
+.login-input-wrap{position:relative;margin-bottom:14px;}
+.login-input{width:100%;background:var(–card2);border:1.5px solid var(–border2);border-radius:10px;padding:14px 44px 14px 14px;color:var(–tx);font-family:var(–f-mono);font-size:13px;outline:none;transition:border-color .15s;}
+.login-input:focus{border-color:var(–cyan);}
+.login-input::placeholder{color:var(–dim);}
+.login-eye{position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(–dim);cursor:pointer;font-size:16px;padding:0;}
+.login-btn{width:100%;padding:15px;border-radius:12px;border:none;background:linear-gradient(135deg,rgba(0,212,255,.2),rgba(0,212,255,.05));border:2px solid var(–cyan);color:var(–cyan);font-family:var(–f-mono);font-size:14px;font-weight:700;letter-spacing:2px;cursor:pointer;transition:all .15s;margin-bottom:12px;}
+.login-btn:active{transform:scale(.98);}
+.login-hint{font-family:var(–f-mono);font-size:9px;color:var(–dim);text-align:center;line-height:1.6;}
+.login-hint a{color:var(–cyan);text-decoration:none;}
+.account-card{background:var(–card);border:1px solid var(–border2);border-radius:18px;padding:20px;width:100%;max-width:360px;}
+.acc-balance{font-family:var(–f-mono);font-size:38px;font-weight:700;color:var(–green);margin:6px 0;}
+.acc-name{font-size:15px;font-weight:600;color:var(–tx);}
+.acc-id{font-family:var(–f-mono);font-size:11px;color:var(–dim2);margin-bottom:12px;}
+.acc-type-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:8px;font-family:var(–f-mono);font-size:10px;font-weight:700;}
+.acc-type-badge.demo{background:var(–gold2);border:1px solid rgba(255,193,7,.3);color:var(–gold);}
+.acc-type-badge.real{background:var(–green2);border:1px solid rgba(0,230,118,.3);color:var(–green);}
+.acc-controls{display:flex;gap:8px;margin-top:14px;align-items:center;}
+.acc-stake-wrap{flex:1;background:var(–card2);border:1px solid var(–border);border-radius:8px;padding:6px 10px;}
+.acc-stake-lbl{font-family:var(–f-mono);font-size:8px;color:var(–dim);}
+.acc-stake-input{background:none;border:none;color:var(–tx);font-family:var(–f-mono);font-size:16px;font-weight:700;outline:none;width:100%;}
+.acc-max-wrap{flex:1;background:var(–card2);border:1px solid var(–border);border-radius:8px;padding:6px 10px;}
+.logout-btn{padding:8px 14px;border-radius:8px;background:var(–red2);border:1px solid rgba(255,61,87,.3);color:var(–red);font-family:var(–f-mono);font-size:10px;font-weight:700;cursor:pointer;}
+.mg-tracker{background:var(–card2);border:1px solid var(–border);border-radius:12px;padding:14px;margin-top:14px;width:100%;max-width:360px;}
+.mg-title{font-family:var(–f-mono);font-size:10px;letter-spacing:2px;color:var(–dim2);margin-bottom:10px;}
+.mg-row{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;}
+.mg-cell{background:var(–card);border:1px solid var(–border);border-radius:8px;padding:7px;text-align:center;}
+.mg-cell-lbl{font-family:var(–f-mono);font-size:8px;color:var(–dim);}
+.mg-cell-val{font-family:var(–f-mono);font-size:15px;font-weight:700;}
+.trade-msg{padding:10px 14px;border-radius:8px;font-family:var(–f-mono);font-size:11px;margin-top:12px;width:100%;max-width:360px;display:none;background:var(–card2);border:1px solid var(–border);}
+.open-pos{background:var(–card2);border:1px solid var(–border);border-radius:12px;padding:12px 14px;margin-top:14px;width:100%;max-width:360px;}
+
+/* ── MG TRACKER (top) ── */
+#mgTrackerPanel{display:none;}
+
+/* ── SHARED ── */
+.section-hdr{font-family:var(–f-mono);font-size:10px;letter-spacing:2px;color:var(–dim2);margin-bottom:8px;text-transform:uppercase;}
+.divider{height:1px;background:var(–border);margin:14px 0;}
+.disc{font-family:var(–f-mono);font-size:9px;color:var(–dim);text-align:center;padding:10px 0;line-height:1.6;}
+input[type=number]{-moz-appearance:textfield;}
+input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;}
+.trade-btn-wrap{display:none;}
+.scan-trade-btn{display:none;}
 </style>
+
 </head>
 <body>
-<div class="hdr">
-  <div class="logo">Deriv<b>Signal</b></div>
-  <div style="display:flex;align-items:center;gap:10px;">
-    <div class="pill connecting" id="connPill"><div class="ldot connecting" id="connDot"></div><span id="connTxt">CONNECTING</span></div>
-    <div class="clk" id="clk">--:--:--</div>
-  </div>
-</div>
-<div id="banner" class="connecting">⟳ Connecting to Deriv live data...</div>
-<div id="tradePanel">
 
-  <div style="background:linear-gradient(135deg,rgba(0,212,255,.07),rgba(0,255,136,.04));border-bottom:2px solid var(--bd);padding:12px 14px;position:relative;z-index:1;">
-    <div style="font-family:var(--dp);font-size:11px;font-weight:700;letter-spacing:3px;color:#00d4ff;margin-bottom:10px;">[!] TRADING ACCOUNT</div>
-    <div id="tradeLogin">
-      <div style="font-family:var(--mn);font-size:9px;color:var(--dm);margin-bottom:7px;line-height:1.7">Enter Deriv API token (Read+Trade). Stays in your browser - never shared.</div>
-      <div style="display:flex;gap:7px;">
-        <input id="apiTokenInput" type="password" placeholder="Paste API token here"
-          style="flex:1;background:var(--p2);border:1.5px solid var(--bd);color:var(--tx);font-family:var(--mn);font-size:10px;padding:8px 10px;border-radius:5px;outline:none;"
-          onkeydown="if(event.key==='Enter')doLogin()">
-        <button id="loginBtn" onclick="doLogin()" style="padding:8px 18px;background:rgba(0,212,255,.12);border:2px solid #00d4ff;color:#00d4ff;font-family:var(--dp);font-size:14px;font-weight:700;letter-spacing:2px;border-radius:5px;cursor:pointer;">LOGIN</button>
-      </div>
-      <div style="font-family:var(--mn);font-size:8px;color:var(--dm);margin-top:5px;">Get token: app.deriv.com/account/api-token · Read + Trade · Token saved in browser</div>
+<!-- ══ HEADER ══ -->
+
+<div class="hdr">
+  <div class="hdr-logo">Deriv<span>Signal</span></div>
+  <div class="hdr-right">
+    <div class="conn-pill connecting" id="connPill">
+      <div class="conn-dot" id="connDot"></div>
+      <span id="connTxt">CONNECTING</span>
     </div>
-    <div id="tradeAccount" style="display:none">
-      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-start;margin-bottom:10px;">
-        <div style="background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.2);border-radius:6px;padding:8px 14px;min-width:140px;">
-          <div style="font-family:var(--mn);font-size:8px;color:var(--dm)">BALANCE</div>
-          <div style="font-family:var(--dp);font-size:26px;font-weight:900;color:#00ff88" id="accBal">-</div>
-          <div style="font-family:var(--dp);font-size:11px;font-weight:700;letter-spacing:2px;margin-top:1px" id="accType">-</div>
-        </div>
-        <div style="flex:1;min-width:130px;">
-          <div style="font-family:var(--dp);font-size:16px;font-weight:700;color:var(--tx)" id="accName">-</div>
-          <div style="font-family:var(--mn);font-size:9px;color:var(--dm);margin-bottom:6px" id="accId">-</div>
-          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
-            <span style="font-family:var(--mn);font-size:9px;color:var(--dm)">BASE $</span>
-            <input id="stakeAmt" type="number" value="1" min="0.35" step="0.5"
-              style="width:60px;background:var(--p2);border:1px solid var(--bd);color:var(--tx);font-family:var(--mn);font-size:11px;padding:5px 7px;border-radius:5px;text-align:center;"
-              onchange="MG.base=parseFloat(this.value)||1;MG.current=MG.base;updMartStats();">
-            <span style="font-family:var(--mn);font-size:9px;color:var(--dm)">MAX $</span>
-            <input id="maxStake" type="number" value="50" min="1"
-              style="width:60px;background:var(--p2);border:1px solid var(--bd);color:var(--tx);font-family:var(--mn);font-size:11px;padding:5px 7px;border-radius:5px;text-align:center;">
-            <button onclick="doLogout()" style="padding:5px 10px;background:rgba(255,59,92,.08);border:1px solid rgba(255,59,92,.3);color:#ff3b5c;font-family:var(--mn);font-size:9px;border-radius:4px;cursor:pointer;">LOGOUT</button>
-          </div>
-        </div>
-      </div>
-      <!-- MARTINGALE TRACKER -->
-      <div id="mgTrackerPanel" style="background:rgba(0,0,0,.2);border:1px solid var(--bd);border-radius:6px;padding:8px 12px;margin-bottom:8px;">
-        <div style="font-family:var(--dp);font-size:9px;font-weight:700;letter-spacing:2px;color:var(--dm);margin-bottom:6px;">MG · OV0-3/RF×3.6 · DIFF×6.8 · OV4/U5×2.1 · MATCH×1.5 · E/O×2.1</div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
-          <div style="text-align:center"><div style="font-family:var(--mn);font-size:8px;color:var(--dm)">NEXT STAKE</div><div style="font-family:var(--dp);font-size:22px;font-weight:900;color:#ffd700" id="mgStake">$1.00</div></div>
-          <div style="text-align:center"><div style="font-family:var(--mn);font-size:8px;color:var(--dm)">P&amp;L</div><div style="font-family:var(--dp);font-size:22px;font-weight:900;color:#00ff88" id="mgPnl">+$0</div></div>
-          <div style="text-align:center"><div style="font-family:var(--mn);font-size:8px;color:var(--dm)">WINS</div><div style="font-family:var(--dp);font-size:22px;font-weight:900;color:#00ff88" id="mgW">0</div></div>
-          <div style="text-align:center"><div style="font-family:var(--mn);font-size:8px;color:var(--dm)">LOSSES</div><div style="font-family:var(--dp);font-size:22px;font-weight:900;color:#ff3b5c" id="mgL">0</div></div>
-          <div style="text-align:center"><div style="font-family:var(--mn);font-size:8px;color:var(--dm)">STREAK</div><div style="font-family:var(--dp);font-size:22px;font-weight:900" id="mgS">0L</div></div>
-          <button onclick="runQueue=[];runExecuting=false;MG.current=MG.base;document.getElementById('stakeAmt').value=MG.base;updMartStats();showTradeMsg('Reset','#ffd700');" style="padding:5px 10px;background:rgba(255,215,0,.08);border:1px solid rgba(255,215,0,.3);color:#ffd700;font-family:var(--mn);font-size:9px;border-radius:4px;cursor:pointer;">RESET</button>
-        </div>
-      </div>
-      <!-- OPEN POSITIONS -->
-      <div id="openPosPanel" style="background:rgba(0,0,0,.15);border:1px solid var(--bd);border-radius:6px;padding:8px 10px;">
-        <div style="font-family:var(--dp);font-size:10px;font-weight:700;letter-spacing:2px;color:var(--dm);margin-bottom:4px;">OPEN POSITIONS</div>
-        <div id="openPositions"><span style="font-family:var(--mn);font-size:9px;color:var(--dm)">No open positions</span></div>
-      </div>
-    </div>
-    <div id="tradeMsg" style="display:none;font-family:var(--mn);font-size:10px;margin-top:8px;padding:6px 10px;background:rgba(0,0,0,.25);border-radius:4px;letter-spacing:.5px;"></div>
+    <div class="hdr-clock" id="clk">--:--:--</div>
   </div>
 </div>
-<div class="tabs">
-  <button class="tab on" onclick="swTab('rf',this)">HIGHER/LOWER</button>
-  <button class="tab" onclick="swTab('dg',this)">DIGITS</button>
-  <button class="tab" onclick="swTab('bot',this)">⚡ BOT</button>
-  <button class="tab" onclick="swTab('dm',this)">DIFFER/MATCH</button>
-  <button class="tab" onclick="swTab('eo',this)">EVEN/ODD</button>
-  <button class="tab" onclick="swTab('sc',this)">SCANNER</button>
-  <button class="tab" onclick="swTab('hist',this)">HISTORY</button>
+
+<!-- ══ PAGE 1: SCANNER (HOME) ══ -->
+
+<div class="page on" id="pg-scan">
+  <div class="page-inner">
+
+```
+<!-- Best Signal -->
+<div class="best-signal" id="bestPanel" style="display:none;">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
+    <div>
+      <div class="scan-inst" id="bs-inst">—</div>
+      <div class="scan-dir" id="bs-dir" style="color:var(--green)">—</div>
+    </div>
+    <div style="text-align:right;">
+      <div id="bs-live-badge"></div>
+      <div class="scan-digit" id="bs-ent" style="margin-top:6px;">—</div>
+    </div>
+  </div>
+  <div class="conf-row"><span style="font-size:10px;color:var(--dim2)">CONFIDENCE</span><span id="bs-conf" style="color:var(--cyan)">—</span></div>
+  <div class="conf-bar"><div class="conf-fill" id="bs-conf-bar" style="width:0%;background:var(--green)"></div></div>
+  <div style="font-family:var(--f-mono);font-size:10px;color:var(--dim2);margin-top:6px;" id="bs-cond">—</div>
+  <button id="bsTradeBtn" class="trade-btn digit scan-trade-btn" style="margin-top:12px;display:none;" onclick="">TRADE BEST SIGNAL</button>
+</div>
+
+<!-- Scan Controls -->
+<div class="card cyan-tint">
+  <div class="last-scan-row">
+    <span class="last-scan-txt" id="lastScan">Never scanned</span>
+    <span class="auto-badge">⟳ AUTO 30s</span>
+  </div>
+  <button id="scBtn" class="scan-btn" onclick="runScan()">⟳ SCAN ALL MARKETS</button>
+  <div class="scanning-indicator" id="scScan">◌ SCANNING ALL MARKETS...</div>
+</div>
+
+<!-- Favourites -->
+<div class="card">
+  <div class="card-title">Your Favourites</div>
+  <div class="fav-row">
+    <div class="fav-box" style="border-color:rgba(0,230,118,.2);">
+      <div class="fav-lbl" style="color:var(--green)">OVER</div>
+      <div class="fav-val" style="color:var(--green)"><input class="fav-input" id="fovS" type="number" min="0" max="9" value="2" onchange="updFavs()"><span id="fovD">2</span></div>
+    </div>
+    <div class="fav-box" style="border-color:rgba(255,61,87,.2);">
+      <div class="fav-lbl" style="color:var(--red)">UNDER</div>
+      <div class="fav-val" style="color:var(--red)"><input class="fav-input" id="fundS" type="number" min="0" max="9" value="7" onchange="updFavs()"><span id="fundD">7</span></div>
+    </div>
+    <div class="fav-box" style="border-color:rgba(179,136,255,.2);">
+      <div class="fav-lbl" style="color:var(--purple)">DIFFERS</div>
+      <div class="fav-val" style="color:var(--purple)"><input class="fav-input" id="fdifS" type="number" min="0" max="9" value="5" onchange="updFavs()"><span id="fdifD">5</span></div>
+    </div>
+    <div class="fav-box" style="border-color:rgba(0,212,255,.2);">
+      <div class="fav-lbl" style="color:var(--cyan)">MATCHES</div>
+      <div class="fav-val" style="color:var(--cyan)"><input class="fav-input" id="fmatS" type="number" min="0" max="9" value="5" onchange="updFavs()"><span id="fmatD">5</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- Results Grid -->
+<div class="card">
+  <div class="card-title">All Markets</div>
+  <div class="scan-grid" id="scResults"></div>
+</div>
+```
+
+  </div>
+</div>
+
+<!-- ══ PAGE 2: TRADE (Digits / Match / E/O / H/L) ══ -->
+
+<div class="page" id="pg-trade">
+  <div class="page-inner">
+
+```
+<!-- Sub-tabs -->
+<div style="display:flex;gap:6px;margin-bottom:12px;overflow-x:auto;padding-bottom:2px;">
+  <button class="inst-btn on" onclick="swTrade('rf',this)" id="ttab-rf" style="min-width:70px;flex:none;padding:8px 12px;">RISE/FALL</button>
+  <button class="inst-btn" onclick="swTrade('dg',this)" id="ttab-dg" style="min-width:60px;flex:none;padding:8px 12px;">DIGITS</button>
+  <button class="inst-btn" onclick="swTrade('dm',this)" id="ttab-dm" style="min-width:80px;flex:none;padding:8px 12px;">DIFF/MATCH</button>
+  <button class="inst-btn" onclick="swTrade('eo',this)" id="ttab-eo" style="min-width:70px;flex:none;padding:8px 12px;">EVEN/ODD</button>
 </div>
 
 <!-- RISE/FALL -->
-
-<div id="tab-rf" class="tc on">
-  <div class="p">
-    <div class="pt">Instrument</div>
-    <div class="ig"><div class="iglbl">Standard</div><div class="irow">
-      <button class="ib on" onclick="selRF(this,'R_10')">V10<span class="lv"></span></button>
-      <button class="ib" onclick="selRF(this,'R_25')">V25<span class="lv"></span></button>
-      <button class="ib" onclick="selRF(this,'R_50')">V50<span class="lv"></span></button>
-      <button class="ib" onclick="selRF(this,'R_75')">V75<span class="lv"></span></button>
-      <button class="ib" onclick="selRF(this,'R_100')">V100<span class="lv"></span></button>
-    </div></div>
-    <div class="ig" style="margin-bottom:0"><div class="iglbl" style="color:rgba(255,140,0,.7)">1 Second</div><div class="irow">
-      <button class="ib s1" onclick="selRF(this,'1HZ10V')">V10 1s<span class="lv"></span></button>
-      <button class="ib s1" onclick="selRF(this,'1HZ25V')">V25 1s<span class="lv"></span></button>
-      <button class="ib s1" onclick="selRF(this,'1HZ50V')">V50 1s<span class="lv"></span></button>
-      <button class="ib s1" onclick="selRF(this,'1HZ75V')">V75 1s<span class="lv"></span></button>
-      <button class="ib s1" onclick="selRF(this,'1HZ100V')">V100 1s<span class="lv"></span></button>
-    </div></div>
-  </div>
-  <div class="p">
-    <div class="pt">Live Price — <span id="rfLbl" style="color:var(--ac)">V10</span> <span id="rfLiveBadge" style="margin-left:6px"></span> <span id="rf1sBadge" style="display:none;margin-left:5px;font-family:var(--mn);font-size:8px;background:rgba(255,140,0,.12);color:#ff8c00;border:1px solid rgba(255,140,0,.3);padding:2px 6px;border-radius:3px;">⚡1S</span></div>
-    <canvas id="rfChart" height="130"></canvas>
-    <div style="display:flex;justify-content:space-between;margin-top:6px;">
-      <span style="font-family:var(--mn);font-size:9px;color:var(--dm)">Price:</span>
-      <span style="font-family:var(--mn);font-size:11px;color:#00d4ff;font-weight:700" id="rfLast">waiting...</span>
-    </div>
-    <div style="display:flex;justify-content:space-between;margin-top:3px;">
-      <span style="font-family:var(--mn);font-size:9px;color:var(--dm)">Live ticks:</span>
-      <span style="font-family:var(--mn);font-size:10px;color:var(--dm)" id="rfTC">0</span>
-    </div>
-  </div>
-  <div class="sc wait" id="rfCard">
-    <div class="scbg" id="rfBg">—</div>
-    <div class="sctop">
-      <div>
-        <div class="sclbl">Signal</div>
-        <div class="sv wait" id="rfSv">SCAN</div>
-        <div class="sdesc" id="rfDesc">Select instrument then press ANALYSE</div>
-        <div id="rf1sNote" style="display:none;font-family:var(--mn);font-size:9px;color:#ff8c00;margin-top:5px;">⚡ 1s — recommended 5+ ticks</div>
-      </div>
-      <div class="scr">
-        <div><div class="sl">TICKS</div><div class="sv2" id="rfTicks" style="color:#00d4ff">—</div></div>
-        <div><div class="sl">MAX RUNS</div><div class="sv2" id="rfRuns" style="color:#ffd700">—</div></div>
+<div id="trade-rf">
+  <div class="card">
+    <div class="section-hdr">Instrument</div>
+    <div style="margin-bottom:8px;"><div class="section-hdr" style="color:var(--dim);margin-bottom:4px;">STANDARD</div>
+      <div class="inst-grid" id="rfInstRow">
+        <button class="inst-btn" onclick="selRF(this,'R_10')">V10<div class="ldot" id="ld-R_10"></div></button>
+        <button class="inst-btn" onclick="selRF(this,'R_25')">V25<div class="ldot" id="ld-R_25"></div></button>
+        <button class="inst-btn" onclick="selRF(this,'R_50')">V50<div class="ldot" id="ld-R_50"></div></button>
+        <button class="inst-btn" onclick="selRF(this,'R_75')">V75<div class="ldot" id="ld-R_75"></div></button>
+        <button class="inst-btn" onclick="selRF(this,'R_100')">V100<div class="ldot" id="ld-R_100"></div></button>
       </div>
     </div>
-    <div class="cb"><div class="cbl"><span>CONFIDENCE</span><span id="rfCpct">—</span></div><div class="cbg"><div class="cbf" id="rfCf" style="width:0%"></div></div></div>
-    <div id="rfEW" style="display:none;margin-top:8px;"><div class="erow"><span>EXPIRES IN</span><span id="rfEp" style="color:#ffd700">—</span></div><div class="cbg"><div id="rfEf" style="height:100%;border-radius:2px;background:#ffd700;width:100%;transition:width 1s linear;"></div></div></div>
-    <div id="rfRW" style="display:none;margin-top:8px;"><div class="er"><div class="dots" id="rfDots"></div><button class="mbtn" id="rfMb" onclick="rfMark()">+ RUN</button></div></div>
-  </div>
-  <div class="p">
-    <div class="pt">Tick Override</div>
-    <div class="tsel">
-      <button class="tbtn" onclick="setTick(this,1)">1</button><button class="tbtn" onclick="setTick(this,2)">2</button>
-      <button class="tbtn" onclick="setTick(this,3)">3</button><button class="tbtn" onclick="setTick(this,5)">5</button>
-      <button class="tbtn" onclick="setTick(this,7)">7</button><button class="tbtn" onclick="setTick(this,10)">10</button>
-    </div>
-  </div>
-  <div class="p">
-    <div class="pt">Indicators</div>
-    <div class="ir"><span class="in">RSI(14)</span><span class="iv" id="rsiV">—</span><span class="is neutral" id="rsiS">WAIT</span></div>
-    <div class="ir"><span class="in">MACD</span><span class="iv" id="macdV">—</span><span class="is neutral" id="macdS">WAIT</span></div>
-    <div class="ir"><span class="in">BB Width</span><span class="iv" id="bbV">—</span><span class="is neutral" id="bbS">WAIT</span></div>
-    <div class="ir"><span class="in">EMA Cross</span><span class="iv" id="emaV">—</span><span class="is neutral" id="emaS">WAIT</span></div>
-    <div class="ir"><span class="in">Stochastic</span><span class="iv" id="stoV">—</span><span class="is neutral" id="stoS">WAIT</span></div>
-    <div class="ir"><span class="in">Momentum</span><span class="iv" id="momV">—</span><span class="is neutral" id="momS">WAIT</span></div>
-  </div>
-  <div class="two">
-    <div class="p y">
-      <div class="pt">Volatility</div>
-      <div style="font-family:var(--dp);font-size:32px;font-weight:900;color:#00d4ff" id="volV">—</div>
-      <div style="font-family:var(--mn);font-size:9px;color:var(--dm)" id="volL">PRESS ANALYSE</div>
-      <div class="vb" id="volB"><div class="vbar"></div><div class="vbar"></div><div class="vbar"></div><div class="vbar"></div><div class="vbar"></div><div class="vbar"></div><div class="vbar"></div><div class="vbar"></div><div class="vbar"></div><div class="vbar"></div></div>
-    </div>
-    <div class="p">
-      <div class="pt">Session</div>
-      <div class="sg2" style="grid-template-columns:1fr 1fr;margin-bottom:0;gap:5px;">
-        <div class="scell"><div class="slbl">TOTAL</div><div class="sval" id="rfSC" style="font-size:24px">0</div></div>
-        <div class="scell"><div class="slbl">WIN%</div><div class="sval" id="rfWR" style="font-size:24px;color:#00ff88">—</div></div>
-        <div class="scell"><div class="slbl">RISE</div><div class="sval" id="rfRC" style="font-size:24px;color:#00ff88">0</div></div>
-        <div class="scell"><div class="slbl">FALL</div><div class="sval" id="rfFC" style="font-size:24px;color:#ff3b5c">0</div></div>
+    <div><div class="section-hdr" style="color:var(--dim);margin-bottom:4px;">1 SECOND</div>
+      <div class="inst-grid">
+        <button class="inst-btn" onclick="selRF(this,'1HZ10V')">V10 1s<div class="ldot" id="ld-1HZ10V"></div></button>
+        <button class="inst-btn" onclick="selRF(this,'1HZ25V')">V25 1s<div class="ldot" id="ld-1HZ25V"></div></button>
+        <button class="inst-btn" onclick="selRF(this,'1HZ50V')">V50 1s<div class="ldot" id="ld-1HZ50V"></div></button>
+        <button class="inst-btn on" onclick="selRF(this,'1HZ75V')">V75 1s<div class="ldot" id="ld-1HZ75V"></div></button>
+        <button class="inst-btn" onclick="selRF(this,'1HZ100V')">V100 1s<div class="ldot" id="ld-1HZ100V"></div></button>
       </div>
     </div>
   </div>
-  <button class="abtn" onclick="runRF()" id="rfBtn">⬡ ANALYSE LIVE MARKET</button>
-  <div class="scanning" id="rfScan" style="color:#00d4ff">ANALYSING...</div>
-  <div class="p"><div class="pt">Signal Log</div>
-    <div class="lw"><table class="lt">
-      <thead><tr><th>TIME</th><th>INST</th><th>SIGNAL</th><th>TICKS</th><th>CONF</th><th>RUNS</th><th>PRICE</th></tr></thead>
-      <tbody id="rfLog"><tr><td colspan="7" style="text-align:center;color:var(--dm);padding:16px">No signals yet</td></tr></tbody>
-    </table></div>
+  <div class="chart-wrap">
+    <div class="chart-hdr">
+      <div><div class="chart-inst" id="rfInstLbl">V75 1S</div><div class="chart-meta" id="rfInfo">—</div></div>
+      <div style="text-align:right;"><div class="chart-price" id="rfLast">—</div><div class="chart-meta" id="rfTC">0 ticks</div></div>
+    </div>
+    <canvas id="rfChart" style="width:100%;display:block;"></canvas>
   </div>
-  <div class="disc">⚠ Live Deriv data. No tool guarantees win rates. Trade responsibly.</div>
+  <div class="signal-box wait" id="rfSigBox">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+      <div><div style="font-family:var(--f-mono);font-size:10px;color:var(--dim);margin-bottom:4px;">SIGNAL</div>
+        <div class="sig-dir" id="rfSigDir" style="color:var(--dim)">WAIT</div></div>
+      <div style="text-align:right;">
+        <div style="font-family:var(--f-mono);font-size:9px;color:var(--dim);">TICKS</div>
+        <div id="rfSigRuns" style="font-family:var(--f-mono);font-size:26px;font-weight:700;color:var(--gold);">—</div>
+        <div style="font-family:var(--f-mono);font-size:8px;color:var(--dim);">MAX RUNS</div>
+        <div id="rfSigMax" style="font-family:var(--f-mono);font-size:14px;font-weight:700;color:var(--red);">WAIT</div>
+      </div>
+    </div>
+    <div class="sig-cond" id="rfSigCond">Analysing market...</div>
+    <div class="sig-note" id="rfSigNote" style="display:none;"></div>
+  </div>
+  <div class="trade-btn-row trade-wrap" id="rfTradeWrap">
+    <button class="trade-btn rise" onclick="tradeRF('CALL')">▲ RISE</button>
+    <button class="trade-btn fall" onclick="tradeRF('PUT')">▼ FALL</button>
+  </div>
 </div>
 
-<!-- DIGITS OVER/UNDER -->
-
-<div id="tab-dg" class="tc">
-  <div class="p">
-    <div class="pt">Instrument</div>
-    <div class="ig"><div class="iglbl">Standard</div><div class="irow">
-      <button class="ib" onclick="selD(this,'R_10')">V10<span class="lv"></span></button>
-      <button class="ib" onclick="selD(this,'R_25')">V25<span class="lv"></span></button>
-      <button class="ib" onclick="selD(this,'R_50')">V50<span class="lv"></span></button>
-      <button class="ib on" onclick="selD(this,'R_75')">V75<span class="lv"></span></button>
-      <button class="ib" onclick="selD(this,'R_100')">V100<span class="lv"></span></button>
-    </div></div>
-    <div class="ig" style="margin-bottom:0"><div class="iglbl" style="color:rgba(255,140,0,.7)">1 Second</div><div class="irow">
-      <button class="ib s1" onclick="selD(this,'1HZ10V')">V10 1s<span class="lv"></span></button>
-      <button class="ib s1" onclick="selD(this,'1HZ25V')">V25 1s<span class="lv"></span></button>
-      <button class="ib s1" onclick="selD(this,'1HZ50V')">V50 1s<span class="lv"></span></button>
-      <button class="ib s1" onclick="selD(this,'1HZ75V')">V75 1s<span class="lv"></span></button>
-      <button class="ib s1" onclick="selD(this,'1HZ100V')">V100 1s<span class="lv"></span></button>
-    </div></div>
-  </div>
-  <div class="p g">
-    <div class="pt">Live Digit Stream — <span id="dLbl" style="color:#00d4ff">V75</span> <span id="dLiveBadge" style="margin-left:5px"></span> <span id="dSpd" style="float:right;font-family:var(--mn);font-size:9px;color:var(--dm)">waiting...</span></div>
-    <div class="sbox"><div class="srow" id="srow"></div></div>
-    <div style="display:flex;justify-content:space-between;margin-top:6px;">
-      <span style="font-family:var(--mn);font-size:9px;"><span style="color:#00ff88">■</span> <span style="color:var(--dm)">Low 0-4</span> &nbsp;&nbsp;<span style="color:#ff3b5c">■</span> <span style="color:var(--dm)">High 5-9</span></span>
-      <span style="font-family:var(--mn);font-size:9px;color:var(--dm)">Last: <span id="dLast" style="color:#00d4ff;font-weight:700">—</span></span>
-    </div>
-    <div style="font-family:var(--mn);font-size:9px;color:var(--dm);margin-top:4px" id="dInfo">Waiting for live data...</div>
-  </div>
-  <div class="p">
-    <div class="pt">Digit Frequency — Live 50 Ticks</div>
-    <div class="dfwrap" id="dfChart"></div><div class="dflbl" id="dfLbl"></div>
-    <div style="display:flex;gap:8px;margin-top:10px;">
-      <div style="flex:1;background:rgba(0,255,136,.06);border:1px solid rgba(0,255,136,.15);border-radius:5px;padding:10px;">
-        <div style="font-family:var(--mn);font-size:8px;color:var(--dm);margin-bottom:3px">LOW (0–4)</div>
-        <div style="font-family:var(--dp);font-size:24px;font-weight:900;color:#00ff88" id="dLow">—</div>
-        <div id="dLT" style="display:flex;gap:3px;flex-wrap:wrap;margin-top:5px"></div>
-      </div>
-      <div style="flex:1;background:rgba(255,59,92,.06);border:1px solid rgba(255,59,92,.15);border-radius:5px;padding:10px;">
-        <div style="font-family:var(--mn);font-size:8px;color:var(--dm);margin-bottom:3px">HIGH (5–9)</div>
-        <div style="font-family:var(--dp);font-size:24px;font-weight:900;color:#ff3b5c" id="dHigh">—</div>
-        <div id="dHT" style="display:flex;gap:3px;flex-wrap:wrap;margin-top:5px"></div>
-      </div>
+<!-- DIGITS -->
+<div id="trade-dg" style="display:none;">
+  <div class="card">
+    <div class="section-hdr">Instrument</div>
+    <div class="inst-grid" id="dInstRow">
+      <button class="inst-btn" onclick="selD(this,'R_10')">V10</button>
+      <button class="inst-btn" onclick="selD(this,'R_25')">V25</button>
+      <button class="inst-btn" onclick="selD(this,'R_50')">V50</button>
+      <button class="inst-btn" onclick="selD(this,'R_75')">V75</button>
+      <button class="inst-btn" onclick="selD(this,'R_100')">V100</button>
+      <button class="inst-btn" onclick="selD(this,'1HZ10V')">V10 1s</button>
+      <button class="inst-btn" onclick="selD(this,'1HZ25V')">V25 1s</button>
+      <button class="inst-btn" onclick="selD(this,'1HZ50V')">V50 1s</button>
+      <button class="inst-btn on" onclick="selD(this,'1HZ75V')">V75 1s</button>
+      <button class="inst-btn" onclick="selD(this,'1HZ100V')">V100 1s</button>
     </div>
   </div>
-  <div class="dsg">
-    <div class="dsc y" id="dDirCell"><div class="dslbl">Direction</div><div class="dsv y" id="dDir">—</div></div>
-    <div class="dsc a"><div class="dslbl">Entry Digit</div><div class="dsv a" id="dEnt">—</div></div>
-    <div class="dsc y"><div class="dslbl">Max Runs</div><div class="dsv y" id="dRns">—</div></div>
-    <div class="dsc a"><div class="dslbl">Streak</div><div class="dsv a" id="dStr">—</div></div>
-  </div>
-  <div class="p">
-    <div class="pt">Signal Condition</div>
-    <div style="font-family:var(--mn);font-size:10px;color:var(--tx);line-height:1.7" id="dCond">Press ANALYSE to generate signal</div>
-    <div class="cb" style="margin-top:8px"><div class="cbl"><span>CONFIDENCE</span><span id="dCpct">—</span></div><div class="cbg"><div class="cbf" id="dCf" style="width:0%"></div></div></div>
-    <div id="dEW" style="display:none;margin-top:8px"><div class="erow"><span>EXPIRES IN</span><span id="dEp" style="color:#ffd700">—</span></div><div class="cbg"><div id="dEf" style="height:100%;border-radius:2px;background:#ffd700;width:100%;transition:width 1s linear"></div></div></div>
-    <div id="dRW" style="display:none;margin-top:8px"><div class="er"><div class="dots" id="dDots"></div><button class="mbtn" id="dMb" onclick="dMark()">+ RUN</button></div><div style="font-family:var(--mn);font-size:9px;color:var(--dm);margin-top:5px" id="dRN"></div></div>
-  </div>
-  <button class="abtn g" onclick="runD()" id="dBtn">◈ ANALYSE OVER / UNDER</button>
-  <div class="scanning" id="dScan" style="color:#00ff88">READING LIVE STREAM...</div>
-  <div class="p"><div class="pt">Signal Log</div>
-    <div class="lw"><table class="lt">
-      <thead><tr><th>TIME</th><th>INST</th><th>DIR</th><th>DIGIT</th><th>COND</th><th>RUNS</th><th>LO%</th><th>HI%</th></tr></thead>
-      <tbody id="dLog"><tr><td colspan="8" style="text-align:center;color:var(--dm);padding:16px">No signals yet</td></tr></tbody>
-    </table></div>
-  </div>
-  <div class="disc">⚠ Statistical analysis only.</div>
-</div>
-
-<!-- AUTO BOT -->
-
-<div id="tab-bot" class="tc">
-  <div class="p" style="border-top:3px solid #ffd700;">
-    <div class="pt" style="color:#ffd700;">⚡ AUTO TRADING BOTS</div>
-    <div style="font-family:var(--mn);font-size:10px;color:var(--dm);line-height:1.8">
-      Bot runs isolated — top tracker freezes. One trade at a time. Full history below.<br>
-      <b style="color:#ff3b5c">[!] Places real trades. Set TP/SL carefully.</b>
+  <div class="card cyan-tint">
+    <div class="chart-hdr">
+      <div><div class="chart-inst">LAST DIGIT STREAM</div><div class="chart-meta" id="dInfo">—</div></div>
+      <div style="text-align:right;"><div class="chart-price" id="dLast" style="font-size:32px;">—</div><div class="chart-meta" id="dSpd">—</div></div>
     </div>
-
-```
-    <!-- Bot Selector -->
-<div style="margin-top:10px;">
-  <div style="font-family:var(--mn);font-size:8px;color:var(--dm);letter-spacing:2px;margin-bottom:6px;">OVER/UNDER STRATEGY</div>
-  <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:6px;">
-    <button id="botSel_ou1" onclick="selBot('ou1')" style="flex:1;padding:8px 4px;background:rgba(0,255,136,.1);border:2px solid #00ff88;color:#00ff88;font-family:var(--dp);font-size:9px;font-weight:700;border-radius:5px;cursor:pointer;text-align:center;">
-      O2/U7<br><span style="font-size:7px;opacity:.8">REC O3/U6 ×2.5</span>
-    </button>
-    <button id="botSel_ou2" onclick="selBot('ou2')" style="flex:1;padding:8px 4px;background:transparent;border:2px solid rgba(0,229,255,.3);color:var(--dm);font-family:var(--dp);font-size:9px;font-weight:700;border-radius:5px;cursor:pointer;text-align:center;">
-      O1/U8<br><span style="font-size:7px;opacity:.8">REC O3/U6 ×3.6</span>
-    </button>
-    <button id="botSel_ou3" onclick="selBot('ou3')" style="flex:1;padding:8px 4px;background:transparent;border:2px solid rgba(255,215,0,.3);color:var(--dm);font-family:var(--dp);font-size:9px;font-weight:700;border-radius:5px;cursor:pointer;text-align:center;">
-      O4/U5<br><span style="font-size:7px;opacity:.8">50/50 ×2.1</span>
-    </button>
+    <div class="digit-stream" id="srow"></div>
+    <div style="margin-top:10px;"><div class="freq-chart" id="dfChart"></div>
+      <div style="display:flex;gap:3px;margin-top:16px;"id="dfLbl"></div></div>
   </div>
-  <div style="font-family:var(--mn);font-size:8px;color:var(--dm);letter-spacing:2px;margin-bottom:6px;margin-top:4px;">OTHER BOTS</div>
-  <div style="display:flex;gap:5px;">
-    <button id="botSel_eo" onclick="selBot('eo')" style="flex:1;padding:8px 4px;background:transparent;border:2px solid rgba(0,212,255,.3);color:var(--dm);font-family:var(--dp);font-size:9px;font-weight:700;border-radius:5px;cursor:pointer;text-align:center;">
-      EVEN/ODD<br><span style="font-size:7px;opacity:.8">×2.1</span>
-    </button>
-    <button id="botSel_df" onclick="selBot('df')" style="flex:1;padding:8px 4px;background:transparent;border:2px solid rgba(179,136,255,.3);color:var(--dm);font-family:var(--dp);font-size:9px;font-weight:700;border-radius:5px;cursor:pointer;text-align:center;">
-      DIFFERS<br><span style="font-size:7px;opacity:.8">digit entry ×6.8</span>
-    </button>
+  <div class="signal-box neutral" id="dSigBox">
+    <div style="font-family:var(--f-mono);font-size:10px;color:var(--dim);margin-bottom:4px;">OVER / UNDER SIGNAL</div>
+    <div class="sig-dir" id="dSigDir" style="color:var(--cyan);">—</div>
+    <div class="sig-cond" id="dSigCond">Analysing digits...</div>
+    <div class="sig-meta" id="dSigMeta"></div>
   </div>
-</div>
-```
-
+  <div class="trade-wrap trade-btn-row" id="dTradeWrap">
+    <button class="trade-btn digit" onclick="tradeD('DIGITOVER')">OVER</button>
+    <button class="trade-btn fall" onclick="tradeD('DIGITUNDER')">UNDER</button>
   </div>
-  <!-- TP/SL Settings -->
-  <div class="p y">
-    <div class="pt">Take Profit &amp; Stop Loss</div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px;">
-      <div style="flex:1;min-width:120px;">
-        <div style="font-family:var(--mn);font-size:9px;color:var(--dm);margin-bottom:5px;">TAKE PROFIT ($)</div>
-        <input id="botTP" type="number" value="20" min="1" step="1"
-          style="width:100%;background:var(--p2);border:1.5px solid rgba(0,255,136,.3);color:#00ff88;font-family:var(--dp);font-size:22px;font-weight:900;padding:8px 10px;border-radius:5px;text-align:center;">
-        <div style="font-family:var(--mn);font-size:8px;color:var(--dm);margin-top:3px;">Bot stops when P&L reaches this</div>
-      </div>
-      <div style="flex:1;min-width:120px;">
-        <div style="font-family:var(--mn);font-size:9px;color:var(--dm);margin-bottom:5px;">STOP LOSS ($)</div>
-        <input id="botSL" type="number" value="15" min="1" step="1"
-          style="width:100%;background:var(--p2);border:1.5px solid rgba(255,59,92,.3);color:#ff3b5c;font-family:var(--dp);font-size:22px;font-weight:900;padding:8px 10px;border-radius:5px;text-align:center;">
-        <div style="font-family:var(--mn);font-size:8px;color:var(--dm);margin-top:3px;">Bot stops on this loss</div>
-      </div>
-    </div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap;">
-      <div style="flex:1;min-width:120px;">
-        <div style="font-family:var(--mn);font-size:9px;color:var(--dm);margin-bottom:5px;">BASE STAKE ($) <span style="color:#00d4ff">— syncs with main MG on start</span></div>
-        <input id="botBase" type="number" value="1" min="0.35" step="0.5"
-          style="width:100%;background:var(--p2);border:1.5px solid rgba(255,215,0,.3);color:#ffd700;font-family:var(--dp);font-size:22px;font-weight:900;padding:8px 10px;border-radius:5px;text-align:center;"
-          onchange="MG.base=parseFloat(this.value)||1;MG.current=MG.base;document.getElementById('stakeAmt').value=MG.base.toFixed(2);updMartStats();">
-      </div>
-      <div style="flex:1;min-width:120px;">
-        <div style="font-family:var(--mn);font-size:9px;color:var(--dm);margin-bottom:5px;">MAX STAKE ($)</div>
-        <input id="botMaxStake" type="number" value="30" min="1"
-          style="width:100%;background:var(--p2);border:1.5px solid rgba(255,140,0,.3);color:#ff8c00;font-family:var(--dp);font-size:22px;font-weight:900;padding:8px 10px;border-radius:5px;text-align:center;">
-      </div>
-    </div>
-  </div>
-  <!-- Bot Stats -->
-  <div class="p" id="botStatsPanel">
-    <div class="pt">Bot Performance</div>
-    <div style="font-family:var(--mn);font-size:8px;color:rgba(0,212,255,.6);margin-bottom:6px;">BOT SESSION ONLY — resets each start. Main MG tracker above is lifetime.</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
-      <div style="flex:1;min-width:70px;background:var(--p2);border:1px solid var(--bd);border-radius:5px;padding:8px;text-align:center;">
-        <div style="font-family:var(--mn);font-size:8px;color:var(--dm)">BOT P&L</div>
-        <div style="font-family:var(--dp);font-size:22px;font-weight:900;color:#00ff88" id="botPnl">$0</div>
-      </div>
-      <div style="flex:1;min-width:70px;background:var(--p2);border:1px solid var(--bd);border-radius:5px;padding:8px;text-align:center;">
-        <div style="font-family:var(--mn);font-size:8px;color:var(--dm)">WINS</div>
-        <div style="font-family:var(--dp);font-size:22px;font-weight:900;color:#00ff88" id="botWins">0</div>
-      </div>
-      <div style="flex:1;min-width:70px;background:var(--p2);border:1px solid var(--bd);border-radius:5px;padding:8px;text-align:center;">
-        <div style="font-family:var(--mn);font-size:8px;color:var(--dm)">LOSSES</div>
-        <div style="font-family:var(--dp);font-size:22px;font-weight:900;color:#ff3b5c" id="botLosses">0</div>
-      </div>
-      <div style="flex:1;min-width:70px;background:var(--p2);border:1px solid var(--bd);border-radius:5px;padding:8px;text-align:center;">
-        <div style="font-family:var(--mn);font-size:8px;color:var(--dm)">NEXT STAKE</div>
-        <div style="font-family:var(--dp);font-size:22px;font-weight:900;color:#ffd700" id="botNextStake">$1</div>
-      </div>
-    </div>
-    <div style="font-family:var(--mn);font-size:8px;color:var(--dm);margin-bottom:4px;">
-      MODE: <span id="botModeLabel" style="color:#00ff88">NORMAL · OVER2/UNDER7</span>
-    </div>
-    <div style="font-family:var(--mn);font-size:9px;padding:6px 10px;background:rgba(0,0,0,.2);border-radius:4px;" id="botStatus">Bot stopped</div>
-  </div>
-  <!-- Bot Activity Log -->
-  <div class="p" id="botLogPanel">
-    <div class="pt">Bot Activity <span style="font-size:8px;color:var(--dm);font-family:var(--mn)">(live log)</span></div>
-    <div id="botActivity" style="font-family:var(--mn);font-size:9px;color:var(--dm);max-height:140px;overflow-y:auto;line-height:2;">Bot not started yet.</div>
-  </div>
-  <!-- Bot Trade History — Deriv style -->
-  <div class="p">
-    <div class="pt">Bot Trade History</div>
-    <!-- Summary stats — Deriv style -->
-    <div style="overflow-x:auto;margin-bottom:10px;">
-      <table style="width:100%;border-collapse:collapse;min-width:400px;">
-        <thead><tr style="border-bottom:2px solid var(--bd);">
-          <th style="font-family:var(--mn);font-size:8px;color:var(--dm);padding:6px 4px;text-align:left;">Total P&amp;L</th>
-          <th style="font-family:var(--mn);font-size:8px;color:var(--dm);padding:6px 4px;text-align:left;">Trades</th>
-          <th style="font-family:var(--mn);font-size:8px;color:var(--dm);padding:6px 4px;text-align:left;">Won</th>
-          <th style="font-family:var(--mn);font-size:8px;color:var(--dm);padding:6px 4px;text-align:left;">Lost</th>
-          <th style="font-family:var(--mn);font-size:8px;color:var(--dm);padding:6px 4px;text-align:left;">Largest Stake</th>
-          <th style="font-family:var(--mn);font-size:8px;color:var(--dm);padding:6px 4px;text-align:left;">Loss Streak</th>
-        </tr></thead>
-        <tbody><tr style="border-bottom:1px solid var(--bd);">
-          <td style="font-family:var(--dp);font-size:15px;font-weight:900;padding:8px 4px;color:#00ff88" id="botHistPnl">$0</td>
-          <td style="font-family:var(--dp);font-size:15px;font-weight:900;padding:8px 4px;color:var(--tx)" id="botHistTotal">0</td>
-          <td style="font-family:var(--dp);font-size:15px;font-weight:900;padding:8px 4px;color:#00ff88" id="botHistWins">0</td>
-          <td style="font-family:var(--dp);font-size:15px;font-weight:900;padding:8px 4px;color:#ff3b5c" id="botHistLost">0</td>
-          <td style="font-family:var(--dp);font-size:15px;font-weight:900;padding:8px 4px;color:#ffd700" id="botHistMaxStake">$0</td>
-          <td style="font-family:var(--dp);font-size:15px;font-weight:900;padding:8px 4px;color:#ff3b5c" id="botHistStreak">0</td>
-        </tr></tbody>
-      </table>
-    </div>
-    <!-- Export / Clear -->
-    <div style="display:flex;gap:6px;margin-bottom:10px;">
-      <button onclick="exportBotCSV()" style="flex:2;padding:8px;background:rgba(255,215,0,.1);border:1.5px solid rgba(255,215,0,.4);color:#ffd700;font-family:var(--dp);font-size:11px;font-weight:700;letter-spacing:1px;border-radius:5px;cursor:pointer;">[D] EXPORT CSV</button>
-      <button onclick="if(confirm('Clear all bot trade history?')){botHistory.length=0;renderBotHistory();}" style="flex:1;padding:8px;background:rgba(255,59,92,.08);border:1.5px solid rgba(255,59,92,.3);color:#ff3b5c;font-family:var(--dp);font-size:11px;font-weight:700;border-radius:5px;cursor:pointer;">CLEAR</button>
-    </div>
-    <!-- Trade rows -->
-    <div style="overflow-x:auto;">
-      <table style="width:100%;border-collapse:collapse;min-width:340px;">
-        <thead><tr style="border-bottom:2px solid var(--bd);">
-          <th style="font-family:var(--mn);font-size:8px;color:var(--dm);padding:6px 8px;text-align:left;">Contract</th>
-          <th style="font-family:var(--mn);font-size:8px;color:var(--dm);padding:6px 8px;text-align:left;">Stake</th>
-          <th style="font-family:var(--mn);font-size:8px;color:var(--dm);padding:6px 8px;text-align:left;">Profit/Loss</th>
-          <th style="font-family:var(--mn);font-size:8px;color:var(--dm);padding:6px 8px;text-align:left;">Market</th>
-          <th style="font-family:var(--mn);font-size:8px;color:var(--dm);padding:6px 8px;text-align:left;">Status</th>
-        </tr></thead>
-        <tbody id="botHistTbl">
-          <tr><td colspan="5" style="text-align:center;color:var(--dm);padding:20px;font-family:var(--mn);font-size:10px;">No bot trades yet</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-      <div style="flex:1;background:var(--p2);border:1px solid var(--bd);border-radius:5px;padding:7px;text-align:center;">
-        <div style="font-family:var(--mn);font-size:8px;color:var(--dm)">TRADES</div>
-        <div style="font-family:var(--dp);font-size:20px;font-weight:900;color:var(--tx)" id="botHistTotal">0</div>
-      </div>
-      <div style="flex:1;background:var(--p2);border:1px solid var(--bd);border-radius:5px;padding:7px;text-align:center;">
-        <div style="font-family:var(--mn);font-size:8px;color:var(--dm)">P&L</div>
-        <div style="font-family:var(--dp);font-size:20px;font-weight:900;color:#00ff88" id="botHistPnl">$0</div>
-      </div>
-    </div>
-  <!-- Start/Stop -->
-  <button id="botStartBtn" onclick="startBot()" class="abtn" style="border-color:#ffd700;color:#ffd700;">⚡ START AUTO BOT</button>
-  <button id="botStopBtn" onclick="stopBot()" class="abtn" style="display:none;border-color:#ff3b5c;color:#ff3b5c;">■ STOP BOT</button>
-  <div class="disc">⚠ Auto bot places real trades. Set TP/SL carefully. Monitor actively.</div>
 </div>
 
 <!-- DIFFER/MATCH -->
-
-<div id="tab-dm" class="tc">
-  <div class="p pu">
-    <div class="pt">Differs &amp; Matches</div>
-    <div style="font-family:var(--mn);font-size:10px;color:var(--dm);line-height:1.9">
-      <b style="color:#b388ff">DIFFERS</b> — next tick's last digit will differ from predicted digit.<br>
-      <b style="color:#00d4ff">MATCHES</b> — next tick's last digit will match the predicted digit.<br>
-      Signals based on hot/cold digit patterns from live stream.
+<div id="trade-dm" style="display:none;">
+  <div class="card">
+    <div class="section-hdr">Instrument</div>
+    <div class="inst-grid" id="dmInstRow">
+      <button class="inst-btn" onclick="selDM(this,'R_10')">V10</button>
+      <button class="inst-btn" onclick="selDM(this,'R_25')">V25</button>
+      <button class="inst-btn" onclick="selDM(this,'R_50')">V50</button>
+      <button class="inst-btn" onclick="selDM(this,'R_75')">V75</button>
+      <button class="inst-btn" onclick="selDM(this,'R_100')">V100</button>
+      <button class="inst-btn" onclick="selDM(this,'1HZ10V')">V10 1s</button>
+      <button class="inst-btn" onclick="selDM(this,'1HZ25V')">V25 1s</button>
+      <button class="inst-btn" onclick="selDM(this,'1HZ50V')">V50 1s</button>
+      <button class="inst-btn on" onclick="selDM(this,'1HZ75V')">V75 1s</button>
+      <button class="inst-btn" onclick="selDM(this,'1HZ100V')">V100 1s</button>
     </div>
   </div>
-  <div class="p">
-    <div class="pt">Instrument</div>
-    <div class="ig"><div class="iglbl">Standard</div><div class="irow">
-      <button class="ib" onclick="selDM(this,'R_10')">V10<span class="lv"></span></button>
-      <button class="ib" onclick="selDM(this,'R_25')">V25<span class="lv"></span></button>
-      <button class="ib" onclick="selDM(this,'R_50')">V50<span class="lv"></span></button>
-      <button class="ib on" onclick="selDM(this,'R_75')">V75<span class="lv"></span></button>
-      <button class="ib" onclick="selDM(this,'R_100')">V100<span class="lv"></span></button>
-    </div></div>
-    <div class="ig" style="margin-bottom:0"><div class="iglbl" style="color:rgba(255,140,0,.7)">1 Second</div><div class="irow">
-      <button class="ib s1" onclick="selDM(this,'1HZ10V')">V10 1s<span class="lv"></span></button>
-      <button class="ib s1" onclick="selDM(this,'1HZ25V')">V25 1s<span class="lv"></span></button>
-      <button class="ib s1" onclick="selDM(this,'1HZ50V')">V50 1s<span class="lv"></span></button>
-      <button class="ib s1" onclick="selDM(this,'1HZ75V')">V75 1s<span class="lv"></span></button>
-      <button class="ib s1" onclick="selDM(this,'1HZ100V')">V100 1s<span class="lv"></span></button>
-    </div></div>
-  </div>
-  <div class="p g">
-    <div class="pt">Live Digit Stream — <span id="dmLbl" style="color:#00d4ff">V75</span> <span id="dmLiveBadge" style="margin-left:5px"></span></div>
-    <div class="sbox"><div class="srow" id="dmrow"></div></div>
-    <div style="display:flex;justify-content:space-between;margin-top:6px;">
-      <span style="font-family:var(--mn);font-size:9px;color:var(--dm)">Last: <span id="dmLast" style="color:#00d4ff;font-weight:700">—</span></span>
-      <span style="font-family:var(--mn);font-size:9px;color:var(--dm)" id="dmInfo">waiting...</span>
+  <div class="card purple-tint">
+    <div class="chart-hdr">
+      <div><div class="chart-inst">DIGIT STREAM</div><div class="chart-meta" id="dmInfo">—</div></div>
+      <div style="text-align:right;"><div class="chart-price" id="dmLast" style="color:var(--purple);font-size:32px;">—</div></div>
     </div>
+    <div class="digit-stream" id="dmrow"></div>
+    <div style="margin-top:10px;"><div class="freq-chart" id="dmdfChart"></div>
+      <div style="display:flex;gap:3px;margin-top:16px;" id="dmdfLbl"></div></div>
   </div>
-  <div class="p">
-    <div class="pt">Digit Frequency</div>
-    <div class="dfwrap" id="dmdfChart"></div><div class="dflbl" id="dmdfLbl"></div>
+  <div class="signal-box neutral" style="border-color:rgba(179,136,255,.2);background:rgba(179,136,255,.04);" id="dmSigBox">
+    <div style="font-family:var(--f-mono);font-size:10px;color:var(--dim);margin-bottom:4px;">DIFFERS / MATCHES SIGNAL</div>
+    <div class="sig-dir" id="dmSigDir" style="color:var(--purple);">—</div>
+    <div class="sig-cond" id="dmSigCond">Analysing digits...</div>
   </div>
-  <div class="dsg">
-    <div class="dsc pu" id="dmDirCell"><div class="dslbl">Contract</div><div class="dsv pu" id="dmDir">—</div></div>
-    <div class="dsc a"><div class="dslbl">Digit</div><div class="dsv a" id="dmDig">—</div></div>
-    <div class="dsc y"><div class="dslbl">Max Runs</div><div class="dsv y" id="dmRns">—</div></div>
-    <div class="dsc a"><div class="dslbl">Streak</div><div class="dsv a" id="dmStr">—</div></div>
+  <div class="trade-wrap" id="dmTradeWrap">
+    <button class="trade-btn digit" style="border-color:var(--purple);color:var(--purple);" onclick="tradeDM()">TRADE SIGNAL</button>
+    <div id="dmBtn" style="display:none;"></div>
   </div>
-  <div class="p">
-    <div class="pt">Signal Condition</div>
-    <div style="font-family:var(--mn);font-size:10px;color:var(--tx);line-height:1.7" id="dmCond">Press ANALYSE to generate signal</div>
-    <div class="cb" style="margin-top:8px"><div class="cbl"><span>CONFIDENCE</span><span id="dmCpct">—</span></div><div class="cbg"><div class="cbf" id="dmCf" style="width:0%"></div></div></div>
-    <div id="dmEW" style="display:none;margin-top:8px"><div class="erow"><span>EXPIRES IN</span><span id="dmEp" style="color:#ffd700">—</span></div><div class="cbg"><div id="dmEf" style="height:100%;border-radius:2px;background:#ffd700;width:100%;transition:width 1s linear"></div></div></div>
-    <div id="dmRW" style="display:none;margin-top:8px"><div class="er"><div class="dots" id="dmDots"></div><button class="mbtn" id="dmMb" onclick="dmMark()">+ RUN</button></div><div style="font-family:var(--mn);font-size:9px;color:var(--dm);margin-top:5px" id="dmRN"></div></div>
-  </div>
-  <button class="abtn pu" onclick="runDM()" id="dmBtn">◆ ANALYSE DIFFER / MATCH</button>
-  <div class="scanning" id="dmScan" style="color:#b388ff">ANALYSING PATTERNS...</div>
-  <div class="p"><div class="pt">Signal Log</div>
-    <div class="lw"><table class="lt">
-      <thead><tr><th>TIME</th><th>INST</th><th>TYPE</th><th>DIGIT</th><th>REASON</th><th>RUNS</th><th>CONF</th></tr></thead>
-      <tbody id="dmLog"><tr><td colspan="7" style="text-align:center;color:var(--dm);padding:16px">No signals yet</td></tr></tbody>
-    </table></div>
-  </div>
-  <div class="disc">⚠ Differs/Matches are ~50/50 probability contracts. Analysis improves edge only slightly.</div>
 </div>
 
 <!-- EVEN/ODD -->
+<div id="trade-eo" style="display:none;">
+  <div class="card">
+    <div class="section-hdr">Instrument</div>
+    <div class="inst-grid" id="eoInstRow">
+      <button class="inst-btn" onclick="selEO(this,'R_10')">V10</button>
+      <button class="inst-btn" onclick="selEO(this,'R_25')">V25</button>
+      <button class="inst-btn" onclick="selEO(this,'R_50')">V50</button>
+      <button class="inst-btn" onclick="selEO(this,'R_75')">V75</button>
+      <button class="inst-btn" onclick="selEO(this,'R_100')">V100</button>
+      <button class="inst-btn" onclick="selEO(this,'1HZ10V')">V10 1s</button>
+      <button class="inst-btn" onclick="selEO(this,'1HZ25V')">V25 1s</button>
+      <button class="inst-btn" onclick="selEO(this,'1HZ50V')">V50 1s</button>
+      <button class="inst-btn on" onclick="selEO(this,'1HZ75V')">V75 1s</button>
+      <button class="inst-btn" onclick="selEO(this,'1HZ100V')">V100 1s</button>
+    </div>
+  </div>
+  <div class="card gold-tint">
+    <div class="chart-hdr">
+      <div><div class="chart-inst">EVEN / ODD STREAM</div><div class="chart-meta" id="eoInfo">—</div></div>
+      <div style="text-align:right;"><div class="chart-price" id="eoLast" style="color:var(--gold);font-size:32px;">—</div></div>
+    </div>
+    <div class="digit-stream" id="eorow"></div>
+    <div id="eoFreqWrap" style="margin-top:10px;display:flex;gap:8px;font-family:var(--f-mono);font-size:12px;">
+      <span>EVEN: <b id="eoEvenPct" style="color:var(--gold)">—</b></span>
+      <span>ODD: <b id="eoOddPct" style="color:var(--gold)">—</b></span>
+    </div>
+  </div>
+  <div class="signal-box neutral" style="border-color:rgba(255,193,7,.2);background:rgba(255,193,7,.04);" id="eoSigBox">
+    <div style="font-family:var(--f-mono);font-size:10px;color:var(--dim);margin-bottom:4px;">EVEN / ODD SIGNAL</div>
+    <div class="sig-dir" id="eoSigDir" style="color:var(--gold);">—</div>
+    <div class="sig-cond" id="eoSigCond">Analysing digits...</div>
+  </div>
+  <div class="trade-wrap trade-btn-row" id="eoTradeWrap">
+    <button class="trade-btn digit" style="border-color:var(--gold);color:var(--gold);" onclick="tradeEO('DIGITEVEN')">EVEN</button>
+    <button class="trade-btn digit" style="border-color:var(--gold);color:var(--gold);" onclick="tradeEO('DIGITODD')">ODD</button>
+  </div>
+</div>
+```
 
-<div id="tab-eo" class="tc">
-  <div class="p pu">
-    <div class="pt">Even &amp; Odd</div>
-    <div style="font-family:var(--mn);font-size:10px;color:var(--dm);line-height:1.9">
-      <b style="color:#00d4ff">EVEN</b> — last digit is even (0,2,4,6,8).<br>
-      <b style="color:#b388ff">ODD</b> — last digit is odd (1,3,5,7,9).<br>
-      Analysis detects streaks and frequency bias.
-    </div>
   </div>
-  <div class="p">
-    <div class="pt">Instrument</div>
-    <div class="ig"><div class="iglbl">Standard</div><div class="irow">
-      <button class="ib" onclick="selEO(this,'R_10')">V10<span class="lv"></span></button>
-      <button class="ib" onclick="selEO(this,'R_25')">V25<span class="lv"></span></button>
-      <button class="ib" onclick="selEO(this,'R_50')">V50<span class="lv"></span></button>
-      <button class="ib on" onclick="selEO(this,'R_75')">V75<span class="lv"></span></button>
-      <button class="ib" onclick="selEO(this,'R_100')">V100<span class="lv"></span></button>
-    </div></div>
-    <div class="ig" style="margin-bottom:0"><div class="iglbl" style="color:rgba(255,140,0,.7)">1 Second</div><div class="irow">
-      <button class="ib s1" onclick="selEO(this,'1HZ10V')">V10 1s<span class="lv"></span></button>
-      <button class="ib s1" onclick="selEO(this,'1HZ25V')">V25 1s<span class="lv"></span></button>
-      <button class="ib s1" onclick="selEO(this,'1HZ50V')">V50 1s<span class="lv"></span></button>
-      <button class="ib s1" onclick="selEO(this,'1HZ75V')">V75 1s<span class="lv"></span></button>
-      <button class="ib s1" onclick="selEO(this,'1HZ100V')">V100 1s<span class="lv"></span></button>
-    </div></div>
-  </div>
-  <div class="p g">
-    <div class="pt">Live Stream — <span id="eoLbl" style="color:#00d4ff">V75</span> <span id="eoLiveBadge" style="margin-left:5px"></span></div>
-    <div class="sbox"><div class="srow" id="eorow"></div></div>
-    <div style="display:flex;justify-content:space-between;margin-top:6px;">
-      <span style="font-family:var(--mn);font-size:9px;"><span style="color:#00d4ff">■</span> <span style="color:var(--dm)">Even</span> &nbsp;<span style="color:#b388ff">■</span> <span style="color:var(--dm)">Odd</span></span>
-      <span style="font-family:var(--mn);font-size:9px;color:var(--dm)">Last: <span id="eoLast" style="color:#00d4ff;font-weight:700">—</span></span>
-    </div>
-    <div style="font-family:var(--mn);font-size:9px;color:var(--dm);margin-top:4px" id="eoInfo">waiting...</div>
-  </div>
-  <div class="p">
-    <div class="pt">Frequency — Live 50 Ticks</div>
-    <div style="display:flex;gap:8px;margin-bottom:10px;">
-      <div style="flex:1;background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.15);border-radius:5px;padding:12px;text-align:center;">
-        <div style="font-family:var(--mn);font-size:8px;color:var(--dm)">EVEN (0,2,4,6,8)</div>
-        <div style="font-family:var(--dp);font-size:32px;font-weight:900;color:#00d4ff" id="eoEvenPct">—</div>
-        <div style="height:5px;background:var(--bd);border-radius:3px;overflow:hidden;margin-top:6px"><div id="eoEvenBar" style="height:100%;background:#00d4ff;border-radius:3px;width:50%"></div></div>
-      </div>
-      <div style="flex:1;background:rgba(179,136,255,.06);border:1px solid rgba(179,136,255,.15);border-radius:5px;padding:12px;text-align:center;">
-        <div style="font-family:var(--mn);font-size:8px;color:var(--dm)">ODD (1,3,5,7,9)</div>
-        <div style="font-family:var(--dp);font-size:32px;font-weight:900;color:#b388ff" id="eoOddPct">—</div>
-        <div style="height:5px;background:var(--bd);border-radius:3px;overflow:hidden;margin-top:6px"><div id="eoOddBar" style="height:100%;background:#b388ff;border-radius:3px;width:50%"></div></div>
-      </div>
-    </div>
-    <div style="font-family:var(--mn);font-size:9px;color:var(--dm)">Last 10: <span id="eoLast10" style="color:var(--tx);letter-spacing:3px">—</span></div>
-    <div style="font-family:var(--mn);font-size:9px;color:var(--dm);margin-top:4px">Streak: <span id="eoStreakTxt" style="color:#ffd700">—</span></div>
-  </div>
-  <div class="dsg" style="grid-template-columns:1fr 1fr">
-    <div class="dsc a" id="eoDirCell"><div class="dslbl">Signal</div><div class="dsv a" id="eoDir">—</div></div>
-    <div class="dsc y"><div class="dslbl">Max Runs</div><div class="dsv y" id="eoRns">—</div></div>
-  </div>
-  <div class="p">
-    <div class="pt">Signal Condition</div>
-    <div style="font-family:var(--mn);font-size:10px;color:var(--tx);line-height:1.7" id="eoCond">Press ANALYSE to generate signal</div>
-    <div class="cb" style="margin-top:8px"><div class="cbl"><span>CONFIDENCE</span><span id="eoCpct">—</span></div><div class="cbg"><div class="cbf" id="eoCf" style="width:0%"></div></div></div>
-    <div id="eoEW" style="display:none;margin-top:8px"><div class="erow"><span>EXPIRES IN</span><span id="eoEp" style="color:#ffd700">—</span></div><div class="cbg"><div id="eoEf" style="height:100%;border-radius:2px;background:#ffd700;width:100%;transition:width 1s linear"></div></div></div>
-    <div id="eoRW" style="display:none;margin-top:8px"><div class="er"><div class="dots" id="eoDots"></div><button class="mbtn" id="eoMb" onclick="eoMark()">+ RUN</button></div><div style="font-family:var(--mn);font-size:9px;color:var(--dm);margin-top:5px" id="eoRN"></div></div>
-  </div>
-  <button class="abtn" style="border-color:#00d4ff;color:#00d4ff;" onclick="runEO()" id="eoBtn">◉ ANALYSE EVEN / ODD</button>
-  <div class="scanning" id="eoScan" style="color:#00d4ff">ANALYSING...</div>
-  <div class="trade-btn-wrap" style="display:none;margin-bottom:12px;">
-    <button onclick="tradeEO()" style="width:100%;padding:13px;background:rgba(0,212,255,.1);border:2px solid #00d4ff;color:#00d4ff;font-family:var(--dp);font-size:16px;font-weight:900;letter-spacing:3px;border-radius:6px;cursor:pointer;">⚡ PLACE EVEN/ODD · ALL RUNS</button>
-  </div>
-  <div class="p"><div class="pt">Signal Log</div>
-    <div class="lw"><table class="lt">
-      <thead><tr><th>TIME</th><th>INST</th><th>TYPE</th><th>EVEN%</th><th>ODD%</th><th>RUNS</th><th>CONF</th></tr></thead>
-      <tbody id="eoLog"><tr><td colspan="7" style="text-align:center;color:var(--dm);padding:16px">No signals yet</td></tr></tbody>
-    </table></div>
-  </div>
-  <div class="disc">⚠ Even/Odd ~50/50. Analysis improves edge marginally.</div>
 </div>
 
-<!-- HISTORY TAB -->
+<!-- ══ PAGE 3: BOT (FLOATING) ══ -->
 
-<div id="tab-hist" class="tc">
-  <div class="p" style="border-top:2px solid #ffd700;">
-    <div class="pt" style="color:#ffd700;">Trade History</div>
-    <!-- Summary stats -->
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
-      <div style="flex:1;min-width:70px;background:var(--p2);border:1px solid var(--bd);border-radius:5px;padding:8px;text-align:center;">
-        <div style="font-family:var(--mn);font-size:8px;color:var(--dm)">WIN RATE</div>
-        <div style="font-family:var(--dp);font-size:24px;font-weight:900;color:#00ff88" id="histWR">—</div>
-      </div>
-      <div style="flex:1;min-width:70px;background:var(--p2);border:1px solid var(--bd);border-radius:5px;padding:8px;text-align:center;">
-        <div style="font-family:var(--mn);font-size:8px;color:var(--dm)">TOTAL TRADES</div>
-        <div style="font-family:var(--dp);font-size:24px;font-weight:900;color:var(--tx)" id="histTotal">0</div>
-      </div>
-      <div style="flex:1;min-width:70px;background:var(--p2);border:1px solid var(--bd);border-radius:5px;padding:8px;text-align:center;">
-        <div style="font-family:var(--mn);font-size:8px;color:var(--dm)">SESSION P&L</div>
-        <div style="font-family:var(--dp);font-size:24px;font-weight:900;color:#00ff88" id="histPnl">$0</div>
-      </div>
+<div class="page" id="pg-bot">
+  <div class="bot-page-bg">
+    <!-- Hero -->
+    <div class="bot-hero">
+      <div class="bot-title">⚡ AUTO BOT</div>
+      <div class="bot-subtitle">Tick-speed execution · Martingale recovery</div>
+      <div class="bot-warn">⚠ Places real trades — monitor actively</div>
     </div>
-    <!-- Export button -->
-    <button onclick="exportCSV()" style="width:100%;padding:10px;background:rgba(255,215,0,.1);border:1.5px solid rgba(255,215,0,.4);color:#ffd700;font-family:var(--dp);font-size:13px;font-weight:700;letter-spacing:2px;border-radius:5px;cursor:pointer;margin-bottom:10px;">⬇ EXPORT CSV</button>
-    <!-- Table -->
-    <div style="overflow-x:auto;">
-      <table class="lt" style="width:100%">
-        <thead>
-          <tr>
-            <th>TIME</th><th>TYPE</th><th>INST</th><th>DIG</th><th>STAKE</th><th>P&L</th><th>RESULT</th>
-          </tr>
-        </thead>
-        <tbody id="tradeHistTbl">
-          <tr><td colspan="7" style="text-align:center;color:var(--dm);padding:20px;">No trades yet this session</td></tr>
-        </tbody>
-      </table>
+    <div class="page-inner" style="padding-top:14px;">
+
+```
+  <!-- Strategy selector -->
+  <div class="card-title" style="margin-bottom:8px;">SELECT STRATEGY</div>
+  <div class="strat-grid">
+    <div class="strat-card ou1 on" id="botSel_ou1" onclick="selBot('ou1')">
+      <div class="strat-name" style="color:var(--green)">O2/U7</div>
+      <div class="strat-sub">REC: O3/U6</div>
+      <div class="strat-mg">MG ×2.5</div>
+    </div>
+    <div class="strat-card ou2" id="botSel_ou2" onclick="selBot('ou2')">
+      <div class="strat-name" style="color:var(--cyan)">O1/U8</div>
+      <div class="strat-sub">REC: O3/U6</div>
+      <div class="strat-mg">MG ×3.6</div>
+    </div>
+    <div class="strat-card ou3" id="botSel_ou3" onclick="selBot('ou3')">
+      <div class="strat-name" style="color:var(--gold)">O4/U5</div>
+      <div class="strat-sub">50/50</div>
+      <div class="strat-mg">MG ×2.1</div>
     </div>
   </div>
-  <div class="disc">History resets on page refresh. Export CSV to save permanently.</div>
+  <div class="bot-strat-row">
+    <div class="strat-card eo" id="botSel_eo" onclick="selBot('eo')" style="border-radius:12px;text-align:center;padding:12px 8px;cursor:pointer;">
+      <div class="strat-name" style="color:#00bcd4">EVEN/ODD</div>
+      <div class="strat-sub">Even/Odd bias</div>
+      <div class="strat-mg">MG ×2.1</div>
+    </div>
+    <div class="strat-card df" id="botSel_df" onclick="selBot('df')" style="border-radius:12px;text-align:center;padding:12px 8px;cursor:pointer;">
+      <div class="strat-name" style="color:var(--purple)">DIFFERS</div>
+      <div class="strat-sub">Digit entry<br>REC: O2/U7</div>
+      <div class="strat-mg">MG ×6.8 · REC ×3.6</div>
+    </div>
+  </div>
+
+  <!-- Mode label -->
+  <div class="bot-mode-bar">
+    <span class="bot-mode-lbl">MODE</span>
+    <span class="bot-mode-val" id="botModeLabel" style="color:var(--green)">O2/U7 · MG ×2.5</span>
+  </div>
+
+  <!-- TP / SL / Stake inputs -->
+  <div class="card-title" style="margin-bottom:8px;">RISK SETTINGS</div>
+  <div class="bot-strat-row" style="margin-bottom:8px;">
+    <div class="bot-input-grp" style="border-color:rgba(0,230,118,.2);">
+      <div class="bot-input-lbl" style="color:var(--green)">TAKE PROFIT $</div>
+      <input class="bot-input tp" id="botTP" type="number" value="20" min="1" step="1">
+    </div>
+    <div class="bot-input-grp" style="border-color:rgba(255,61,87,.2);">
+      <div class="bot-input-lbl" style="color:var(--red)">STOP LOSS $</div>
+      <input class="bot-input sl" id="botSL" type="number" value="15" min="1" step="1">
+    </div>
+  </div>
+  <div class="bot-strat-row" style="margin-bottom:14px;">
+    <div class="bot-input-grp" style="border-color:rgba(255,193,7,.2);">
+      <div class="bot-input-lbl" style="color:var(--gold)">BASE STAKE $</div>
+      <input class="bot-input bs" id="botBase" type="number" value="1" min="0.35" step="0.5" onchange="MG.base=parseFloat(this.value)||1;MG.current=MG.base;try{document.getElementById('stakeAmt').value=MG.base.toFixed(2);updMartStats();}catch(e){}">
+    </div>
+    <div class="bot-input-grp" style="border-color:rgba(255,138,0,.2);">
+      <div class="bot-input-lbl" style="color:var(--orange)">MAX STAKE $</div>
+      <input class="bot-input ms" id="botMaxStake" type="number" value="30" min="1">
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="card-title" style="margin-bottom:8px;">PERFORMANCE</div>
+  <div class="bot-stats-row">
+    <div class="bstat"><div class="bstat-lbl">P&L</div><div class="bstat-val" id="botPnl" style="color:var(--green)">$0</div></div>
+    <div class="bstat"><div class="bstat-lbl">WINS</div><div class="bstat-val" id="botWins" style="color:var(--green)">0</div></div>
+    <div class="bstat"><div class="bstat-lbl">LOSSES</div><div class="bstat-val" id="botLosses" style="color:var(--red)">0</div></div>
+    <div class="bstat"><div class="bstat-lbl">NEXT $</div><div class="bstat-val" id="botNextStake" style="color:var(--gold)">1</div></div>
+  </div>
+
+  <!-- Status -->
+  <div class="bot-status-bar" id="botStatus" style="color:var(--dim2);">Bot stopped</div>
+
+  <!-- RUN button -->
+  <button id="botStartBtn" class="bot-run-btn start" onclick="startBot()">⚡ START BOT</button>
+  <button id="botStopBtn" class="bot-run-btn stop" onclick="stopBot()" style="display:none;">■ STOP BOT</button>
+
+  <!-- Activity Log -->
+  <div class="card-title" style="margin-bottom:8px;">LIVE LOG</div>
+  <div class="bot-log" id="botActivity">Bot not started yet.</div>
+
+  <!-- History -->
+  <div class="card-title" style="margin-bottom:8px;">TRADE HISTORY</div>
+  <div class="bot-hist-summary">
+    <div class="bhs"><div class="bhs-lbl">TOTAL P&L</div><div class="bhs-val" id="botHistPnl" style="color:var(--green)">$0</div></div>
+    <div class="bhs"><div class="bhs-lbl">TRADES</div><div class="bhs-val" id="botHistTotal">0</div></div>
+    <div class="bhs"><div class="bhs-lbl">WIN RATE</div><div class="bhs-val" id="botHistWR" style="color:var(--cyan)">—</div></div>
+  </div>
+  <div class="export-row">
+    <button class="exp-btn" onclick="exportBotCSV()">[D] EXPORT CSV</button>
+    <button class="clr-btn" onclick="if(confirm('Clear history?')){botHistory.length=0;renderBotHistory();}">CLEAR</button>
+  </div>
+  <div style="overflow-x:auto;background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:4px;">
+    <table class="bot-hist-tbl">
+      <thead><tr>
+        <th>Contract</th><th>Stake</th><th>P/L</th><th>Market</th><th>Status</th>
+      </tr></thead>
+      <tbody id="botHistTbl"><tr><td colspan="5" style="text-align:center;color:var(--dim);padding:16px;">No trades yet</td></tr></tbody>
+    </table>
+  </div>
+  <div style="height:8px;"></div>
+  <div class="disc">⚠ Auto bot places real trades. Set TP/SL carefully.</div>
+</div>
+```
+
+  </div>
 </div>
 
-<!-- SCANNER -->
+<!-- ══ PAGE 4: LOGIN / ACCOUNT ══ -->
 
-<div id="tab-sc" class="tc">
-  <div class="p o">
-    <div class="pt">Auto Scanner <span style="font-family:var(--mn);font-size:8px;background:rgba(255,140,0,.12);color:#ff8c00;border:1px solid rgba(255,140,0,.25);padding:2px 7px;border-radius:3px;margin-left:6px;vertical-align:middle;">⟳ AUTO 30s</span></div>
-    <div style="font-family:var(--mn);font-size:10px;color:var(--dm);line-height:1.8">Scans all 10 markets. Auto-refreshes every 30s. Over/Under + Differs/Matches ranked by confidence.</div>
+<div class="page" id="pg-login">
+  <div class="login-page">
+
+```
+<!-- Logged OUT state -->
+<div id="tradeLogin">
+  <div style="text-align:center;margin-bottom:28px;">
+    <div class="login-logo">Deriv<span>Signal</span></div>
+    <div class="login-tagline">Connect your Deriv account<br>to start trading</div>
   </div>
-  <div class="bestbox" id="bestPanel" style="display:none">
-    <div style="font-family:var(--dp);font-size:11px;font-weight:700;letter-spacing:3px;color:#00d4ff;margin-bottom:10px;">🏆 BEST LIVE OPPORTUNITY</div>
-    <div id="bestContent"></div>
-  </div>
-  <div class="p g">
-    <div class="pt">Your Favourites</div>
-    <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px">
-      <div style="background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.2);border-radius:5px;padding:8px 12px;text-align:center;min-width:60px">
-        <div style="font-family:var(--mn);font-size:8px;color:var(--dm)">OVER</div>
-        <div style="font-family:var(--dp);font-size:28px;font-weight:900;color:#00ff88" id="fovD">2</div>
-      </div>
-      <div style="background:rgba(255,59,92,.08);border:1px solid rgba(255,59,92,.2);border-radius:5px;padding:8px 12px;text-align:center;min-width:60px">
-        <div style="font-family:var(--mn);font-size:8px;color:var(--dm)">UNDER</div>
-        <div style="font-family:var(--dp);font-size:28px;font-weight:900;color:#ff3b5c" id="fundD">7</div>
-      </div>
-      <div style="background:rgba(179,136,255,.08);border:1px solid rgba(179,136,255,.2);border-radius:5px;padding:8px 12px;text-align:center;min-width:60px">
-        <div style="font-family:var(--mn);font-size:8px;color:var(--dm)">DIFFERS</div>
-        <div style="font-family:var(--dp);font-size:28px;font-weight:900;color:#b388ff" id="fdifD">5</div>
-      </div>
-      <div style="background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.2);border-radius:5px;padding:8px 12px;text-align:center;min-width:60px">
-        <div style="font-family:var(--mn);font-size:8px;color:var(--dm)">MATCHES</div>
-        <div style="font-family:var(--dp);font-size:28px;font-weight:900;color:#00d4ff" id="fmatD">5</div>
-      </div>
+  <div class="login-card">
+    <div class="login-title">API TOKEN</div>
+    <div class="login-input-wrap">
+      <input class="login-input" id="apiTokenInput" type="password" placeholder="Paste your API token here" onkeydown="if(event.key==='Enter')doLogin()">
+      <button class="login-eye" onclick="var i=document.getElementById('apiTokenInput');i.type=i.type==='password'?'text':'password'">👁</button>
     </div>
-    <div style="display:flex;gap:7px;flex-wrap:wrap">
-      <select id="fovS" onchange="updFavs()" style="flex:1;min-width:100px;background:var(--p2);border:1px solid var(--bd);color:var(--tx);font-family:var(--mn);font-size:10px;padding:7px;border-radius:5px">
-        <option value="0">Over 0</option><option value="1">Over 1</option><option value="2" selected>Over 2</option><option value="3">Over 3</option><option value="4">Over 4</option>
-      </select>
-      <select id="fundS" onchange="updFavs()" style="flex:1;min-width:100px;background:var(--p2);border:1px solid var(--bd);color:var(--tx);font-family:var(--mn);font-size:10px;padding:7px;border-radius:5px">
-        <option value="5">Under 5</option><option value="6">Under 6</option><option value="7" selected>Under 7</option><option value="8">Under 8</option><option value="9">Under 9</option>
-      </select>
-      <select id="fdifS" onchange="updFavs()" style="flex:1;min-width:100px;background:var(--p2);border:1px solid var(--bd);color:var(--tx);font-family:var(--mn);font-size:10px;padding:7px;border-radius:5px">
-        <option value="0">Differs 0</option><option value="1">Differs 1</option><option value="2">Differs 2</option><option value="3">Differs 3</option><option value="4">Differs 4</option>
-        <option value="5" selected>Differs 5</option><option value="6">Differs 6</option><option value="7">Differs 7</option><option value="8">Differs 8</option><option value="9">Differs 9</option>
-      </select>
-      <select id="fmatS" onchange="updFavs()" style="flex:1;min-width:100px;background:var(--p2);border:1px solid var(--bd);color:var(--tx);font-family:var(--mn);font-size:10px;padding:7px;border-radius:5px">
-        <option value="0">Matches 0</option><option value="1">Matches 1</option><option value="2">Matches 2</option><option value="3">Matches 3</option><option value="4">Matches 4</option>
-        <option value="5" selected>Matches 5</option><option value="6">Matches 6</option><option value="7">Matches 7</option><option value="8">Matches 8</option><option value="9">Matches 9</option>
-      </select>
+    <button class="login-btn" id="loginBtn" onclick="doLogin()">CONNECT ACCOUNT</button>
+    <div class="login-hint">
+      Get token at <a href="https://app.deriv.com/account/api-token" target="_blank">app.deriv.com</a><br>
+      Select <b>Read</b> + <b>Trade</b> scopes · Token saved in browser
     </div>
   </div>
-  <div style="display:flex;gap:10px;margin-bottom:10px;align-items:center;flex-wrap:wrap;">
-    <button class="abtn o" style="margin:0;flex:1;min-width:160px" onclick="runScan()" id="scBtn">⊕ SCAN ALL MARKETS</button>
-    <div style="font-family:var(--mn);font-size:9px;color:var(--dm)" id="lastScan">Never scanned</div>
-  </div>
-  <div class="scanning" id="scScan" style="color:#ff8c00">SCANNING ALL MARKETS...</div>
-  <div id="scResults"></div>
-  <div class="disc">⚠ Live Deriv data. Statistical analysis only — not financial advice.</div>
 </div>
+
+<!-- Logged IN state -->
+<div id="tradeAccount" style="display:none;width:100%;max-width:360px;">
+  <div class="account-card">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+      <div>
+        <div style="font-family:var(--f-mono);font-size:9px;color:var(--dim);letter-spacing:1px;margin-bottom:3px;">BALANCE</div>
+        <div class="acc-balance" id="accBal">—</div>
+      </div>
+      <div id="accTypeBadge" class="acc-type-badge demo">DEMO</div>
+    </div>
+    <div class="acc-name" id="accName">—</div>
+    <div class="acc-id" id="accId">—</div>
+    <div class="acc-controls">
+      <div class="acc-stake-wrap">
+        <div class="acc-stake-lbl">BASE STAKE $</div>
+        <input class="acc-stake-input" id="stakeAmt" type="number" value="1" min="0.35" step="0.5" onchange="MG.base=parseFloat(this.value)||1;MG.current=MG.base;updMartStats();">
+      </div>
+      <div class="acc-max-wrap">
+        <div class="acc-stake-lbl">MAX STAKE $</div>
+        <input class="acc-stake-input" id="maxStake" type="number" value="50" min="1">
+      </div>
+      <button class="logout-btn" onclick="doLogout()">LOGOUT</button>
+    </div>
+  </div>
+
+  <!-- MG Tracker -->
+  <div class="mg-tracker">
+    <div class="mg-title">MARTINGALE TRACKER</div>
+    <div class="mg-row">
+      <div class="mg-cell"><div class="mg-cell-lbl">STAKE</div><div class="mg-cell-val" id="mgStake" style="color:var(--gold)">$1.00</div></div>
+      <div class="mg-cell"><div class="mg-cell-lbl">P&L</div><div class="mg-cell-val" id="mgPnl" style="color:var(--green)">+$0</div></div>
+      <div class="mg-cell"><div class="mg-cell-lbl">STREAK</div><div class="mg-cell-val" id="mgStreak" style="color:var(--red)">0</div></div>
+      <div class="mg-cell"><div class="mg-cell-lbl">TRADES</div><div class="mg-cell-val" id="mgTrades">0</div></div>
+    </div>
+    <div style="margin-top:8px;font-family:var(--f-mono);font-size:9px;color:var(--dim);text-align:center;" id="mgLastInfo">—</div>
+  </div>
+
+  <!-- Open Positions -->
+  <div class="open-pos" id="openPosWrap" style="display:none;">
+    <div class="mg-title">OPEN POSITIONS</div>
+    <div id="openPosList"></div>
+  </div>
+
+  <!-- Trade message -->
+  <div class="trade-msg" id="tradeMsg"></div>
+</div>
+```
+
+  </div>
+</div>
+
+<!-- ══ BOTTOM NAV ══ -->
+
+<nav class="nav">
+  <button class="nav-btn on" id="nb-scan" onclick="swPage('scan',this)">
+    <div class="nav-icon">⟳</div>
+    <div class="nav-label">Scanner</div>
+  </button>
+  <button class="nav-btn" id="nb-trade" onclick="swPage('trade',this)">
+    <div class="nav-icon">📊</div>
+    <div class="nav-label">Trade</div>
+  </button>
+  <button class="nav-btn nav-bot-btn" id="nb-bot" onclick="swPage('bot',this)">
+    <div class="bot-badge" id="botBadge"></div>
+    <div class="nav-icon">⚡</div>
+    <div class="nav-label">Bot</div>
+  </button>
+  <button class="nav-btn" id="nb-login" onclick="swPage('login',this)">
+    <div class="nav-icon">👤</div>
+    <div class="nav-label">Account</div>
+  </button>
+</nav>
 
 <script>
+// ══════════════════════════════════════════════════════════
+// PAGE NAVIGATION
+// ══════════════════════════════════════════════════════════
+function swPage(id,el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('on'));
+  document.getElementById('pg-'+id).classList.add('on');
+  el.classList.add('on');
+}
+
+function swTrade(id,el){
+  ['rf','dg','dm','eo'].forEach(function(t){
+    document.getElementById('trade-'+t).style.display=t===id?'':'none';
+    var tb=document.getElementById('ttab-'+t);
+    if(tb){tb.classList.toggle('on',t===id);}
+  });
+}
+
+// Legacy tab switcher (used by JS internally)
+function swTab(id,el){}
+
+// ══════════════════════════════════════════════════════════
+// NEW RENDERERS for redesigned scanner
+// ══════════════════════════════════════════════════════════
+const getColClass=dir=>dir==='OVER'?'over':dir==='UNDER'?'under':dir==='DIFFERS'?'differs':dir==='MATCHES'?'matches':dir==='EVEN'?'even':dir==='ODD'?'odd':'wait';
+const getHex=dir=>dir==='OVER'?'#00e676':dir==='UNDER'?'#ff3d57':dir==='DIFFERS'?'#b388ff':dir==='MATCHES'?'#00d4ff':dir==='EVEN'||dir==='ODD'?'#ffc107':'#5a6a7a';
+
+function renderScan(results){
+  try{
+    // Best panel
+    const best=results.find(x=>x.r.dir!=='WAIT');
+    const bp=document.getElementById('bestPanel');
+    if(best){
+      bp.style.display='block';
+      const col=getHex(best.r.dir);
+      document.getElementById('bs-inst').textContent=(SYM[best.inst]||best.inst)+(best.live?' ':'  SIM');
+      document.getElementById('bs-dir').textContent=best.r.dir;
+      document.getElementById('bs-dir').style.color=col;
+      document.getElementById('bs-ent').textContent=best.r.ent!==null&&best.r.ent!==undefined?best.r.ent:'';
+      document.getElementById('bs-conf').textContent=best.r.conf+'%';
+      document.getElementById('bs-conf').style.color=col;
+      document.getElementById('bs-conf-bar').style.width=best.r.conf+'%';
+      document.getElementById('bs-conf-bar').style.background=col;
+      document.getElementById('bs-cond').textContent=best.r.cond||'';
+      document.getElementById('bs-live-badge').innerHTML=best.live?'<span class="badge live">● LIVE</span>':'<span class="badge sim">SIM</span>';
+      var tBtn=document.getElementById('bsTradeBtn');
+      if(accountInfo&&tBtn){
+        tBtn.style.display='block';
+        tBtn.style.borderColor=col;tBtn.style.color=col;
+        tBtn.onclick=function(){scanTrade(best.r.dir,best.inst,best.r.ent,best.r.runs);};
+      }
+    } else {
+      bp.style.display='none';
+    }
+    // Grid
+    var wrap=document.getElementById('scResults');wrap.innerHTML='';
+    var shown=results.slice(0,12);
+    shown.forEach(function(x,i){
+      var isW=x.r.dir==='WAIT';
+      var col=getHex(x.r.dir);
+      var cls=getColClass(x.r.dir);
+      var card=document.createElement('div');
+      card.className='scard-mini'+(i===0&&!isW?' top':'');
+      card.innerHTML='<div class="sc-inst">'+(SYM[x.inst]||x.inst)+(x.live?' <span style="color:var(--green);font-size:8px;">●</span>':'')+'</div>'
+        +'<div class="sc-dir '+cls+'">'+x.r.dir+'</div>'
+        +(x.r.ent!==null&&x.r.ent!==undefined?'<div class="sc-dig">'+x.r.ent+'</div>':'')
+        +'<div class="sc-conf">'+(!isW?x.r.conf+'%':'—')+'</div>';
+      wrap.appendChild(card);
+    });
+  }catch(e){}
+}
+
+// ══════════════════════════════════════════════════════════
+// INSTRUMENT SELECTORS (new versions for redesign)
+// ══════════════════════════════════════════════════════════
+var rfInst='1HZ75V',dInst='1HZ75V',dmInst='1HZ75V',eoInst='1HZ75V';
+
+function selRF(el,s){
+  rfInst=s;
+  document.querySelectorAll('#rfInstRow .inst-btn,#trade-rf .inst-btn').forEach(function(b){b.classList.remove('on');});
+  el.classList.add('on');
+  document.getElementById('rfInstLbl').textContent=(SYM[s]||s).toUpperCase();
+  subInst(s);drawChart(getPx(s));updRFLast();
+}
+function selD(el,s){
+  dInst=s;
+  document.querySelectorAll('#dInstRow .inst-btn').forEach(function(b){b.classList.remove('on');});
+  el.classList.add('on');
+  subInst(s);seedStream('srow',dg[s]||[]);renderFreq('dfChart','dfLbl',dg[s]||[],true);
+}
+function selDM(el,s){
+  dmInst=s;
+  document.querySelectorAll('#dmInstRow .inst-btn').forEach(function(b){b.classList.remove('on');});
+  el.classList.add('on');
+  subInst(s);seedStream('dmrow',dg[s]||[]);renderFreq('dmdfChart','dmdfLbl',dg[s]||[],false);
+}
+function selEO(el,s){
+  eoInst=s;
+  document.querySelectorAll('#eoInstRow .inst-btn').forEach(function(b){b.classList.remove('on');});
+  el.classList.add('on');
+  subInst(s);addEOStream(null,true);
+}
+
+// ══════════════════════════════════════════════════════════
+// SIGNAL DISPLAY helpers (updated for new IDs)
+// ══════════════════════════════════════════════════════════
+function updRFSig(r){
+  try{
+    var box=document.getElementById('rfSigBox');
+    var dir=document.getElementById('rfSigDir');
+    var cond=document.getElementById('rfSigCond');
+    var note=document.getElementById('rfSigNote');
+    var runs=document.getElementById('rfSigRuns');
+    var max=document.getElementById('rfSigMax');
+    if(!r||r.dir==='WAIT'){
+      box.className='signal-box wait';
+      dir.style.color='var(--dim)';dir.textContent='WAIT';
+      cond.textContent=r?r.cond:'Analysing...';
+      runs.textContent='—';max.textContent='WAIT';
+      if(note)note.style.display='none';
+    } else {
+      var isRise=r.dir==='HIGHER'||r.dir==='RISE';
+      box.className='signal-box '+(isRise?'over':'under');
+      dir.style.color=isRise?'var(--green)':'var(--red)';
+      dir.textContent=r.dir;
+      cond.textContent=r.cond||'';
+      runs.textContent=r.runs||'1';
+      max.textContent=r.runs>0?r.runs+'r':'WAIT';
+      max.style.color=r.runs>0?'var(--green)':'var(--red)';
+      if(note){
+        if(r.is1s){note.style.display='block';note.textContent='⚡ 1s — recommended 5+ ticks';}
+        else{note.style.display='none';}
+      }
+    }
+  }catch(e){}
+}
+
+function updDSig(r){
+  try{
+    var dir=document.getElementById('dSigDir');
+    var cond=document.getElementById('dSigCond');
+    var meta=document.getElementById('dSigMeta');
+    if(!r||r.dir==='WAIT'){
+      dir.textContent='WAIT';dir.style.color='var(--dim)';
+      cond.textContent=r?r.cond:'Analysing...';
+      if(meta)meta.innerHTML='';
+    } else {
+      dir.textContent=r.dir+(r.ent!==null?' '+r.ent:'');
+      dir.style.color=getHex(r.dir);
+      cond.textContent=r.cond||'';
+      if(meta)meta.innerHTML='<span class="sig-chip">CONF <span>'+r.conf+'%</span></span><span class="sig-chip">RUNS <span>'+r.runs+'</span></span>';
+    }
+  }catch(e){}
+}
+
+function updDMSig(r){
+  try{
+    var dir=document.getElementById('dmSigDir');
+    var cond=document.getElementById('dmSigCond');
+    if(!r||r.type==='WAIT'){
+      dir.textContent='WAIT';dir.style.color='var(--dim)';
+      cond.textContent=r?r.cond:'Analysing...';
+    } else {
+      dir.textContent=r.type+(r.digit!==null?' '+r.digit:'');
+      dir.style.color=getHex(r.type);
+      cond.textContent=r.cond||'';
+    }
+  }catch(e){}
+}
+
+function updEOSig(r){
+  try{
+    var dir=document.getElementById('eoSigDir');
+    var cond=document.getElementById('eoSigCond');
+    var ep=document.getElementById('eoEvenPct');
+    var op=document.getElementById('eoOddPct');
+    if(ep)ep.textContent=(r&&r.evenPct!==undefined?r.evenPct:'—')+'%';
+    if(op)op.textContent=(r&&r.oddPct!==undefined?r.oddPct:'—')+'%';
+    if(!r||r.dir==='WAIT'){
+      dir.textContent='WAIT';dir.style.color='var(--dim)';
+      cond.textContent=r?r.cond:'Analysing...';
+    } else {
+      dir.textContent=r.dir;dir.style.color='var(--gold)';
+      cond.textContent=r.cond||'';
+    }
+  }catch(e){}
+}
+
+// ══════════════════════════════════════════════════════════
+// LIVE INDICATOR helpers
+// ══════════════════════════════════════════════════════════
+function markLive(s){
+  var d=document.getElementById('ld-'+s);
+  if(d){d.className='ldot live';}
+}
+function setConn(st){
+  var pill=document.getElementById('connPill');
+  var dot=document.getElementById('connDot');
+  var txt=document.getElementById('connTxt');
+  if(!pill)return;
+  pill.className='conn-pill '+st;
+  txt.textContent=st==='live'?'LIVE':st==='offline'?'OFFLINE':'CONNECTING';
+}
+
+// ══════════════════════════════════════════════════════════
+// showAccountInfo — updated for new login page IDs
+// ══════════════════════════════════════════════════════════
+function showAccountInfo(auth){
+  document.getElementById('tradeLogin').style.display='none';
+  document.getElementById('tradeAccount').style.display='block';
+  document.getElementById('accName').textContent=auth.fullname||auth.loginid||'Account';
+  document.getElementById('accId').textContent=auth.loginid||'';
+  document.getElementById('accBal').textContent=parseFloat(auth.balance||0).toFixed(2)+' '+(auth.currency||'USD');
+  var badge=document.getElementById('accTypeBadge');
+  if(badge){badge.textContent=auth.is_virtual?'DEMO':'REAL';badge.className='acc-type-badge '+(auth.is_virtual?'demo':'real');}
+  document.querySelectorAll('.trade-wrap').forEach(function(w){w.style.display='flex';});
+  document.querySelectorAll('.scan-trade-btn').forEach(function(b){b.style.display='block';});
+  // Update nav account icon
+  var nb=document.getElementById('nb-login');
+  if(nb){var ico=nb.querySelector('.nav-icon');if(ico)ico.textContent='✓';}
+  showTradeMsg('[OK] Account connected · ready to trade','#00e676');
+}
+
+function setLoggedOut(){
+  apiToken=null;accountInfo=null;tradeWSok=false;tradeReady=false;
+  runQueue=[];runExecuting=false;
+  try{localStorage.removeItem('dv_tok');}catch(e){}
+  document.getElementById('tradeLogin').style.display='';
+  document.getElementById('tradeAccount').style.display='none';
+  document.querySelectorAll('.trade-wrap').forEach(function(w){w.style.display='none';});
+  document.querySelectorAll('.scan-trade-btn').forEach(function(b){b.style.display='none';});
+  try{document.getElementById('apiTokenInput').value='';}catch(e){}
+  var nb=document.getElementById('nb-login');
+  if(nb){var ico=nb.querySelector('.nav-icon');if(ico)ico.textContent='👤';}
+}
+
+function showTradeMsg(msg,col){
+  try{
+    var el=document.getElementById('tradeMsg');
+    if(!el)return;
+    el.style.display='block';
+    el.style.color=col||'var(--tx)';
+    el.style.borderColor=(col||'var(--border)');
+    el.textContent=msg;
+    setTimeout(function(){if(el)el.style.display='none';},8000);
+  }catch(e){}
+}
+
+// Bot badge on nav
+function setBotBadge(on){
+  var b=document.getElementById('botBadge');
+  if(b)b.classList.toggle('on',on);
+}
+
+// ══════════════════════════════════════════════════════════
+// selBot — updated visual for new strat cards
+// ══════════════════════════════════════════════════════════
+function selBot(type){
+  if(botRunning){showTradeMsg('Stop bot first','#ff3d57');return;}
+  activeBotType=type;
+  var cols={ou1:'#00e676',ou2:'#00d4ff',ou3:'#ffc107',eo:'#00bcd4',df:'#b388ff'};
+  ['ou1','ou2','ou3','eo','df'].forEach(function(t){
+    var c=document.getElementById('botSel_'+t);
+    if(c)c.classList.toggle('on',t===type);
+  });
+  try{
+    var cfg=BOT_CONFIGS[type];
+    var dfNote=type==='df'?' | REC: O2/U7 ×3.6':'';
+    document.getElementById('botModeLabel').textContent=cfg.name+' MG ×'+cfg.mg+dfNote;
+    document.getElementById('botModeLabel').style.color=cols[type]||'#00e676';
+  }catch(e){}
+}
+
+// ══════════════════════════════════════════════════════════
+// botHistWR — add win rate to history summary
+// ══════════════════════════════════════════════════════════
+var _origRenderBotHistory;
+function renderBotHistoryNew(){
+  if(_origRenderBotHistory)_origRenderBotHistory();
+  try{
+    var w=parseInt(document.getElementById('botHistWins').textContent)||0;
+    var t=parseInt(document.getElementById('botHistTotal').textContent)||0;
+    var el=document.getElementById('botHistWR');
+    if(el)el.textContent=t>0?Math.round(w/t*100)+'%':'—';
+  }catch(e){}
+}
+
+// Auto-restore token
+setTimeout(function(){
+  try{
+    var saved=localStorage.getItem('dv_tok');
+    if(saved){
+      var inp=document.getElementById('apiTokenInput');
+      if(inp)inp.value=saved;
+      setTimeout(function(){
+        if(!accountInfo&&saved){
+          apiToken=saved;
+          showTradeMsg('[~] Reconnecting saved account...','#ffc107');
+          initTradeWS(saved);
+        }
+      },800);
+    }
+  }catch(e){}
+},400);
+
+// ══ CORE TRADING ENGINE ══
 // ══════════════════════════════════════════════
 // FAST WEBSOCKET ENGINE
 // ══════════════════════════════════════════════
@@ -879,21 +1130,11 @@ function subInst(s){
 
 const ldig=q=>{const s=String(q);return parseInt(s[s.length-1])||0;};
 
-function setConn(st){
-  const pill=document.getElementById('connPill'),dot=document.getElementById('connDot'),txt=document.getElementById('connTxt'),ban=document.getElementById('banner');
-  pill.className='pill '+st;dot.className='ldot '+st;
-  if(st==='live'){txt.textContent='LIVE';ban.className='live';ban.textContent='[OK] Connected to Deriv live data feed';}
-  else if(st==='connecting'){txt.textContent='CONNECTING';ban.className='connecting';ban.textContent='[~] Connecting...';}
-  else{txt.textContent='OFFLINE';ban.className='offline';ban.textContent='[X] Offline - simulated data';}
-}
+// [merged into shell] setConn
 
-function markLive(s){
-  document.querySelectorAll('.ib').forEach(b=>{if((b.getAttribute('onclick')||'').includes("'"+s+"'"))b.classList.add('lv-on');});
-  const badge='<span class="livebadge">LIVE</span>';
-  if(s===rfInst)document.getElementById('rfLiveBadge').innerHTML=badge;
-  if(s===dInst)document.getElementById('dLiveBadge').innerHTML=badge;
-  if(s===dmInst)document.getElementById('dmLiveBadge').innerHTML=badge;
-}
+
+// [merged into shell] markLive
+
 
 // Simulation
 const BASES={R_10:1200,R_25:3500,R_50:4200,R_75:5800,R_100:8500,'1HZ10V':1200,'1HZ25V':3500,'1HZ50V':4200,'1HZ75V':5800,'1HZ100V':8500};
@@ -930,7 +1171,7 @@ window.addEventListener('resize',()=>{try{drawChart(getPx(rfInst));}catch(e){}})
 function updRFLast(){try{const p=px[rfInst];if(p&&p.length>0)document.getElementById('rfLast').textContent=p[p.length-1].toFixed(2);}catch(e){}}
 
 // ── RF ──
-let rfInst='R_10',rfTickOvr=null,rfMaxR=0,rfRDone=0,rfETi=null;
+rfInst='R_10';var rfTickOvr=null,rfMaxR=0,rfRDone=0,rfETi=null;
 const rfSt={t:0,r:0,f:0};
 function selRF(el,s){document.querySelectorAll('#tab-rf .ib').forEach(b=>b.classList.remove('on'));el.classList.add('on');rfInst=s;document.getElementById('rfLbl').textContent=SYM[s];document.getElementById('rf1sBadge').style.display=is1s(s)?'inline':'none';document.getElementById('rf1sNote').style.display=is1s(s)?'block':'none';document.getElementById('rfLiveBadge').innerHTML=hd[s]?'<span class="livebadge">LIVE</span>':'<span class="simbadge">SIM</span>';document.getElementById('rfTC').textContent=tc[s]||0;drawChart(getPx(s));updRFLast();subInst(s);}
 function setTick(el,n){document.querySelectorAll('.tbtn').forEach(b=>b.classList.remove('on'));el.classList.add('on');rfTickOvr=n;}
@@ -1060,7 +1301,7 @@ function analyseOD(stream,inst){
   return{dir,ent,cond,conf:Math.round(conf),runs,dur:1,sL,sD,lp:Math.round(lp),hp:Math.round(100-lp)};
 }
 
-let dInst='R_75',dMaxR=0,dRDone=0;
+dInst='R_75';var dMaxR=0,dRDone=0;
 function selD(el,s){document.querySelectorAll('#tab-dg .ib').forEach(b=>b.classList.remove('on'));el.classList.add('on');dInst=s;document.getElementById('dLbl').textContent=SYM[s];document.getElementById('dSpd').textContent=is1s(s)?'~1s':'~2s';document.getElementById('dLiveBadge').innerHTML=hd[s]?'<span class="livebadge">LIVE</span>':'<span class="simbadge">SIM</span>';seedStream('srow',getDg(s));renderFreq('dfChart','dfLbl',getDg(s),true);subInst(s);}
 
 function runD(){
@@ -1090,7 +1331,7 @@ function dMark(){try{if(dRDone>=dMaxR)return;document.getElementById(`dDots_${dR
 function addDLog(r){try{const tb=document.getElementById('dLog');if(tb.querySelector('td[colspan]'))tb.innerHTML='';const tr=document.createElement('tr');tr.innerHTML=`<td>${new Date().toTimeString().slice(0,8)}</td><td>${SYM[dInst]}</td><td class="${r.dir==='OVER'?'win':r.dir==='UNDER'?'loss':'wt'}">${r.dir}</td><td style="color:#00d4ff">${r.ent!==null?r.ent:'-'}</td><td style="font-size:9px">${r.cond.slice(0,34)}…</td><td style="color:#ffd700">${r.runs}</td><td style="color:#00ff88">${r.lp}%</td><td style="color:#ff3b5c">${r.hp}%</td>`;tb.insertAdjacentElement('afterbegin',tr);if(tb.children.length>8)tb.removeChild(tb.lastChild);}catch(e){}}
 
 // ── DIFFER/MATCH ──
-let dmInst='R_75',dmMaxR=0,dmRDone=0;
+dmInst='R_75';var dmMaxR=0,dmRDone=0;
 function selDM(el,s){document.querySelectorAll('#tab-dm .ib').forEach(b=>b.classList.remove('on'));el.classList.add('on');dmInst=s;document.getElementById('dmLbl').textContent=SYM[s];document.getElementById('dmLiveBadge').innerHTML=hd[s]?'<span class="livebadge">LIVE</span>':'<span class="simbadge">SIM</span>';seedStream('dmrow',getDg(s));renderFreq('dmdfChart','dmdfLbl',getDg(s),false);subInst(s);}
 
 function analyseDM(stream,inst){
@@ -1637,18 +1878,8 @@ function scanTrade(dir,inst,barrier,runs){
 }
 
 // ── ACCOUNT UI ──
-function showAccountInfo(auth){
-  document.getElementById('tradeLogin').style.display='none';
-  document.getElementById('tradeAccount').style.display='block';
-  document.getElementById('accName').textContent=auth.fullname||auth.loginid||'Account';
-  document.getElementById('accId').textContent=auth.loginid||'';
-  document.getElementById('accBal').textContent=parseFloat(auth.balance||0).toFixed(2)+' '+(auth.currency||'USD');
-  document.getElementById('accType').textContent=auth.is_virtual?'DEMO':'REAL';
-  document.getElementById('accType').style.color=auth.is_virtual?'#ffd700':'#00ff88';
-  document.querySelectorAll('.trade-btn-wrap').forEach(w=>w.style.display='flex');
-  document.querySelectorAll('.scan-trade-btn').forEach(b=>b.style.display='block');
-  showTradeMsg('[OK] Account connected - ready to trade','#00ff88');
-}
+// [merged into shell] showAccountInfo
+
 
 function refreshPositions(){
   try{
@@ -1674,16 +1905,8 @@ function refreshPositions(){
   }catch(e){}
 }
 
-function setLoggedOut(){
-  apiToken=null;accountInfo=null;tradeWSok=false;tradeReady=false;
-  runQueue=[];runExecuting=false;
-  try{localStorage.removeItem('dv_tok');}catch(e){}
-  document.getElementById('tradeLogin').style.display='block';
-  document.getElementById('tradeAccount').style.display='none';
-  document.querySelectorAll('.trade-btn-wrap').forEach(w=>w.style.display='none');
-  document.querySelectorAll('.scan-trade-btn').forEach(b=>b.style.display='none');
-  try{document.getElementById('apiTokenInput').value='';}catch(e){}
-}
+// [merged into shell] setLoggedOut
+
 
 function doLogin(){
   const tok=document.getElementById('apiTokenInput').value.trim();
@@ -1712,15 +1935,8 @@ function doLogout(){
   showTradeMsg('Logged out','#ffd700');
 }
 
-function showTradeMsg(msg,col){
-  try{
-    const el=document.getElementById('tradeMsg');
-    el.textContent=msg;el.style.color=col||'#00d4ff';el.style.display='block';
-    clearTimeout(el._t);
-    if(col!=='#00ff88'||!msg.includes('connected'))
-      el._t=setTimeout(()=>{el.style.display='none';},8000);
-  }catch(e){}
-}
+// [merged into shell] showTradeMsg
+
 
 // ── INJECT TRADE UI ──
 function injectTradingUI(){
@@ -1940,11 +2156,19 @@ function botFindEO(){
   return best;
 }
 function botFindDF(){
+  // DIFFERS only — digit entry from analysis
+  // Uses the digit that analysis identifies as most likely to differ
   var best=null,bestConf=0;
   ALL.forEach(function(inst){
-    var s=getDg(inst);if(!s||s.length<15)return;
-    var r=analyseDM(s,inst);if(r.type==='WAIT')return;
-    if(r.conf>bestConf){bestConf=r.conf;best={inst:inst,dir:r.type,ent:r.digit,conf:r.conf,ct:r.type==='DIFFERS'?'DIGITDIFF':'DIGITMATCH'};}
+    var s=dg[inst]&&dg[inst].length>=15?dg[inst]:getDg(inst);
+    if(!s||s.length<15)return;
+    var r=analyseDM(s,inst);
+    if(r.type!=='DIFFERS')return; // DIFFERS only, skip MATCHES/WAIT
+    if(r.digit===null||r.digit===undefined)return;
+    if(r.conf>bestConf){
+      bestConf=r.conf;
+      best={inst:inst,dir:'DIFFERS',ent:r.digit,conf:r.conf,ct:'DIGITDIFF',reason:r.cond};
+    }
   });
   return best;
 }
@@ -2204,7 +2428,8 @@ function botFire(sig){
   botCurrentContractId='pending'; // reserve slot BEFORE sending
   botNextSignal=null;
   const tickMs=getTickMs(sig.inst);
-  botLog(`[!] ${sig.dir}${sig.ent!==null?' '+sig.ent:''} · ${SYM[sig.inst]} · $${stake} · ${sig.conf}%`,'#00d4ff');
+  const _rea=sig.reason?` · ${sig.reason.slice(0,50)}`:'';
+  botLog(`[!] ${sig.dir}${sig.ent!==null?' '+sig.ent:''} · ${SYM[sig.inst]} · $${stake} · ${sig.conf}%${_rea}`,'#00d4ff');
   botSetStatus(`[~] Open: ${sig.dir}${sig.ent!==null?' '+sig.ent:''} · ${SYM[sig.inst]} · $${stake}`,'#ffd700');
   // Set MG tracking state BEFORE firing - so history captures correctly
   MG.lastType=sig.ct;
@@ -2259,24 +2484,8 @@ function botTick(){
   }
 }
 
-function selBot(type){
-  if(botRunning){showTradeMsg('Stop bot first','#ff3b5c');return;}
-  activeBotType=type;
-  const cols={ou1:'#00ff88',ou2:'#00e5ff',ou3:'#ffd700',eo:'#00d4ff',df:'#b388ff'};
-  ['ou1','ou2','ou3','eo','df'].forEach(function(t){
-    const b=document.getElementById('botSel_'+t);
-    if(!b)return;
-    const on=t===type;
-    b.style.borderColor=on?cols[t]:'rgba(255,255,255,.15)';
-    b.style.color=on?cols[t]:'var(--dm)';
-    b.style.background=on?'rgba(255,255,255,.07)':'transparent';
-  });
-  try{
-    const cfg=BOT_CONFIGS[type];
-    document.getElementById('botModeLabel').textContent='[NRM] '+cfg.name+' MG x'+cfg.mg;
-    document.getElementById('botModeLabel').style.color=cols[type]||'#00ff88';
-  }catch(e){}
-}
+// [merged into shell] selBot
+
 
 function startBot(){
   if(!apiToken){showTradeMsg('Login with API token first','#ff3b5c');return;}
@@ -2350,8 +2559,6 @@ try{initWS();}catch(e){setConn('offline');}
 selBot('ou1');
 setTimeout(()=>{try{drawChart(getPx(rfInst));}catch(e){}},100);
 injectTradingUI();
-
-
 </script>
 
 </body>
