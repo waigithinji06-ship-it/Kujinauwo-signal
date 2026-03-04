@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Deriv Volatility Analyser + AI Trader</title>
+<title>Deriv AI Trader v5</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap');
 :root{--bg:#07090f;--surface:#0e1117;--card:#131720;--border:#1e2535;--accent:#00ffc8;--accent2:#ff6b35;--blue:#4d9fff;--purple:#b06aff;--yellow:#ffd60a;--red:#ff3d5a;--green:#00e676;--dim:#4a5568;--text:#e2e8f0;--muted:#8892a4;}
@@ -224,6 +224,36 @@ td.L{text-align:left;padding-left:12px;}
 ::-webkit-scrollbar{width:4px;height:4px;}
 ::-webkit-scrollbar-track{background:var(–surface);}
 ::-webkit-scrollbar-thumb{background:var(–border);border-radius:2px;}
+
+.lad-step{padding:8px 10px;border-radius:8px;text-align:center;min-width:66px;border:1px solid var(–border);background:var(–surface);transition:all .3s;}
+.lad-step.differ{border-color:rgba(0,230,118,.25);}
+.lad-step.over{border-color:rgba(77,159,255,.25);}
+.lad-step.final{border-color:rgba(255,107,53,.35);}
+.lad-step.active{transform:scale(1.1);box-shadow:0 0 14px rgba(255,214,10,.5);border-color:var(–yellow)!important;background:rgba(255,214,10,.08);}
+.lad-step.won{background:rgba(0,230,118,.12);border-color:rgba(0,230,118,.4);}
+.lad-step.lost{opacity:.42;}
+.lad-num{font-family:‘Space Mono’,monospace;font-size:7px;color:var(–dim);margin-bottom:2px;}
+.lad-type{font-family:‘Space Mono’,monospace;font-size:9px;font-weight:700;}
+.lad-step.differ .lad-type{color:var(–green);}
+.lad-step.over .lad-type{color:var(–blue);}
+.lad-step.final .lad-type{color:var(–accent2);}
+.lad-stake{font-family:‘Space Mono’,monospace;font-size:11px;font-weight:700;color:var(–text);margin-top:3px;}
+.lad-arrow{color:var(–dim);font-size:13px;align-self:center;}
+.tick-speed{display:inline-flex;align-items:center;padding:1px 5px;border-radius:8px;font-size:7px;font-family:‘Space Mono’,monospace;font-weight:700;margin-left:3px;}
+.tick-speed.fast{background:rgba(0,230,118,.12);color:var(–green);}
+.tick-speed.med{background:rgba(255,214,10,.12);color:var(–yellow);}
+.tick-speed.slow{background:rgba(255,61,90,.12);color:var(–red);}
+.eq-wrap{background:var(–surface);border:1px solid var(–border);border-radius:9px;padding:10px;margin-bottom:14px;}
+.eq-title{font-size:9px;font-weight:700;letter-spacing:2px;color:var(–muted);text-transform:uppercase;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;font-family:‘Space Mono’,monospace;}
+
+.mode-row{}
+.mode-btn{flex:1;min-width:160px;background:var(–surface);border:2px solid var(–border);border-radius:10px;padding:12px 14px;cursor:pointer;transition:all .2s;text-align:center;}
+.mode-btn:hover{border-color:var(–muted);}
+.mode-btn.active{border-color:var(–accent);background:rgba(0,255,200,.06);}
+.mode-icon{font-size:20px;margin-bottom:4px;}
+.mode-name{font-size:10px;font-weight:800;font-family:‘Syne’,sans-serif;color:var(–text);margin-bottom:4px;}
+.mode-btn.active .mode-name{color:var(–accent);}
+.mode-desc{font-size:8px;color:var(–muted);font-family:‘Space Mono’,monospace;line-height:1.5;}
 </style>
 
 </head>
@@ -303,7 +333,7 @@ td.L{text-align:left;padding-left:12px;}
         <div class="ai-icon">🤖</div>
         <div>
           <div class="ai-title">AI <span>AUTO TRADER</span></div>
-          <div class="ai-subtitle">Differs primary · Over2 recovery · 3.6x Martingale · 5-loss circuit breaker</div>
+          <div class="ai-subtitle">Dual Martingale Modes · Custom Ladder · Manual Feed · Full Reset on Win</div>
         </div>
       </div>
       <div class="ai-status">
@@ -375,15 +405,106 @@ td.L{text-align:left;padding-left:12px;}
   <div class="ast"><div class="ast-label">Consec. Loss</div><div class="ast-val" id="astCL" style="color:var(--yellow)">0</div></div>
   <div class="ast"><div class="ast-label">Mart. Step</div><div class="ast-val" id="astMS" style="color:var(--purple)">0/5</div></div>
   <div class="ast"><div class="ast-label">Next Stake</div><div class="ast-val" id="astNS" style="color:var(--yellow)">—</div></div>
-  <div class="ast"><div class="ast-label">Best Index</div><div class="ast-val" id="astBI" style="font-size:12px;color:var(--blue)">—</div></div>
+  <div class="ast"><div class="ast-label">Tick Speed</div><div class="ast-val" id="astTS" style="font-size:11px;color:var(--blue)">—</div></div>
 </div>
 
-<!-- Martingale steps indicator -->
-<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
-  <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;">MARTINGALE STEPS:</div>
-  <div class="mart-row" id="martRow">
-    <div class="mart-step" id="ms0">1</div>
-    <div class="mart-step" id="ms1">2</div>
+    <!-- MODE SELECTOR -->
+<div class="mode-row" id="modeRow">
+  <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:2px;margin-bottom:8px;">MARTINGALE MODE</div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+    <div class="mode-btn active" id="modeA" onclick="setMode('A')">
+      <div class="mode-icon">🪜</div>
+      <div class="mode-name">CUSTOM LADDER</div>
+      <div class="mode-desc">DIFF→DIFF→OVER2→OVER2→OVER2<br>$5→$18→$18→$18→$64.80</div>
+    </div>
+    <div class="mode-btn" id="modeB" onclick="setMode('B')">
+      <div class="mode-icon">📈</div>
+      <div class="mode-name">FLAT 3.6× MARTINGALE</div>
+      <div class="mode-desc">DIFFERS all steps<br>Stake ×3.6 each loss</div>
+    </div>
+    <div class="mode-btn" id="modeC" onclick="setMode('C')">
+      <div class="mode-icon">✏️</div>
+      <div class="mode-name">MANUAL FEED</div>
+      <div class="mode-desc">You set stake + contract<br>AI executes on signal</div>
+    </div>
+  </div>
+</div>
+
+<!-- LADDER VISUAL (Mode A + B) -->
+<div id="ladderPanel">
+  <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:2px;margin-bottom:8px;display:flex;justify-content:space-between;"><span>STAKE LADDER</span><span id="ladExposure" style="color:var(--red)"></span></div>
+  <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;margin-bottom:14px;">
+    <div class="lad-step differ" id="lad0"><div class="lad-num">STEP 1</div><div class="lad-type">DIFFERS</div><div class="lad-stake" id="ladS0">$5.00</div></div>
+    <div class="lad-arrow">&#8594;</div>
+    <div class="lad-step differ" id="lad1"><div class="lad-num">STEP 2</div><div class="lad-type">DIFFERS</div><div class="lad-stake" id="ladS1">$18.00</div></div>
+    <div class="lad-arrow">&#8594;</div>
+    <div class="lad-step over" id="lad2"><div class="lad-num">STEP 3</div><div class="lad-type">OVER 2</div><div class="lad-stake" id="ladS2">$18.00</div></div>
+    <div class="lad-arrow">&#8594;</div>
+    <div class="lad-step over" id="lad3"><div class="lad-num">STEP 4</div><div class="lad-type">OVER 2</div><div class="lad-stake" id="ladS3">$18.00</div></div>
+    <div class="lad-arrow">&#8594;</div>
+    <div class="lad-step over final" id="lad4"><div class="lad-num">STEP 5</div><div class="lad-type">OVER 2</div><div class="lad-stake" id="ladS4">$64.80</div></div>
+  </div>
+</div>
+
+<!-- MANUAL FEED PANEL (Mode C) -->
+<div id="manualPanel" style="display:none;margin-bottom:14px;">
+  <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:2px;margin-bottom:10px;">MANUAL TRADE FEED</div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:10px;">
+    <div class="cfg-block">
+      <div class="cfg-label">CONTRACT TYPE</div>
+      <select class="cfg-select" id="manContract">
+        <option value="DIGITDIFF">DIFFERS</option>
+        <option value="DIGITOVER">OVER 2</option>
+        <option value="DIGITUNDER">UNDER 7</option>
+        <option value="DIGITEVEN">EVEN</option>
+        <option value="DIGITODD">ODD</option>
+      </select>
+    </div>
+    <div class="cfg-block">
+      <div class="cfg-label">STAKE ($)</div>
+      <input class="cfg-input" id="manStake" type="number" value="5.00" min="0.35" step="0.50"/>
+    </div>
+    <div class="cfg-block">
+      <div class="cfg-label">BARRIER / DIGIT</div>
+      <input class="cfg-input" id="manBarrier" type="number" value="2" min="0" max="9" step="1"/>
+      <div style="font-size:8px;color:var(--dim);margin-top:3px;font-family:'Space Mono',monospace">DIFFERS/OVER/UNDER only</div>
+    </div>
+    <div class="cfg-block">
+      <div class="cfg-label">INDEX</div>
+      <select class="cfg-select" id="manIndex">
+        <option value="AUTO">AUTO (AI picks)</option>
+        <option value="R_10">V10</option>
+        <option value="R_25">V25</option>
+        <option value="R_50">V50</option>
+        <option value="R_75">V75</option>
+        <option value="R_100">V100</option>
+        <option value="1HZ10V">V10 1s</option>
+        <option value="1HZ25V">V25 1s</option>
+        <option value="1HZ50V">V50 1s</option>
+        <option value="1HZ75V">V75 1s</option>
+        <option value="1HZ100V">V100 1s</option>
+      </select>
+    </div>
+    <div class="cfg-block">
+      <div class="cfg-label">AFTER LOSS</div>
+      <select class="cfg-select" id="manOnLoss">
+        <option value="repeat">Repeat same trade</option>
+        <option value="martingale">Apply 3.6× martingale</option>
+        <option value="stop">Stop after loss</option>
+      </select>
+    </div>
+    <div class="cfg-block">
+      <div class="cfg-label">AFTER WIN</div>
+      <select class="cfg-select" id="manOnWin">
+        <option value="reset">Reset to original stake</option>
+        <option value="repeat">Repeat same stake</option>
+        <option value="stop">Stop after win</option>
+      </select>
+    </div>
+  </div>
+  <button class="ai-btn start" style="width:100%;margin-bottom:0;" onclick="manualFire()">⚡ FIRE MANUAL TRADE NOW</button>
+  <div style="font-size:9px;color:var(--dim);font-family:'Space Mono',monospace;margin-top:6px;text-align:center;">Manual trades also respect TP / SL and circuit breaker</div>
+</div>
     <div class="mart-step" id="ms2">3</div>
     <div class="mart-step" id="ms3">4</div>
     <div class="mart-step" id="ms4">5</div>
@@ -407,6 +528,11 @@ td.L{text-align:left;padding-left:12px;}
   </div>
 </div>
 
+<!-- Equity curve -->
+<div class="eq-wrap">
+  <div class="eq-title"><span>EQUITY CURVE</span><span id="eqStats"></span></div>
+  <canvas id="eqCanvas" height="70" style="width:100%;display:block;"></canvas>
+</div>
 <!-- Trade log -->
 <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;margin-bottom:6px;">TRADE LOG</div>
 <div class="trade-log" id="tradeLog">
@@ -476,55 +602,123 @@ const IDX=[
   {s:'1HZ100V',n:'V100 (1s)',sub:'Volatility 100 1s',v:100},
 ];
 
-// ══ STATE ══
-const ST={};
-IDX.forEach(i=>{ST[i.s]={prices:[],digits:[],freq:new Array(10).fill(0),last:null,conn:false,ticks:0};});
-let total=0,ws=null,rtimer=null,userToken=null,isGuest=false;
+// ══ MODE A: CUSTOM LADDER (your confirmed sequence) ══
+// Step 0: DIFFERS  ×1       $5
+// Step 1: DIFFERS  ×3.6     $18
+// Step 2: OVER2    ×3.6     $18  (switch, hold stake)
+// Step 3: OVER2    ×3.6     $18  (flat retry)
+// Step 4: OVER2    ×12.96   $64.80 (final escalation)
+const LADDER_A=[
+  {type:'DIFFER',code:'DIGITDIFF',mult:1,    label:'DIFFERS', cls:'differ'},
+  {type:'DIFFER',code:'DIGITDIFF',mult:3.6,  label:'DIFFERS', cls:'differ'},
+  {type:'OVER2', code:'DIGITOVER',mult:3.6,  label:'OVER 2',  cls:'over'},
+  {type:'OVER2', code:'DIGITOVER',mult:3.6,  label:'OVER 2',  cls:'over'},
+  {type:'OVER2', code:'DIGITOVER',mult:12.96,label:'OVER 2',  cls:'over final'},
+];
 
-// ══ AI TRADER STATE ══
+// ══ MODE B: FLAT 3.6× MARTINGALE (all DIFFERS) ══
+// Step 0: DIFFERS  ×1        base
+// Step 1: DIFFERS  ×3.6
+// Step 2: DIFFERS  ×12.96
+// Step 3: DIFFERS  ×46.656
+// Step 4: DIFFERS  ×167.96   (circuit breaker after this)
+const LADDER_B=[
+  {type:'DIFFER',code:'DIGITDIFF',mult:1,       label:'DIFFERS', cls:'differ'},
+  {type:'DIFFER',code:'DIGITDIFF',mult:3.6,     label:'DIFFERS', cls:'differ'},
+  {type:'DIFFER',code:'DIGITDIFF',mult:12.96,   label:'DIFFERS', cls:'differ'},
+  {type:'DIFFER',code:'DIGITDIFF',mult:46.656,  label:'DIFFERS', cls:'differ'},
+  {type:'DIFFER',code:'DIGITDIFF',mult:167.9616,label:'DIFFERS', cls:'differ final'},
+];
+
+// ══ MARKET STATE ══
+const ST={};
+IDX.forEach(i=>{ST[i.s]={prices:[],digits:[],freq:new Array(10).fill(0),last:null,conn:false,ticks:0,tickTimes:[]};});
+let total=0,ws=null,rtimer=null,userToken=null,isGuest=false,lastTradeTime=0;
+
+// ══ AI STATE ══
 const AI={
-  running:false,
-  state:'idle', // idle | scanning | trading | waiting | stopped
-  baseStake:0.35,
-  tp:5.00,
-  sl:3.00,
-  martMult:3.6,
-  maxLoss:5,
-  currentStake:0.35,
-  consecLoss:0,
-  martStep:0,
-  wins:0,
-  losses:0,
-  totalPnl:0,
-  sessPnl:0,
-  trades:[],
-  activeCid:null,    // active contract id
-  activeSym:null,
-  activeType:null,   // 'DIFFER' or 'OVER'
-  activeDigit:null,
-  inTrade:false,
+  running:false, state:'idle',
+  mode:'A',   // 'A' = custom ladder, 'B' = flat 3.6x, 'C' = manual
+  baseStake:5, tp:15, sl:10,
+  ladderStep:0, consecLoss:0,
+  wins:0, losses:0, totalPnl:0, sessPnl:0,
+  equityPoints:[0],
+  activeCid:null, activeSym:null, activeType:null, activeDigit:null,
+  inTrade:false, pendingResult:false,
   tradeTimer:null,
-  scanTimer:null,
-  waitTimer:null,
-  pendingResult:false,
+  // manual mode state
+  manOrigStake:5,
+  manCurrentStake:5,
 };
+
+// ══ MODE FUNCTIONS ══
+function setMode(m){
+  if(AI.running)return; // can't switch while running
+  AI.mode=m;
+  ['A','B','C'].forEach(x=>{
+    const el=document.getElementById('mode'+x);
+    if(el)el.classList.toggle('active',x===m);
+  });
+  // show/hide panels
+  document.getElementById('ladderPanel').style.display=(m==='C')?'none':'block';
+  document.getElementById('manualPanel').style.display=(m==='C')?'block':'none';
+  // update ladder for selected mode
+  if(m!=='C')buildLadder();
+  aiLog('🔄 Mode switched to: '+(m==='A'?'Custom Ladder':m==='B'?'Flat 3.6× Martingale':'Manual Feed'),'info');
+}
+
+function getLadder(){return AI.mode==='B'?LADDER_B:LADDER_A;}
+
+function getLadderStake(step){
+  if(AI.mode==='C')return AI.manCurrentStake;
+  return Math.round(AI.baseStake*getLadder()[step].mult*100)/100;
+}
+
+function buildLadder(){
+  const ladder=getLadder();
+  let totalExp=0;
+  ladder.forEach((l,i)=>{
+    const stake=Math.round(AI.baseStake*l.mult*100)/100;
+    totalExp+=stake;
+    const el=document.getElementById('lad'+i);
+    if(el){
+      el.className='lad-step '+l.cls;
+      el.querySelector('.lad-type').textContent=l.label;
+      el.querySelector('.lad-stake').textContent='$'+stake.toFixed(2);
+    }
+  });
+  const exp=document.getElementById('ladExposure');
+  if(exp)exp.textContent='Max: $'+totalExp.toFixed(2);
+}
+
+function updateLadderUI(){
+  if(AI.mode==='C')return;
+  getLadder().forEach((_,i)=>{
+    const el=document.getElementById('lad'+i);
+    if(!el)return;
+    el.classList.remove('active','won','lost');
+    if(i<AI.ladderStep)el.classList.add('lost');
+    else if(i===AI.ladderStep&&AI.running)el.classList.add('active');
+  });
+}
 
 // ══ LOGIN ══
 document.getElementById('toggleVis').addEventListener('click',()=>{
-  const i=document.getElementById('tokenInput');i.type=i.type==='password'?'text':'password';
+  const i=document.getElementById('tokenInput');
+  i.type=i.type==='password'?'text':'password';
 });
 document.getElementById('tokenInput').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+
 function showLE(m){const e=document.getElementById('loginErr');e.textContent='⚠ '+m;e.style.display='block';}
 function hideLE(){document.getElementById('loginErr').style.display='none';}
 
 function doLogin(){
   const t=document.getElementById('tokenInput').value.trim();
   if(!t){showLE('Please enter your API token');return;}
-  if(t.length<10){showLE('Token looks too short');return;}
+  if(t.length<10){showLE('Token too short');return;}
   const btn=document.getElementById('loginBtn');
   btn.classList.add('ld');btn.textContent='VERIFYING…';hideLE();
-  userToken=t;
-  verifyToken(t);
+  userToken=t;verifyToken(t);
 }
 function doGuest(){isGuest=true;userToken=null;launchDash(null);}
 function doLogout(){
@@ -532,12 +726,13 @@ function doLogout(){
   if(ws){ws.onclose=null;ws.close();}
   clearTimeout(rtimer);
   userToken=null;isGuest=false;
-  IDX.forEach(i=>{ST[i.s]={prices:[],digits:[],freq:new Array(10).fill(0),last:null,conn:false,ticks:0};});
+  IDX.forEach(i=>{ST[i.s]={prices:[],digits:[],freq:new Array(10).fill(0),last:null,conn:false,ticks:0,tickTimes:[]};});
   total=0;
   document.getElementById('tokenInput').value='';
   document.getElementById('dashPage').style.display='none';
   document.getElementById('loginPage').style.display='flex';
-  const btn=document.getElementById('loginBtn');btn.classList.remove('ld');btn.textContent='CONNECT TO DERIV';
+  document.getElementById('loginBtn').classList.remove('ld');
+  document.getElementById('loginBtn').textContent='CONNECT TO DERIV';
   hideLE();
 }
 
@@ -546,7 +741,7 @@ function verifyToken(token){
   try{vws=new WebSocket('wss://ws.binaryws.com/websockets/v3?app_id=1089');}
   catch(e){loginFail('Connection failed: '+e.message);return;}
   let ok=false;
-  const to=setTimeout(()=>{if(!ok){vws.close();loginFail('Timed out. Check internet.');}},8000);
+  const to=setTimeout(()=>{if(!ok){vws.close();loginFail('Timed out.');}},8000);
   vws.onopen=()=>vws.send(JSON.stringify({authorize:token}));
   vws.onmessage=e=>{
     try{
@@ -560,11 +755,15 @@ function verifyToken(token){
   };
   vws.onerror=()=>{clearTimeout(to);loginFail('WebSocket error');};
 }
-function loginFail(m){showLE(m);const b=document.getElementById('loginBtn');b.classList.remove('ld');b.textContent='CONNECT TO DERIV';}
+function loginFail(m){
+  showLE(m);
+  document.getElementById('loginBtn').classList.remove('ld');
+  document.getElementById('loginBtn').textContent='CONNECT TO DERIV';
+}
 
 function launchDash(auth){
   document.getElementById('loginPage').style.display='none';
-  const d=document.getElementById('dashPage');d.style.display='block';d.classList.add('slide-in');
+  document.getElementById('dashPage').style.display='block';
   if(auth){
     const name=auth.fullname||auth.email||'Trader';
     const lid=auth.loginid||'—';
@@ -578,7 +777,7 @@ function launchDash(auth){
     document.getElementById('balAcct').textContent=lid;
     document.getElementById('balType').textContent=auth.is_virtual?'✓ Demo Account':'⚡ Real Account';
   }
-  initTable();initDC();startConn();
+  initTable();initDC();buildLadder();drawEquity();startConn();
 }
 
 // ══ WEBSOCKET ══
@@ -587,16 +786,14 @@ function startConn(){
   catch(e){showErr(e.message);sched();return;}
   ws.onopen=()=>{
     updConn(true);hideErr();
-    if(userToken&&!isGuest){ws.send(JSON.stringify({authorize:userToken}));}
-    else{subAll();}
+    if(userToken&&!isGuest)ws.send(JSON.stringify({authorize:userToken}));
+    else subAll();
   };
   ws.onmessage=e=>{
     try{
       const m=JSON.parse(e.data);
-      if(m.error&&m.error.code!=='MarketIsClosed'){
-        // suppress auth errors gracefully
-        if(m.error.code!=='AuthorizationRequired') showErr(m.error.message||m.error.code);
-      }
+      if(m.error&&m.error.code!=='MarketIsClosed'&&m.error.code!=='AuthorizationRequired')
+        showErr(m.error.message||m.error.code);
       if(m.msg_type==='authorize'&&!m.error){subAll();ws.send(JSON.stringify({balance:1,subscribe:1}));}
       if(m.msg_type==='tick')onTick(m.tick);
       if(m.msg_type==='balance')updBal(m.balance);
@@ -611,8 +808,7 @@ function subAll(){IDX.forEach(i=>ws.send(JSON.stringify({ticks:i.s,subscribe:1})
 function sched(){clearTimeout(rtimer);rtimer=setTimeout(startConn,4000);}
 function updBal(b){
   if(!b)return;
-  const v=parseFloat(b.balance).toFixed(2);
-  document.getElementById('balVal').textContent=v;
+  document.getElementById('balVal').textContent=parseFloat(b.balance).toFixed(2);
 }
 
 // ══ TICK ══
@@ -620,6 +816,11 @@ function onTick(tk){
   const s=ST[tk.symbol];if(!s)return;
   const p=parseFloat(tk.quote);
   const d=parseInt(String(Math.round(p*100)).slice(-1));
+  const now=Date.now();
+  s.tickTimes.push(now);
+  if(s.tickTimes.length>20)s.tickTimes.shift();
+  if(s.tickTimes.length>=2)
+    s.tickSpeed=Math.round((s.tickTimes[s.tickTimes.length-1]-s.tickTimes[0])/(s.tickTimes.length-1));
   s.last=p;s.prices.push(p);
   if(s.prices.length>200)s.prices.shift();
   s.digits.push(d);
@@ -629,8 +830,7 @@ function onTick(tk){
   updateRow(tk.symbol);updateDC(tk.symbol);updateSum();
   document.getElementById('STK').textContent=total.toLocaleString();
   document.getElementById('TT').textContent=total;
-  // feed AI tick
-  if(AI.running)aiTick(tk.symbol);
+  if(AI.running&&AI.mode!=='C')aiTick(tk.symbol);
 }
 
 // ══ ANALYSIS ══
@@ -659,36 +859,31 @@ function ana(sym){
   const o2=[3,4,5,6,7,8,9].reduce((a,d)=>a+(fr[d]||0),0)/tot*100,u7=100-o2;
   const mxF=Math.max(...fr),mnF=Math.min(...fr.filter(f=>f>0))||0;
   const hotD=fr.indexOf(mxF),coldD=fr.indexOf(mnF);
-  // confidence score for AI (0-100)
   let score=0;
-  if(isCon) score+=30;
-  if(n>=30) score+=10;
-  if((mxF/tot*100)>13) score+=20; // hot digit
-  if(vl<50) score+=15;
-  const diffBias=Math.abs(ep-50);
-  if(diffBias>6) score+=10;
+  if(isCon)score+=35;
+  if(n>=50)score+=15; else if(n>=30)score+=8;
+  if((mxF/tot*100)>14)score+=20;
+  if(vl<50)score+=15;
+  if(Math.abs(ep-50)>6)score+=10;
   score=Math.min(100,score);
-
-  const eoR=()=>{if(!isCon)return{l:'AVOID',c:'av',t:'Expanding'};const b=Math.abs(ep-50);if(b>8)return{l:(ep>50?'EVEN':'ODD')+' ▲',c:'sb',t:Math.round(Math.max(ep,op))+'%'};if(b>4)return{l:ep>50?'EVEN':'ODD',c:'by',t:Math.round(Math.max(ep,op))+'%'};return{l:'NEUTRAL',c:'nt',t:'~50%'};};
+  const eoR=()=>{if(!isCon)return{l:'AVOID',c:'av',t:''};const b=Math.abs(ep-50);if(b>8)return{l:(ep>50?'EVEN':'ODD')+' ▲',c:'sb',t:Math.round(Math.max(ep,op))+'%'};if(b>4)return{l:ep>50?'EVEN':'ODD',c:'by',t:Math.round(Math.max(ep,op))+'%'};return{l:'NEUTRAL',c:'nt',t:'~50%'};};
   const o4R=()=>{if(!isCon)return{l:'AVOID',c:'av',t:''};const b=Math.abs(o4-50);if(b>8)return{l:(o4>50?'OVER4':'UNDER5')+' ▲',c:'sb',t:Math.round(Math.max(o4,u5))+'%'};if(b>3)return{l:o4>50?'OVER4':'UNDER5',c:'by',t:Math.round(Math.max(o4,u5))+'%'};return{l:'NEUTRAL',c:'nt',t:'~50%'};};
-  const o2R=()=>{if(n<20)return{l:'LOADING',c:'wt',t:''};if(isCon)return{l:(o2>=u7?'OVER2':'UNDER7')+' ★',c:'sb',t:'~70% base'};return{l:o2>=u7?'OVER2':'UNDER7',c:'by',t:'70%'};};
+  const o2R=()=>{if(n<20)return{l:'LOADING',c:'wt',t:''};if(isCon)return{l:(o2>=u7?'OVER2':'UNDER7')+' ★',c:'sb',t:'~70%'};return{l:o2>=u7?'OVER2':'UNDER7',c:'by',t:'70%'};};
   const difR=()=>{if(n<15)return{l:'LOADING',c:'wt',t:''};const hp=(mxF/tot*100);if(hp>15)return{l:'DIFF '+hotD+' ★',c:'sb',t:'d'+hotD+' at '+Math.round(hp)+'%'};return{l:'DIFF '+hotD,c:'by',t:'90% base'};};
-  const matR=()=>{if(n<30)return{l:'LOADING',c:'wt',t:''};if((mnF/tot*100)<5&&isCon)return{l:'MATCH '+coldD,c:'wt',t:'cold digit'};return{l:'AVOID',c:'av',t:'10% only'};};
+  const matR=()=>{if(n<30)return{l:'LOADING',c:'wt',t:''};if((mnF/tot*100)<5&&isCon)return{l:'MATCH '+coldD,c:'wt',t:'cold'};return{l:'AVOID',c:'av',t:'10% only'};};
   return{isCon,ms,vl,ep,op,o4,u5,o2,u7,hotD,coldD,fr,tot,score,
     eo:eoR(),o4r:o4R(),o2r:o2R(),dif:difR(),mat:matR()};
 }
 
-// ══ AI ENGINE ══
-function aiLog(msg,cls='info'){
+// ══ AI LOG ══
+function aiLog(msg,cls){
   const el=document.getElementById('aiLog');
   const now=new Date().toUTCString().slice(17,25);
   const div=document.createElement('div');
   div.className='ai-log-line '+(cls||'info');
-  div.innerHTML=`<span class="ts">${now}</span>${msg}`;
-  el.appendChild(div);
-  el.scrollTop=el.scrollHeight;
-  // keep max 60 lines
-  while(el.children.length>61)el.removeChild(el.children[1]);
+  div.innerHTML='<span class="ts">'+now+'</span>'+msg;
+  el.appendChild(div);el.scrollTop=el.scrollHeight;
+  while(el.children.length>62)el.removeChild(el.children[1]);
 }
 
 function setAIState(state){
@@ -699,198 +894,156 @@ function setAIState(state){
     scanning:{cls:'scanning',txt:'🔍 SCANNING'},
     trading:{cls:'trading',txt:'⚡ TRADING'},
     waiting:{cls:'waiting',txt:'⏳ WAITING'},
-    stopped:{cls:'stopped',txt:'🛑 STOPPED'},
+    stopped:{cls:'stopped',txt:'🛑 STOPPED'}
   };
   const s=map[state]||map.idle;
-  b.className='ai-state-badge '+s.cls;
-  b.textContent=s.txt;
+  b.className='ai-state-badge '+s.cls;b.textContent=s.txt;
 }
 
-// find best market to trade
+// ══ MARKET FINDER ══
 function findBestMarket(){
-  const targetSym=document.getElementById('cfgIndex').value;
-  if(targetSym!=='AUTO'){
-    const s=ST[targetSym];
-    if(!s||!s.conn||s.digits.length<20)return null;
-    const a=ana(targetSym);
-    return{sym:targetSym,a};
+  const tgt=document.getElementById('cfgIndex').value;
+  if(tgt!=='AUTO'){
+    const s=ST[tgt];
+    if(!s||!s.conn||s.digits.length<30)return null;
+    try{const a=ana(tgt);if(a.score<45)return null;return{sym:tgt,a};}
+    catch(e){return null;}
   }
-  // score all connected indices
   let best=null,bestScore=0;
   IDX.forEach(i=>{
     const s=ST[i.s];
-    if(!s||!s.conn||s.digits.length<20)return;
-    const a=ana(i.s);
-    if(a.score>bestScore){bestScore=a.score;best={sym:i.s,a};}
+    if(!s||!s.conn||s.digits.length<30)return;
+    try{
+      const a=ana(i.s);
+      if(a.score>bestScore){bestScore=a.score;best={sym:i.s,a};}
+    }catch(e){}
   });
-  return best&&best.a.score>=40?best:null;
+  return best&&best.a.score>=45?best:null;
 }
 
-function calcNextStake(){
-  if(AI.martStep===0)return AI.baseStake;
-  let s=AI.baseStake;
-  for(let i=0;i<AI.martStep;i++)s*=AI.martMult;
-  return Math.round(s*100)/100;
-}
-
-function updateMartDisplay(){
-  const stake=calcNextStake();
-  document.getElementById('astNS').textContent='$'+stake.toFixed(2);
-  document.getElementById('astMS').textContent=AI.martStep+'/'+AI.maxLoss;
-  for(let i=0;i<5;i++){
-    const el=document.getElementById('ms'+i);
-    if(!el)continue;
-    if(i<AI.martStep){el.className='mart-step used';el.textContent=i+1;}
-    else if(i===AI.martStep&&AI.running){el.className='mart-step active';el.textContent=i+1;}
-    else{el.className='mart-step';el.textContent=i+1;}
+// ══ EQUITY CURVE ══
+function drawEquity(){
+  const canvas=document.getElementById('eqCanvas');
+  if(!canvas)return;
+  const ctx=canvas.getContext('2d');
+  const W=canvas.offsetWidth||500;
+  canvas.width=W;canvas.height=70;
+  ctx.clearRect(0,0,W,70);
+  const pts=AI.equityPoints;
+  if(pts.length<2){
+    ctx.strokeStyle='rgba(138,146,164,.2)';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(0,35);ctx.lineTo(W,35);ctx.stroke();
+    return;
   }
-  const stakes=[];
-  let s=AI.baseStake;
-  for(let i=0;i<=4;i++){stakes.push('$'+s.toFixed(2));s=Math.round(s*AI.martMult*100)/100;}
-  document.getElementById('martStakeDisplay').textContent='Stakes: '+stakes.join(' → ');
+  const mn=Math.min(...pts),mx=Math.max(...pts),range=mx-mn||1;
+  const toY=v=>5+(60*(1-(v-mn)/range));
+  ctx.strokeStyle='rgba(138,146,164,.15)';ctx.lineWidth=1;ctx.setLineDash([3,4]);
+  ctx.beginPath();ctx.moveTo(0,toY(0));ctx.lineTo(W,toY(0));ctx.stroke();
+  ctx.setLineDash([]);
+  const last=pts[pts.length-1];
+  const grad=ctx.createLinearGradient(0,0,0,70);
+  if(last>=0){grad.addColorStop(0,'rgba(0,230,118,.25)');grad.addColorStop(1,'rgba(0,230,118,.02)');}
+  else{grad.addColorStop(0,'rgba(255,61,90,.02)');grad.addColorStop(1,'rgba(255,61,90,.2)');}
+  ctx.beginPath();
+  pts.forEach((v,i)=>{const x=i/(pts.length-1)*W,y=toY(v);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
+  ctx.lineTo(W,70);ctx.lineTo(0,70);ctx.closePath();
+  ctx.fillStyle=grad;ctx.fill();
+  ctx.strokeStyle=last>=0?'#00e676':'#ff3d5a';ctx.lineWidth=2;
+  ctx.beginPath();
+  pts.forEach((v,i)=>{const x=i/(pts.length-1)*W,y=toY(v);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
+  ctx.stroke();
+  const es=document.getElementById('eqStats');
+  if(es){
+    const peak=Math.max(...pts),trough=Math.min(...pts);
+    es.textContent='Now '+(last>=0?'+':'')+last.toFixed(2)+'  Peak '+(peak>=0?'+':'')+peak.toFixed(2)+'  Low '+(trough>=0?'+':'')+trough.toFixed(2);
+    es.style.color=last>=0?'var(--green)':'var(--red)';
+  }
 }
 
-function updateAIStats(){
-  const w=AI.wins,l=AI.losses,tot=w+l;
-  document.getElementById('astW').textContent=w;
-  document.getElementById('astL').textContent=l;
-  document.getElementById('astWR').textContent=tot>0?Math.round(w/tot*100)+'%':'—';
-  const pnlEl=document.getElementById('astPnl');
-  pnlEl.textContent=(AI.totalPnl>=0?'+':'')+AI.totalPnl.toFixed(2);
-  pnlEl.style.color=AI.totalPnl>=0?'var(--green)':'var(--red)';
-  document.getElementById('astCL').textContent=AI.consecLoss;
-  const spEl=document.getElementById('sessPnl');
-  spEl.textContent=(AI.sessPnl>=0?'+':'')+AI.sessPnl.toFixed(2);
-  spEl.style.color=AI.sessPnl>=0?'var(--green)':'var(--red)';
-  document.getElementById('sessPnlSub').textContent=tot+' trades';
-  updateMartDisplay();
+// ══ MODE C: MANUAL FIRE ══
+function manualFire(){
+  if(!userToken||isGuest){aiLog('⚠ Token required.','danger');return;}
+  if(!ws||ws.readyState!==1){aiLog('⚠ Not connected.','warn');return;}
+  if(AI.inTrade||AI.pendingResult){aiLog('⚠ Trade already in progress.','warn');return;}
+
+  const tp=parseFloat(document.getElementById('cfgTP').value)||15;
+  const sl=parseFloat(document.getElementById('cfgSL').value)||10;
+  if(AI.sessPnl>=tp){aiLog('🎯 TP already reached — reset stats to continue.','warn');return;}
+  if(AI.sessPnl<=-Math.abs(sl)){aiLog('🛑 SL already reached — reset stats to continue.','warn');return;}
+  if(AI.consecLoss>=5){aiLog('🛑 Circuit breaker active — reset to continue.','warn');return;}
+
+  const code=document.getElementById('manContract').value;
+  const stake=parseFloat(document.getElementById('manStake').value)||5;
+  const barrier=parseInt(document.getElementById('manBarrier').value)||2;
+  const idxSel=document.getElementById('manIndex').value;
+  AI.manOrigStake=stake;
+  AI.manCurrentStake=stake;
+
+  let sym=null;
+  if(idxSel==='AUTO'){
+    const market=findBestMarket();
+    if(!market){aiLog('⚠ No suitable market found. Try again in a moment.','warn');return;}
+    sym=market.sym;
+  } else {
+    sym=idxSel;
+  }
+
+  const typeLabel=code==='DIGITDIFF'?'DIFFER':code==='DIGITOVER'?'OVER2':code==='DIGITUNDER'?'UNDER7':code==='DIGITEVEN'?'EVEN':'ODD';
+  const actualBarrier=(code==='DIGITEVEN'||code==='DIGITODD')?0:barrier;
+
+  aiLog('✏️ MANUAL: '+typeLabel+' barrier:'+actualBarrier+' stake:$'+stake.toFixed(2)+' on '+(IDX.find(i=>i.s===sym)||{n:sym}).n,'info');
+  placeTrade(sym,code,stake,actualBarrier,typeLabel,true);
 }
 
-// main AI tick — called on every tick when running
-let lastTradeTime=0;
+// ══ AI TICK (Modes A + B) ══
 function aiTick(sym){
   if(!AI.running||AI.inTrade||AI.pendingResult)return;
-
-  // circuit breaker
-  if(AI.consecLoss>=AI.maxLoss){
-    if(AI.state!=='stopped'){
-      setAIState('stopped');
-      aiLog('🛑 CIRCUIT BREAKER: '+AI.maxLoss+' consecutive losses reached. AI stopped.','danger');
-      stopAI();
-    }
+  if(AI.consecLoss>=5){
+    if(AI.state!=='stopped'){setAIState('stopped');aiLog('🛑 CIRCUIT BREAKER: 5 consecutive losses.','danger');stopAI();}
     return;
   }
-
-  // TP / SL check
-  const tp=parseFloat(document.getElementById('cfgTP').value)||5;
-  const sl=parseFloat(document.getElementById('cfgSL').value)||3;
-  if(AI.sessPnl>=tp){
-    aiLog('🎯 TAKE PROFIT HIT: +$'+AI.sessPnl.toFixed(2)+' ≥ $'+tp+'. AI stopped.','success');
-    stopAI();return;
-  }
-  if(AI.sessPnl<=-Math.abs(sl)){
-    aiLog('🛑 STOP LOSS HIT: $'+AI.sessPnl.toFixed(2)+' ≤ -$'+sl+'. AI stopped.','danger');
-    stopAI();return;
-  }
-
-  // cooldown between trades
-  const now=Date.now();
-  if(now-lastTradeTime<1800)return;
-
+  const tp=parseFloat(document.getElementById('cfgTP').value)||15;
+  const sl=parseFloat(document.getElementById('cfgSL').value)||10;
+  if(AI.sessPnl>=tp){aiLog('🎯 TAKE PROFIT +$'+AI.sessPnl.toFixed(2)+'.','success');stopAI();return;}
+  if(AI.sessPnl<=-Math.abs(sl)){aiLog('🛑 STOP LOSS -$'+Math.abs(AI.sessPnl).toFixed(2)+'.','danger');stopAI();return;}
+  if(Date.now()-lastTradeTime<1800)return;
   setAIState('scanning');
   const market=findBestMarket();
-  if(!market){
-    document.getElementById('astBI').textContent='SCANNING…';
-    return;
-  }
-
-  const {sym:tradeSym,a}=market;
+  if(!market)return;
+  const{sym:tradeSym,a}=market;
   const ix=IDX.find(i=>i.s===tradeSym);
-  document.getElementById('astBI').textContent=ix?ix.n:tradeSym;
-
-  // determine contract type
-  // Primary: DIFFER (avoid hot digit)
-  // Recovery (martingale step > 0): OVER2 or DIFFER depending on conditions
-  let contractType,barrierDigit,contractCode;
-
-  if(AI.martStep===0){
-    // primary — DIFFER
-    contractType='DIFFER';
-    barrierDigit=a.hotD;
-    contractCode='DIGITDIFF';
-    aiLog(`📊 ${ix.n} score:${a.score} | Differs digit ${barrierDigit} (${Math.round(a.fr[barrierDigit]/a.tot*100)}% freq) | Stake: $${calcNextStake().toFixed(2)}`,'info');
-  } else {
-    // recovery — use OVER2 if consolidating, else DIFFER again
-    if(a.isCon&&a.o2>=50){
-      contractType='OVER2';
-      barrierDigit=2;
-      contractCode='DIGITOVER';
-      aiLog(`🔄 RECOVERY step ${AI.martStep}: OVER2 on ${ix.n} (${a.o2.toFixed(0)}% base) | Stake: $${calcNextStake().toFixed(2)}`,'warn');
-    } else {
-      contractType='DIFFER';
-      barrierDigit=a.hotD;
-      contractCode='DIGITDIFF';
-      aiLog(`🔄 RECOVERY step ${AI.martStep}: DIFFER ${barrierDigit} on ${ix.n} | Stake: $${calcNextStake().toFixed(2)}`,'warn');
-    }
-  }
-
-  const stake=calcNextStake();
-  lastTradeTime=now;
-  placeTrade(tradeSym,contractCode,stake,barrierDigit,contractType,a);
+  const step=getLadder()[AI.ladderStep];
+  const stake=getLadderStake(AI.ladderStep);
+  const barrier=step.type==='DIFFER'?a.hotD:2;
+  if(tradeSym.includes('HZ')&&ST[tradeSym].tickSpeed&&ST[tradeSym].tickSpeed<1200)
+    aiLog('⚡ 1s index '+ix.n+' ('+ST[tradeSym].tickSpeed+'ms) — tight window','warn');
+  aiLog('📊 Step '+(AI.ladderStep+1)+'/5 [Mode '+(AI.mode===('A')?'A:Custom':'B:3.6×')+'] | '+ix.n+' | '+step.label+' $'+stake.toFixed(2)+' | Score:'+a.score,'info');
+  lastTradeTime=Date.now();
+  placeTrade(tradeSym,step.code,stake,barrier,step.type,false);
 }
 
-function placeTrade(sym,code,stake,barrier,typeLabel,a){
-  if(!userToken||isGuest){
-    aiLog('⚠ No token — cannot place trades. Login with API token first.','danger');
-    setAIState('idle');return;
-  }
-  if(!ws||ws.readyState!==1){
-    aiLog('⚠ WebSocket not connected. Retrying…','warn');
-    return;
-  }
-
-  AI.inTrade=true;
-  AI.activeSym=sym;
-  AI.activeType=typeLabel;
-  AI.activeDigit=barrier;
-  setAIState('trading');
-
-  // show current trade card
+// ══ PLACE TRADE ══
+function placeTrade(sym,code,stake,barrier,typeLabel,isManual){
+  if(!userToken||isGuest){aiLog('⚠ Token required.','danger');setAIState('idle');return;}
+  if(!ws||ws.readyState!==1){aiLog('⚠ WS not connected.','warn');return;}
+  AI.inTrade=true;AI.activeSym=sym;AI.activeType=typeLabel;AI.activeDigit=barrier;
+  if(!isManual){setAIState('trading');updateLadderUI();}
   const ix=IDX.find(i=>i.s===sym);
   document.getElementById('curTrade').classList.add('active');
-  document.getElementById('ctIndex').textContent=ix?ix.n:sym;
-  document.getElementById('ctContract').textContent=typeLabel==='DIFFER'?'DIFFERS '+barrier:'OVER '+barrier;
+  document.getElementById('ctIndex').textContent=(ix?ix.n:sym)+(isManual?' [M]':' [AI]');
+  document.getElementById('ctContract').textContent=typeLabel==='DIFFER'?'DIFFERS '+barrier:typeLabel==='OVER2'?'OVER 2':typeLabel;
   document.getElementById('ctStake').textContent='$'+stake.toFixed(2);
-  document.getElementById('ctDigit').textContent=typeLabel==='DIFFER'?'Digit '+barrier:'N/A';
+  document.getElementById('ctDigit').textContent=typeLabel==='DIFFER'?'Avoid d.'+barrier:typeLabel==='OVER2'?'Last > 2':'See contract';
   document.getElementById('ctId').textContent='Placing…';
   document.getElementById('ctPayout').textContent='—';
   document.getElementById('ctStatus').textContent='SENDING…';
   document.getElementById('ctStatus').style.color='var(--yellow)';
-
-  // build proposal + buy
-  const proposal={
-    buy:1,
-    price:stake,
-    parameters:{
-      amount:stake,
-      basis:'stake',
-      contract_type:code,
-      currency:'USD',
-      duration:1,
-      duration_unit:'t',
-      symbol:sym,
-      barrier:String(barrier),
-    }
-  };
-
+  const order={buy:1,price:stake,parameters:{amount:stake,basis:'stake',contract_type:code,currency:'USD',duration:1,duration_unit:'t',symbol:sym,barrier:String(barrier)}};
   AI.pendingResult=true;
-  ws.send(JSON.stringify(proposal));
-  aiLog(`⚡ Placing ${typeLabel} on ${ix?ix.n:sym} barrier:${barrier} stake:$${stake.toFixed(2)}`,'info');
-
-  // safety timeout — if no result in 15s, treat as unknown and reset
+  ws.send(JSON.stringify(order));
   AI.tradeTimer=setTimeout(()=>{
     if(AI.pendingResult){
-      aiLog('⚠ Trade result timeout — resetting','warn');
+      aiLog('⚠ Trade timeout — resetting.','warn');
       AI.inTrade=false;AI.pendingResult=false;
       document.getElementById('curTrade').classList.remove('active');
       setAIState(AI.running?'scanning':'idle');
@@ -898,14 +1051,14 @@ function placeTrade(sym,code,stake,barrier,typeLabel,a){
   },15000);
 }
 
+// ══ BUY RESPONSE ══
 function onBuy(msg){
   if(!AI.pendingResult)return;
   if(msg.error){
     clearTimeout(AI.tradeTimer);
     aiLog('❌ Buy error: '+(msg.error.message||msg.error.code),'danger');
     AI.inTrade=false;AI.pendingResult=false;
-    // on insufficient funds stop
-    if(msg.error.code==='InsufficientBalance'){stopAI();aiLog('🛑 Insufficient balance. AI stopped.','danger');}
+    if(msg.error.code==='InsufficientBalance'){aiLog('🛑 Insufficient balance.','danger');stopAI();}
     setAIState(AI.running?'scanning':'idle');
     return;
   }
@@ -913,44 +1066,74 @@ function onBuy(msg){
   AI.activeCid=msg.buy.contract_id;
   document.getElementById('ctId').textContent='#'+AI.activeCid;
   document.getElementById('ctPayout').textContent='$'+parseFloat(msg.buy.payout||0).toFixed(2);
-  document.getElementById('ctStatus').textContent='ACTIVE';
+  document.getElementById('ctStatus').textContent='ACTIVE ⚡';
   document.getElementById('ctStatus').style.color='var(--green)';
-  aiLog(`✅ Contract #${AI.activeCid} bought. Payout: $${parseFloat(msg.buy.payout||0).toFixed(2)}`,'success');
-  // subscribe to contract updates
+  aiLog('✅ #'+AI.activeCid+' open. Payout: $'+parseFloat(msg.buy.payout||0).toFixed(2),'success');
   ws.send(JSON.stringify({proposal_open_contract:1,contract_id:AI.activeCid,subscribe:1}));
 }
 
+// ══ CONTRACT RESULT ══
 function onContract(poc){
   if(!poc||poc.contract_id!==AI.activeCid)return;
-  if(poc.status==='open')return; // still running
-
+  if(poc.status==='open')return;
   clearTimeout(AI.tradeTimer);
   const won=poc.is_sold&&poc.profit>0;
   const profit=parseFloat(poc.profit||0);
   const stake=parseFloat(poc.buy_price||0);
-
-  AI.pendingResult=false;
-  AI.inTrade=false;
+  const stepAtResult=AI.ladderStep;
+  AI.pendingResult=false;AI.inTrade=false;
   AI.totalPnl=Math.round((AI.totalPnl+profit)*100)/100;
   AI.sessPnl=Math.round((AI.sessPnl+profit)*100)/100;
+  AI.equityPoints.push(AI.sessPnl);
+  if(AI.equityPoints.length>300)AI.equityPoints.shift();
+  const stepEl=document.getElementById('lad'+stepAtResult);
 
   if(won){
-    AI.wins++;
-    AI.consecLoss=0;
-    AI.martStep=0; // reset martingale on win
-    aiLog(`✅ WIN +$${profit.toFixed(2)} | Total: ${(AI.totalPnl>=0?'+':'')}$${AI.totalPnl.toFixed(2)}`,'success');
-    for(let i=0;i<5;i++){const e=document.getElementById('ms'+i);if(e){e.className='mart-step win';}}
-    setTimeout(()=>updateMartDisplay(),800);
+    AI.wins++;AI.consecLoss=0;
+    if(stepEl){stepEl.classList.remove('active');stepEl.classList.add('won');}
+    aiLog('✅ WIN +$'+profit.toFixed(2)+(AI.mode!=='C'?' | Resetting to step 1':''),'success');
+
+    if(AI.mode==='C'){
+      // manual win actions
+      const onWin=document.getElementById('manOnWin').value;
+      if(onWin==='reset')AI.manCurrentStake=AI.manOrigStake;
+      if(onWin==='stop'){AI.inTrade=false;setAIState('idle');aiLog('Manual stop-on-win triggered.','warn');}
+    } else {
+      AI.ladderStep=0;
+      setTimeout(()=>{
+        getLadder().forEach((_,i)=>{const e=document.getElementById('lad'+i);if(e)e.className='lad-step '+getLadder()[i].cls;});
+        updateLadderUI();
+      },1000);
+    }
   } else {
-    AI.losses++;
-    AI.consecLoss++;
-    AI.martStep=Math.min(AI.martStep+1,AI.maxLoss-1);
-    aiLog(`❌ LOSS -$${Math.abs(profit).toFixed(2)} | Consec: ${AI.consecLoss}/${AI.maxLoss} | Next stake: $${calcNextStake().toFixed(2)}`,'danger');
+    AI.losses++;AI.consecLoss++;
+    if(stepEl){stepEl.classList.remove('active');stepEl.classList.add('lost');}
+
+    if(AI.mode==='C'){
+      // manual loss actions
+      const onLoss=document.getElementById('manOnLoss').value;
+      if(onLoss==='martingale'){
+        AI.manCurrentStake=Math.round(AI.manCurrentStake*3.6*100)/100;
+        document.getElementById('manStake').value=AI.manCurrentStake.toFixed(2);
+        aiLog('❌ LOSS | Manual martingale → next stake: $'+AI.manCurrentStake.toFixed(2),'danger');
+      } else if(onLoss==='stop'){
+        setAIState('idle');
+        aiLog('❌ LOSS | Manual stop-on-loss triggered.','danger');
+      } else {
+        aiLog('❌ LOSS | Repeating same stake $'+AI.manCurrentStake.toFixed(2),'danger');
+      }
+    } else {
+      if(AI.ladderStep<4){
+        AI.ladderStep++;
+        aiLog('❌ LOSS -$'+Math.abs(profit).toFixed(2)+' | Next: step '+(AI.ladderStep+1)+' '+getLadder()[AI.ladderStep].label+' $'+getLadderStake(AI.ladderStep).toFixed(2),'danger');
+      } else {
+        aiLog('❌ LOSS at step 5 — sequence exhausted. Circuit breaker fires.','danger');
+      }
+    }
   }
 
-  // log trade
-  addTradeLog(AI.activeSym,AI.activeType,AI.activeDigit,stake,profit,won);
-  updateAIStats();
+  addTradeLog(AI.activeSym,AI.activeType,AI.activeDigit,stake,profit,won,stepAtResult);
+  updateAIStats();drawEquity();
 
   document.getElementById('ctStatus').textContent=won?'WON ✅':'LOST ❌';
   document.getElementById('ctStatus').style.color=won?'var(--green)':'var(--red)';
@@ -958,70 +1141,61 @@ function onContract(poc){
   setTimeout(()=>{
     document.getElementById('curTrade').classList.remove('active');
     AI.activeCid=null;
-    if(AI.running){
-      if(AI.consecLoss>=AI.maxLoss){
-        setAIState('stopped');
-        aiLog('🛑 CIRCUIT BREAKER TRIGGERED — 5 consecutive losses. AI stopped.','danger');
-        stopAI();
-      } else {
-        setAIState('scanning');
-      }
+    if(AI.running&&AI.mode!=='C'){
+      if(AI.consecLoss>=5){setAIState('stopped');aiLog('🛑 5 consecutive losses — AI stopped.','danger');stopAI();}
+      else{setAIState('scanning');updateLadderUI();}
+    } else if(AI.mode==='C'){
+      setAIState('idle');
     }
   },1200);
 }
 
-function addTradeLog(sym,type,digit,stake,profit,won){
+// ══ TRADE LOG ══
+function addTradeLog(sym,type,digit,stake,profit,won,step){
   const ix=IDX.find(i=>i.s===sym);
   const now=new Date().toUTCString().slice(17,25);
   const entry=document.createElement('div');
   entry.className='log-entry '+(won?'win':profit===0?'pending':'loss');
   const pnlCls=profit>0?'pnl-pos':profit<0?'pnl-neg':'pnl-zero';
-  entry.innerHTML=`
-    <div>${now}</div>
-    <div>${ix?ix.n:sym}</div>
-    <div>${type==='DIFFER'?'DIFF '+digit:'OVER '+digit}</div>
-    <div>$${stake.toFixed(2)}</div>
-    <div style="color:${won?'var(--green)':'var(--red)'}">${won?'WIN':'LOSS'}</div>
-    <div class="${pnlCls}">${profit>=0?'+':''}$${profit.toFixed(2)}</div>`;
+  const modeLbl=AI.mode==='C'?'[M]':'S'+(step+1);
+  entry.innerHTML=
+    '<div>'+now+'</div>'+
+    '<div>'+(ix?ix.n:sym)+'</div>'+
+    '<div>'+(type==='DIFFER'?'DIFF '+digit:type)+' '+modeLbl+'</div>'+
+    '<div>$'+stake.toFixed(2)+'</div>'+
+    '<div style="color:'+(won?'var(--green)':'var(--red)')+';">'+(won?'WIN':'LOSS')+'</div>'+
+    '<div class="'+pnlCls+'">'+(profit>=0?'+':'')+'$'+profit.toFixed(2)+'</div>';
   const log=document.getElementById('tradeLog');
-  log.appendChild(entry);
-  log.scrollTop=log.scrollHeight;
+  log.appendChild(entry);log.scrollTop=log.scrollHeight;
 }
 
 // ══ AI CONTROLS ══
 function startAI(){
-  if(!userToken||isGuest){
-    aiLog('⚠ A valid Deriv token is required to place trades. Guest mode is analysis only.','danger');
-    return;
-  }
+  if(!userToken||isGuest){aiLog('⚠ Token required to trade.','danger');return;}
+  if(AI.mode==='C'){aiLog('ℹ️ Manual mode: use the FIRE button above — START not needed.','info');return;}
+  AI.baseStake=parseFloat(document.getElementById('cfgStake').value)||5;
+  AI.tp=parseFloat(document.getElementById('cfgTP').value)||15;
+  AI.sl=parseFloat(document.getElementById('cfgSL').value)||10;
   AI.running=true;
-  AI.baseStake=parseFloat(document.getElementById('cfgStake').value)||0.35;
-  AI.tp=parseFloat(document.getElementById('cfgTP').value)||5;
-  AI.sl=parseFloat(document.getElementById('cfgSL').value)||3;
-  AI.martMult=parseFloat(document.getElementById('cfgMart').value)||3.6;
-  AI.maxLoss=parseInt(document.getElementById('cfgMaxLoss').value)||5;
   document.getElementById('startBtn').disabled=true;
   document.getElementById('stopBtn').disabled=false;
-  // lock config
-  ['cfgStake','cfgTP','cfgSL','cfgMart','cfgMaxLoss','cfgIndex'].forEach(id=>{
-    document.getElementById(id).disabled=true;
+  ['cfgStake','cfgTP','cfgSL','cfgIndex','modeA','modeB','modeC'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.disabled=true;
   });
-  setAIState('scanning');
-  updateMartDisplay();
-  aiLog(`🚀 AI STARTED — Base:$${AI.baseStake} TP:$${AI.tp} SL:$${AI.sl} Mart:${AI.martMult}x Limit:${AI.maxLoss} losses`,'success');
+  buildLadder();updateLadderUI();setAIState('scanning');
+  const maxExp=[0,1,2,3,4].reduce((s,i)=>s+getLadderStake(i),0);
+  const modeName=AI.mode==='A'?'Custom Ladder':'Flat 3.6×';
+  aiLog('🚀 AI STARTED [Mode '+AI.mode+': '+modeName+'] Base:$'+AI.baseStake.toFixed(2)+' TP:$'+AI.tp+' SL:$'+AI.sl,'success');
+  aiLog('⚠ Max sequence exposure: $'+maxExp.toFixed(2),'warn');
 }
 
 function stopAI(){
-  AI.running=false;
-  AI.inTrade=false;
-  AI.pendingResult=false;
+  AI.running=false;AI.inTrade=false;AI.pendingResult=false;
   clearTimeout(AI.tradeTimer);
-  clearTimeout(AI.scanTimer);
-  clearTimeout(AI.waitTimer);
   document.getElementById('startBtn').disabled=false;
   document.getElementById('stopBtn').disabled=true;
-  ['cfgStake','cfgTP','cfgSL','cfgMart','cfgMaxLoss','cfgIndex'].forEach(id=>{
-    document.getElementById(id).disabled=false;
+  ['cfgStake','cfgTP','cfgSL','cfgIndex','modeA','modeB','modeC'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.disabled=false;
   });
   if(AI.state!=='stopped')setAIState('idle');
   aiLog('⏹ AI stopped.','warn');
@@ -1030,26 +1204,85 @@ function stopAI(){
 function resetAI(){
   stopAI();
   AI.wins=0;AI.losses=0;AI.totalPnl=0;AI.sessPnl=0;
-  AI.consecLoss=0;AI.martStep=0;AI.activeCid=null;
-  setAIState('idle');
-  updateAIStats();
+  AI.consecLoss=0;AI.ladderStep=0;AI.activeCid=null;
+  AI.equityPoints=[0];AI.manCurrentStake=AI.manOrigStake;
+  setAIState('idle');updateAIStats();drawEquity();
   document.getElementById('curTrade').classList.remove('active');
-  document.getElementById('tradeLog').innerHTML=`<div class="log-entry log-header"><div>TIME</div><div>INDEX</div><div>TYPE</div><div>STAKE</div><div>RESULT</div><div>P&L</div></div>`;
-  for(let i=0;i<5;i++){const e=document.getElementById('ms'+i);if(e){e.className='mart-step';e.textContent=i+1;}}
-  aiLog('↺ Stats reset.','info');
+  document.getElementById('tradeLog').innerHTML=
+    '<div class="log-entry log-header"><div>TIME</div><div>INDEX</div><div>TYPE</div><div>STAKE</div><div>RESULT</div><div>P&L</div></div>';
+  if(AI.mode!=='C'){
+    getLadder().forEach((_,i)=>{const e=document.getElementById('lad'+i);if(e)e.className='lad-step '+getLadder()[i].cls;});
+    buildLadder();
+  }
+  aiLog('↺ Stats reset. Ready.','info');
+}
+
+// ══ STATS ══
+function updateAIStats(){
+  const w=AI.wins,l=AI.losses,tot=w+l;
+  document.getElementById('astW').textContent=w;
+  document.getElementById('astL').textContent=l;
+  document.getElementById('astWR').textContent=tot>0?Math.round(w/tot*100)+'%':'—';
+  const pe=document.getElementById('astPnl');
+  pe.textContent=(AI.totalPnl>=0?'+':'')+AI.totalPnl.toFixed(2);
+  pe.style.color=AI.totalPnl>=0?'var(--green)':'var(--red)';
+  document.getElementById('astCL').textContent=AI.consecLoss;
+  if(AI.mode==='C'){
+    document.getElementById('astMS').textContent='MANUAL';
+    document.getElementById('astNS').textContent='$'+AI.manCurrentStake.toFixed(2);
+  } else {
+    document.getElementById('astMS').textContent='Step '+(AI.ladderStep+1)+'/5';
+    document.getElementById('astNS').textContent='$'+getLadderStake(AI.ladderStep).toFixed(2);
+  }
+  const sp=document.getElementById('sessPnl');
+  sp.textContent=(AI.sessPnl>=0?'+':'')+AI.sessPnl.toFixed(2);
+  sp.style.color=AI.sessPnl>=0?'var(--green)':'var(--red)';
+  document.getElementById('sessPnlSub').textContent=tot+' trades';
+  // tick speed
+  let bestSym=null,bestScore=0;
+  IDX.forEach(i=>{
+    const s=ST[i.s];
+    if(s.conn&&s.digits.length>10){
+      try{const a=ana(i.s);if(a.score>bestScore){bestScore=a.score;bestSym=i.s;}}catch(e){}
+    }
+  });
+  if(bestSym&&ST[bestSym].tickSpeed){
+    const spd=ST[bestSym].tickSpeed,el=document.getElementById('astTS');
+    const ix=IDX.find(i=>i.s===bestSym);
+    if(spd<1200){el.textContent=(ix?ix.n:bestSym)+' '+spd+'ms ⚡';el.style.color='var(--green)';}
+    else if(spd<3500){el.textContent=(ix?ix.n:bestSym)+' '+spd+'ms ✓';el.style.color='var(--accent)';}
+    else{el.textContent=(ix?ix.n:bestSym)+' '+spd+'ms';el.style.color='var(--muted)';}
+  }
 }
 
 // ══ RENDER ══
-function bdg(r){return `<span class="b ${r.c}" title="${r.t}">${r.l}</span>`;}
-function ldHTML(sym){const d=ST[sym].digits.slice(-10);return '<div class="lds">'+d.map((v,i)=>{const c=i===d.length-1?'n':(v%2===0?'e':'o');return `<div class="ld2 ${c}">${v}</div>`;}).join('')+'</div>';}
-function fgHTML(sym){const s=ST[sym],tot=s.freq.reduce((a,b)=>a+b,0)||1;return '<div class="fg">'+s.freq.map((f,d)=>{const p=f/tot*100;const c=p>13?'hot':p<7&&f>0?'cold':p>11?'warm':'';return `<div class="fc ${c}" title="d${d}: ${f} (${p.toFixed(1)}%)">${d}<br><span style="font-size:6px">${Math.round(p)}%</span></div>`;}).join('')+'</div>';}
-function vBar(lv){const col=lv<35?'var(--green)':lv<65?'var(--yellow)':'var(--red)';return `<div class="vm"><div class="vf" style="width:${lv}%;background:${col}"></div></div><div style="font-size:8px;color:var(--muted);margin-top:1px;">${lv}%</div>`;}
+function bdg(r){return '<span class="b '+r.c+'" title="'+r.t+'">'+r.l+'</span>';}
+function ldHTML(sym){
+  const d=ST[sym].digits.slice(-10);
+  return '<div class="lds">'+d.map((v,i)=>{
+    const c=i===d.length-1?'n':(v%2===0?'e':'o');
+    return '<div class="ld2 '+c+'">'+v+'</div>';
+  }).join('')+'</div>';
+}
+function fgHTML(sym){
+  const s=ST[sym],tot=s.freq.reduce((a,b)=>a+b,0)||1;
+  return '<div class="fg">'+s.freq.map((f,d)=>{
+    const p=f/tot*100,c=p>13?'hot':p<7&&f>0?'cold':p>11?'warm':'';
+    return '<div class="fc '+c+'" title="d'+d+': '+f+' ('+p.toFixed(1)+'%)">'+d+'<br><span style="font-size:6px">'+Math.round(p)+'%</span></div>';
+  }).join('')+'</div>';
+}
+function vBar(lv){
+  const col=lv<35?'var(--green)':lv<65?'var(--yellow)':'var(--red)';
+  return '<div class="vm"><div class="vf" style="width:'+lv+'%;background:'+col+'"></div></div><div style="font-size:8px;color:var(--muted);margin-top:1px;">'+lv+'%</div>';
+}
 
 function initTable(){
-  document.getElementById('TB').innerHTML=IDX.map(i=>`
-    <tr id="R-${i.s}"><td class="L"><div class="iname">${i.n}</div><div class="isub">${i.sub}</div></td>
-    ${Array(11).fill('<td><div class="sh" style="width:55px;margin:auto"></div></td>').join('')}</tr>`).join('');
+  document.getElementById('TB').innerHTML=IDX.map(i=>
+    '<tr id="R-'+i.s+'"><td class="L"><div class="iname">'+i.n+'</div><div class="isub">'+i.sub+'</div></td>'+
+    Array(11).fill('<td><div class="sh" style="width:55px;margin:auto"></div></td>').join('')+'</tr>'
+  ).join('');
 }
+
 function updateRow(sym){
   const row=document.getElementById('R-'+sym);if(!row)return;
   const s=ST[sym],a=ana(sym),p=s.last;
@@ -1058,31 +1291,38 @@ function updateRow(sym){
   const msCls=a.isCon?'cy':a.ms==='EXPANDING'?'cn':'cw';
   const msIcon=a.isCon?'🟢':a.ms==='EXPANDING'?'🔴':'🟡';
   const ix=IDX.find(i=>i.s===sym);
-  // highlight if AI is trading this index
   const isActive=AI.activeSym===sym&&AI.inTrade;
   row.style.background=isActive?'rgba(176,106,255,.06)':'';
-  row.innerHTML=`
-    <td class="L"><div class="iname">${ix.n}${isActive?' ⚡':''}</div><div class="isub">${ix.sub}</div></td>
-    <td><div class="pcell ${dir}">${p?p.toFixed(2):'—'}</div></td>
-    <td>${vBar(a.vl)}</td>
-    <td><div class="${msCls}">${msIcon} ${a.ms}</div><div style="font-size:8px;color:var(--muted);margin-top:1px;">${a.isCon?'✓ Digits open':'✗ Wait'}</div></td>
-    <td>${ldHTML(sym)}</td>
-    <td>${fgHTML(sym)}</td>
-    <td>${bdg(a.eo)}<div style="font-size:7px;color:var(--muted);margin-top:2px;">E:${a.ep.toFixed(0)}% O:${a.op.toFixed(0)}%</div></td>
-    <td>${bdg(a.o4r)}<div style="font-size:7px;color:var(--muted);margin-top:2px;">O:${a.o4.toFixed(0)}% U:${a.u5.toFixed(0)}%</div></td>
-    <td>${bdg(a.o2r)}<div style="font-size:7px;color:var(--muted);margin-top:2px;">~70% base</div></td>
-    <td>${bdg(a.dif)}<div style="font-size:7px;color:var(--muted);margin-top:2px;">avoid d.${a.hotD}</div></td>
-    <td>${bdg(a.mat)}<div style="font-size:7px;color:var(--muted);margin-top:2px;">d.${a.coldD} cold</div></td>
-    <td><span style="font-size:8px;color:var(--dim)">${s.ticks}</span></td>`;
+  let spdBadge='';
+  if(s.tickSpeed){
+    const sc=s.tickSpeed<1200?'fast':s.tickSpeed<3500?'med':'slow';
+    spdBadge='<span class="tick-speed '+sc+'">'+s.tickSpeed+'ms</span>';
+  }
+  row.innerHTML=
+    '<td class="L"><div class="iname">'+ix.n+(isActive?' ⚡':'')+'</div><div class="isub">'+ix.sub+' '+spdBadge+'</div></td>'+
+    '<td><div class="pcell '+dir+'">'+(p?p.toFixed(2):'—')+'</div></td>'+
+    '<td>'+vBar(a.vl)+'</td>'+
+    '<td><div class="'+msCls+'">'+msIcon+' '+a.ms+'</div><div style="font-size:8px;color:var(--muted);margin-top:1px;">'+(a.isCon?'✓ Digits open':'✗ Wait')+'</div></td>'+
+    '<td>'+ldHTML(sym)+'</td>'+
+    '<td>'+fgHTML(sym)+'</td>'+
+    '<td>'+bdg(a.eo)+'<div style="font-size:7px;color:var(--muted);margin-top:2px;">E:'+a.ep.toFixed(0)+'% O:'+a.op.toFixed(0)+'%</div></td>'+
+    '<td>'+bdg(a.o4r)+'<div style="font-size:7px;color:var(--muted);margin-top:2px;">O:'+a.o4.toFixed(0)+'% U:'+a.u5.toFixed(0)+'%</div></td>'+
+    '<td>'+bdg(a.o2r)+'<div style="font-size:7px;color:var(--muted);margin-top:2px;">~70%</div></td>'+
+    '<td>'+bdg(a.dif)+'<div style="font-size:7px;color:var(--muted);margin-top:2px;">avoid d.'+a.hotD+'</div></td>'+
+    '<td>'+bdg(a.mat)+'<div style="font-size:7px;color:var(--muted);margin-top:2px;">d.'+a.coldD+' cold</div></td>'+
+    '<td><span style="font-size:8px;color:var(--dim)">'+s.ticks+'</span></td>';
   row.classList.remove('ru');void row.offsetWidth;row.classList.add('ru');
 }
+
 function initDC(){
-  document.getElementById('DC').innerHTML=IDX.map(i=>`
-    <div class="dcard">
-      <div class="dtitle"><span>${i.n}</span><span style="font-size:8px;color:var(--muted);font-family:'Space Mono',monospace" id="DCS-${i.s}">LOADING</span></div>
-      <div class="dbars">${Array(10).fill(0).map((_,d)=>`<div class="dbw"><div class="dpct" id="DCP-${i.s}-${d}">0%</div><div class="dbar" id="DCB-${i.s}-${d}" style="height:2px;background:var(--accent)"></div><div class="ddig">${d}</div></div>`).join('')}</div>
-    </div>`).join('');
+  document.getElementById('DC').innerHTML=IDX.map(i=>
+    '<div class="dcard"><div class="dtitle"><span>'+i.n+'</span><span style="font-size:8px;color:var(--muted);font-family:Space Mono,monospace" id="DCS-'+i.s+'">LOADING</span></div>'+
+    '<div class="dbars">'+Array(10).fill(0).map((_,d)=>
+      '<div class="dbw"><div class="dpct" id="DCP-'+i.s+'-'+d+'">0%</div><div class="dbar" id="DCB-'+i.s+'-'+d+'" style="height:2px;background:var(--accent)"></div><div class="ddig">'+d+'</div></div>'
+    ).join('')+'</div></div>'
+  ).join('');
 }
+
 function updateDC(sym){
   const s=ST[sym],tot=s.freq.reduce((a,b)=>a+b,0)||1,mxF=Math.max(...s.freq)||1;
   const a=ana(sym);
@@ -1096,6 +1336,7 @@ function updateDC(sym){
     if(lbl)lbl.textContent=Math.round(p)+'%';
   });
 }
+
 function updateSum(){
   const live=IDX.filter(i=>ST[i.s].conn).length;
   const con=IDX.filter(i=>{try{return ana(i.s).isCon;}catch(e){return false;}}).length;
@@ -1108,6 +1349,7 @@ function updateSum(){
   document.getElementById('SEV').textContent=avg?avg.toFixed(1)+'%':'—';
   document.getElementById('SB').textContent=con>0?'DIFF/OVER2':'WAIT';
 }
+
 function updConn(ok){
   const d=document.getElementById('CD'),l=document.getElementById('CL'),ld=document.getElementById('LD');
   d.className='cdot'+(ok?' on':'');l.textContent=ok?'LIVE':'RECONNECTING';
@@ -1115,7 +1357,9 @@ function updConn(ok){
 }
 function showErr(m){const b=document.getElementById('ERR');b.textContent='⚠ '+m;b.style.display='block';}
 function hideErr(){document.getElementById('ERR').style.display='none';}
+
 setInterval(()=>{document.getElementById('CLK').textContent=new Date().toUTCString().slice(17,25);},1000);
+setInterval(()=>{if(AI.equityPoints.length>1)drawEquity();},4000);
 updateAIStats();
 </script>
 
