@@ -13,8 +13,8 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
 body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,255,200,.02) 1px,transparent 1px),linear-gradient(90deg,rgba(0,255,200,.02) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
 
 /* ══ LOGIN ══ */
-#loginPage{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;background:var(–bg);}
-#loginPage::after{content:’’;position:absolute;width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(0,255,200,.07) 0%,transparent 70%);top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;}
+#loginPage{position:fixed;top:0;left:0;right:0;bottom:0;width:100%;height:100%;z-index:9999;display:flex;align-items:center;justify-content:center;background:#07090f;}
+#loginPage-disabled::after{content:’’;position:absolute;width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(0,255,200,.07) 0%,transparent 70%);top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;}
 .lcard{position:relative;z-index:1;width:100%;max-width:440px;margin:16px;background:var(–card);border:1px solid var(–border);border-radius:20px;padding:40px 36px;box-shadow:0 0 60px rgba(0,255,200,.05),0 30px 80px rgba(0,0,0,.5);}
 .llogo{display:flex;align-items:center;gap:11px;justify-content:center;margin-bottom:28px;}
 .ldot-big{width:15px;height:15px;border-radius:50%;background:var(–accent);box-shadow:0 0 22px var(–accent);animation:pulse 2s infinite;}
@@ -289,7 +289,7 @@ td.L{text-align:left;padding-left:12px;}
 
 <!-- ══════════ DASHBOARD ══════════ -->
 
-<div id="dashPage" style="display:none;">
+<div id="dashPage" style="display:none;visibility:hidden;">
 <div class="wrap">
 
   <header>
@@ -421,10 +421,11 @@ td.L{text-align:left;padding-left:12px;}
 <!-- MANUAL FEED PANEL (Mode C) -->
 <div id="manualPanel" style="display:none;margin-bottom:14px;">
   <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:2px;margin-bottom:10px;">MANUAL TRADE FEED</div>
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:10px;">
+  <!-- Row 1: Contract + Stake + Barrier + Index -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:8px;">
     <div class="cfg-block">
       <div class="cfg-label">CONTRACT TYPE</div>
-      <select class="cfg-select" id="manContract">
+      <select class="cfg-select" id="manContract" onchange="onManContractChange()">
         <option value="DIGITDIFF">DIFFERS</option>
         <option value="DIGITOVER">OVER 2</option>
         <option value="DIGITUNDER">UNDER 7</option>
@@ -433,10 +434,10 @@ td.L{text-align:left;padding-left:12px;}
       </select>
     </div>
     <div class="cfg-block">
-      <div class="cfg-label">STAKE ($)</div>
+      <div class="cfg-label">BASE STAKE ($)</div>
       <input class="cfg-input" id="manStake" type="number" value="5.00" min="0.35" step="0.50"/>
     </div>
-    <div class="cfg-block">
+    <div class="cfg-block" id="manBarrierBlock">
       <div class="cfg-label">BARRIER / DIGIT</div>
       <input class="cfg-input" id="manBarrier" type="number" value="2" min="0" max="9" step="1"/>
       <div style="font-size:8px;color:var(--dim);margin-top:3px;font-family:'Space Mono',monospace">DIFFERS/OVER/UNDER only</div>
@@ -457,25 +458,52 @@ td.L{text-align:left;padding-left:12px;}
         <option value="1HZ100V">V100 1s</option>
       </select>
     </div>
+  </div>
+
+  <!-- Row 2: Loss behaviour + multiplier + Win behaviour -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:10px;">
     <div class="cfg-block">
-      <div class="cfg-label">AFTER LOSS</div>
-      <select class="cfg-select" id="manOnLoss">
+      <div class="cfg-label">ON LOSS</div>
+      <select class="cfg-select" id="manOnLoss" onchange="onManLossChange()">
         <option value="repeat">Repeat same trade</option>
-        <option value="martingale">Apply 3.6× martingale</option>
+        <option value="martingale">Martingale (custom ×)</option>
         <option value="stop">Stop after loss</option>
       </select>
     </div>
+    <div class="cfg-block" id="manMultBlock">
+      <div class="cfg-label">MARTINGALE MULT ×</div>
+      <input class="cfg-input" id="manMult" type="number" value="3.6" min="1.1" max="20" step="0.1"/>
+      <div style="font-size:8px;color:var(--dim);margin-top:3px;font-family:'Space Mono',monospace" id="manMultHint">e.g. 2.1 EVEN/ODD · 3.6 DIFFERS · 2.2 OVER2</div>
+    </div>
     <div class="cfg-block">
-      <div class="cfg-label">AFTER WIN</div>
+      <div class="cfg-label">ON WIN</div>
       <select class="cfg-select" id="manOnWin">
-        <option value="reset">Reset to original stake</option>
-        <option value="repeat">Repeat same stake</option>
+        <option value="reset">Reset to base stake</option>
+        <option value="repeat">Keep same stake</option>
         <option value="stop">Stop after win</option>
       </select>
     </div>
+    <div class="cfg-block">
+      <div class="cfg-label">MAX LOSSES</div>
+      <input class="cfg-input" id="manMaxLoss" type="number" value="5" min="1" max="10" step="1"/>
+      <div style="font-size:8px;color:var(--dim);margin-top:3px;font-family:'Space Mono',monospace">Stop after N losses</div>
+    </div>
   </div>
-  <button class="ai-btn start" style="width:100%;margin-bottom:0;" onclick="manualFire()">⚡ FIRE MANUAL TRADE NOW</button>
-  <div style="font-size:9px;color:var(--dim);font-family:'Space Mono',monospace;margin-top:6px;text-align:center;">Manual trades also respect TP / SL and circuit breaker</div>
+
+  <!-- Next stake preview -->
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 12px;margin-bottom:10px;font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);display:flex;justify-content:space-between;align-items:center;">
+    <span>NEXT STAKE</span>
+    <span id="manNextStake" style="color:var(--accent);font-size:12px;font-weight:700;">$5.00</span>
+    <span id="manLossCount" style="color:var(--yellow);">Loss streak: 0</span>
+    <span id="manRunning" style="color:var(--dim);">⏸ IDLE</span>
+  </div>
+
+  <!-- Buttons -->
+  <div style="display:flex;gap:8px;">
+    <button class="ai-btn start" style="flex:1;" id="manStartBtn" onclick="manualStart()">▶ START MANUAL</button>
+    <button class="ai-btn stop"  style="flex:1;" id="manStopBtn"  onclick="manualStop()" disabled>■ STOP</button>
+  </div>
+  <div style="font-size:9px;color:var(--dim);font-family:'Space Mono',monospace;margin-top:6px;text-align:center;">Runs continuously · respects TP / SL · circuit breaker at max losses</div>
 </div>
     <div class="mart-step" id="ms2">3</div>
     <div class="mart-step" id="ms3">4</div>
@@ -595,12 +623,6 @@ const IDX=[
   {s:'1HZ100V',n:'V100 (1s)',sub:'Volatility 100 1s',v:100},
 ];
 
-// ══ PIONEER STRATEGY (original v3 logic) ══
-// Step 0:   DIFFERS — avoid hot digit, base stake
-// Step 1+:  OVER2   — immediate switch on first loss, stake × mult each step
-// 5 consecutive losses → circuit breaker
-// Any win → full reset to step 0 at base stake
-
 // ══ MARKET STATE ══
 const ST={};
 IDX.forEach(i=>{ST[i.s]={prices:[],digits:[],freq:new Array(10).fill(0),last:null,conn:false,ticks:0,tickTimes:[]};});
@@ -609,7 +631,7 @@ let total=0,ws=null,rtimer=null,userToken=null,isGuest=false,lastTradeTime=0;
 // ══ AI STATE ══
 const AI={
   running:false, state:'idle',
-  mode:'pioneer',   // 'pioneer' or 'manual'
+  mode:'pioneer',
   baseStake:5, mult:3.6, tp:15, sl:10,
   martStep:0, consecLoss:0,
   wins:0, losses:0, totalPnl:0, sessPnl:0,
@@ -617,12 +639,20 @@ const AI={
   activeCid:null, activeSym:null, activeType:null, activeDigit:null,
   inTrade:false, pendingResult:false,
   tradeTimer:null,
-  manOrigStake:5, manCurrentStake:5,
 };
 
-// ══ STAKE CALCULATOR ══
+// ══ MANUAL STATE (separate from AI) ══
+const MAN={
+  running:false,
+  origStake:5, currentStake:5,
+  lossStreak:0, maxLoss:5,
+  code:'DIGITDIFF', barrier:2, typeLabel:'DIFFER',
+  sym:null, mult:3.6,
+  onLoss:'repeat', onWin:'reset',
+};
+
+// ══ PIONEER: STAKE CALC ══
 function calcStake(step){
-  // step 0 = base, step 1+ = base × mult^step
   let s=AI.baseStake;
   for(let i=0;i<step;i++) s=Math.round(s*AI.mult*100)/100;
   return s;
@@ -630,19 +660,155 @@ function calcStake(step){
 
 // ══ MODE ══
 function setMode(m){
-  if(AI.running)return;
+  if(AI.running||MAN.running)return;
   AI.mode=m;
   document.getElementById('modePioneer').classList.toggle('active', m==='pioneer');
   document.getElementById('modeManual').classList.toggle('active',  m==='manual');
-  document.getElementById('ladderPanel').style.display  = m==='manual' ? 'none':'block';
-  document.getElementById('manualPanel').style.display  = m==='manual' ? 'block':'none';
+  document.getElementById('ladderPanel').style.display  = m==='manual'?'none':'block';
+  document.getElementById('manualPanel').style.display  = m==='manual'?'block':'none';
   if(m==='pioneer') refreshLadder();
   aiLog('🔄 Mode: '+(m==='pioneer'?'Pioneer Strategy':'Manual Feed'),'info');
 }
 
-// ══ LADDER DISPLAY ══
+// ══ MANUAL PANEL UI HELPERS ══
+function onManContractChange(){
+  const code=document.getElementById('manContract').value;
+  const needsBarrier=(code==='DIGITDIFF'||code==='DIGITOVER'||code==='DIGITUNDER');
+  document.getElementById('manBarrierBlock').style.opacity=needsBarrier?'1':'0.4';
+  // suggest sensible default multiplier
+  const multEl=document.getElementById('manMult');
+  const hint=document.getElementById('manMultHint');
+  if(code==='DIGITEVEN'||code==='DIGITODD'){
+    if(multEl.value==='3.6')multEl.value='2.1';
+    hint.textContent='~50% probability · 2.1-2.5 recommended';
+  } else if(code==='DIGITOVER'||code==='DIGITUNDER'){
+    if(multEl.value==='2.1')multEl.value='2.2';
+    hint.textContent='~70% base · 2.2-3.0 recommended';
+  } else if(code==='DIGITDIFF'){
+    if(parseFloat(multEl.value)<3.0)multEl.value='3.6';
+    hint.textContent='~90% base · 3.6 recommended';
+  }
+  updateManPreview();
+}
+function onManLossChange(){
+  const v=document.getElementById('manOnLoss').value;
+  document.getElementById('manMultBlock').style.opacity=v==='martingale'?'1':'0.4';
+  updateManPreview();
+}
+function updateManPreview(){
+  const stake=parseFloat(document.getElementById('manStake').value)||5;
+  const onLoss=document.getElementById('manOnLoss').value;
+  const mult=parseFloat(document.getElementById('manMult').value)||3.6;
+  const nextStake=onLoss==='martingale'&&MAN.lossStreak>0
+    ? Math.round(MAN.currentStake*mult*100)/100
+    : MAN.currentStake||stake;
+  document.getElementById('manNextStake').textContent='$'+nextStake.toFixed(2);
+}
+
+// ══ MANUAL START / STOP ══
+function manualStart(){
+  if(!userToken||isGuest){aiLog('⚠ Token required.','danger');return;}
+  if(!ws||ws.readyState!==1){aiLog('⚠ Not connected.','warn');return;}
+  if(AI.running){aiLog('⚠ Pioneer is running — stop it first.','warn');return;}
+
+  const tp=parseFloat(document.getElementById('cfgTP').value)||15;
+  const sl=parseFloat(document.getElementById('cfgSL').value)||10;
+  if(AI.sessPnl>=tp){aiLog('🎯 TP already reached — reset stats.','warn');return;}
+  if(AI.sessPnl<=-Math.abs(sl)){aiLog('🛑 SL already reached — reset stats.','warn');return;}
+
+  // capture all settings
+  MAN.code     = document.getElementById('manContract').value;
+  MAN.barrier  = parseInt(document.getElementById('manBarrier').value)||2;
+  MAN.origStake= parseFloat(document.getElementById('manStake').value)||5;
+  MAN.currentStake = MAN.origStake;
+  MAN.mult     = parseFloat(document.getElementById('manMult').value)||3.6;
+  MAN.onLoss   = document.getElementById('manOnLoss').value;
+  MAN.onWin    = document.getElementById('manOnWin').value;
+  MAN.maxLoss  = parseInt(document.getElementById('manMaxLoss').value)||5;
+  MAN.lossStreak=0;
+  MAN.typeLabel= MAN.code==='DIGITDIFF'?'DIFFER'
+               : MAN.code==='DIGITOVER'?'OVER2'
+               : MAN.code==='DIGITUNDER'?'UNDER7'
+               : MAN.code==='DIGITEVEN'?'EVEN':'ODD';
+  MAN.barrier  = (MAN.code==='DIGITEVEN'||MAN.code==='DIGITODD')?0:MAN.barrier;
+
+  MAN.running=true;
+  document.getElementById('manStartBtn').disabled=true;
+  document.getElementById('manStopBtn').disabled=false;
+  // lock settings while running
+  ['manContract','manStake','manBarrier','manIndex','manOnLoss','manMult','manOnWin','manMaxLoss','modePioneer','modeManual']
+    .forEach(id=>{const el=document.getElementById(id);if(el)el.disabled=true;});
+
+  setAIState('trading');
+  document.getElementById('manRunning').textContent='▶ RUNNING';
+  document.getElementById('manRunning').style.color='var(--green)';
+
+  const ix=IDX.find(i=>i.s===getManaualSym());
+  aiLog('▶ MANUAL STARTED: '+MAN.typeLabel+' $'+MAN.origStake.toFixed(2)
+    +' | Mult:×'+MAN.mult+' | OnLoss:'+MAN.onLoss+' | MaxLoss:'+MAN.maxLoss,'success');
+
+  manFireNext();
+}
+
+function manualStop(){
+  MAN.running=false;
+  document.getElementById('manStartBtn').disabled=false;
+  document.getElementById('manStopBtn').disabled=true;
+  ['manContract','manStake','manBarrier','manIndex','manOnLoss','manMult','manOnWin','manMaxLoss','modePioneer','modeManual']
+    .forEach(id=>{const el=document.getElementById(id);if(el)el.disabled=false;});
+  setAIState('idle');
+  document.getElementById('manRunning').textContent='⏸ IDLE';
+  document.getElementById('manRunning').style.color='var(--dim)';
+  aiLog('⏹ Manual stopped.','warn');
+}
+
+function getManaualSym(){
+  const idxSel=document.getElementById('manIndex').value;
+  if(idxSel!=='AUTO') return idxSel;
+  const market=findBestMarket();
+  return market?market.sym:(IDX[3].s); // fallback V75
+}
+
+function manFireNext(){
+  if(!MAN.running||AI.inTrade||AI.pendingResult)return;
+  // check TP/SL
+  const tp=parseFloat(document.getElementById('cfgTP').value)||15;
+  const sl=parseFloat(document.getElementById('cfgSL').value)||10;
+  if(AI.sessPnl>=tp){
+    aiLog('🎯 TP +$'+AI.sessPnl.toFixed(2)+' reached — manual stopped.','success');
+    manualStop();return;
+  }
+  if(AI.sessPnl<=-Math.abs(sl)){
+    aiLog('🛑 SL -$'+Math.abs(AI.sessPnl).toFixed(2)+' reached — manual stopped.','danger');
+    manualStop();return;
+  }
+  if(MAN.lossStreak>=MAN.maxLoss){
+    aiLog('🛑 Max losses ('+MAN.maxLoss+') reached — manual stopped.','danger');
+    manualStop();return;
+  }
+
+  // update stake display
+  document.getElementById('manNextStake').textContent='$'+MAN.currentStake.toFixed(2);
+  document.getElementById('manLossCount').textContent='Loss streak: '+MAN.lossStreak;
+
+  // pick sym
+  const idxSel=document.getElementById('manIndex').value;
+  let sym;
+  if(idxSel==='AUTO'){
+    const market=findBestMarket();
+    sym=market?market.sym:IDX[3].s;
+  } else {sym=idxSel;}
+  MAN.sym=sym;
+
+  const ix=IDX.find(i=>i.s===sym);
+  aiLog('✏️ [M] '+MAN.typeLabel+' $'+MAN.currentStake.toFixed(2)+' on '+(ix?ix.n:sym)
+    +' | streak:'+MAN.lossStreak+'/'+MAN.maxLoss,'info');
+
+  placeTrade(sym, MAN.code, MAN.currentStake, MAN.barrier, MAN.typeLabel, true);
+}
+
+// ══ PIONEER LADDER ══
 function refreshLadder(){
-  // Pioneer: step0=DIFFERS base, step1-4=OVER2 with escalating stake
   const labels=['DIFFERS','OVER 2','OVER 2','OVER 2','OVER 2'];
   const subs=['primary','recovery ×'+AI.mult,'recovery ×'+AI.mult+'²','recovery ×'+AI.mult+'³','recovery ×'+AI.mult+'⁴'];
   let totalExp=0;
@@ -655,11 +821,11 @@ function refreshLadder(){
       el.querySelector('.lad-type').textContent=labels[i];
       el.querySelector('.lad-stake').textContent='$'+stake.toFixed(2);
       const sub=el.querySelector('.lad-sub');
-      if(sub) sub.textContent=subs[i];
+      if(sub)sub.textContent=subs[i];
     }
   }
   const exp=document.getElementById('ladExposure');
-  if(exp) exp.textContent='Max exposure: $'+totalExp.toFixed(2);
+  if(exp)exp.textContent='Max exposure: $'+totalExp.toFixed(2);
 }
 
 function updateLadderUI(){
@@ -668,21 +834,22 @@ function updateLadderUI(){
     const el=document.getElementById('lad'+i);
     if(!el)continue;
     el.classList.remove('active','won','lost');
-    if(i<AI.martStep) el.classList.add('lost');
-    else if(i===AI.martStep&&AI.running) el.classList.add('active');
+    if(i<AI.martStep)el.classList.add('lost');
+    else if(i===AI.martStep&&AI.running)el.classList.add('active');
   }
 }
 
-// live refresh when base/mult changes
 document.addEventListener('DOMContentLoaded',()=>{
   ['cfgStake','cfgMult'].forEach(id=>{
     const el=document.getElementById(id);
-    if(el) el.addEventListener('input',()=>{
+    if(el)el.addEventListener('input',()=>{
       AI.baseStake=parseFloat(document.getElementById('cfgStake').value)||5;
       AI.mult=parseFloat(document.getElementById('cfgMult').value)||3.6;
-      if(AI.mode==='pioneer') refreshLadder();
+      if(AI.mode==='pioneer')refreshLadder();
     });
   });
+  document.getElementById('manMult')?.addEventListener('input', updateManPreview);
+  document.getElementById('manStake')?.addEventListener('input', updateManPreview);
 });
 
 // ══ LOGIN ══
@@ -691,10 +858,8 @@ document.getElementById('toggleVis').addEventListener('click',()=>{
   i.type=i.type==='password'?'text':'password';
 });
 document.getElementById('tokenInput').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
-
 function showLE(m){const e=document.getElementById('loginErr');e.textContent='⚠ '+m;e.style.display='block';}
 function hideLE(){document.getElementById('loginErr').style.display='none';}
-
 function doLogin(){
   const t=document.getElementById('tokenInput').value.trim();
   if(!t){showLE('Please enter your API token');return;}
@@ -705,7 +870,7 @@ function doLogin(){
 }
 function doGuest(){isGuest=true;userToken=null;launchDash(null);}
 function doLogout(){
-  stopAI();
+  stopAI();manualStop();
   if(ws){ws.onclose=null;ws.close();}
   clearTimeout(rtimer);
   userToken=null;isGuest=false;
@@ -713,6 +878,7 @@ function doLogout(){
   total=0;
   document.getElementById('tokenInput').value='';
   document.getElementById('dashPage').style.display='none';
+  document.getElementById('dashPage').style.visibility='hidden';
   document.getElementById('loginPage').style.display='flex';
   document.getElementById('loginBtn').classList.remove('ld');
   document.getElementById('loginBtn').textContent='CONNECT TO DERIV';
@@ -745,6 +911,7 @@ function loginFail(m){
 function launchDash(auth){
   document.getElementById('loginPage').style.display='none';
   document.getElementById('dashPage').style.display='block';
+  document.getElementById('dashPage').style.visibility='visible';
   if(auth){
     const name=auth.fullname||auth.email||'Trader';
     const lid=auth.loginid||'—';
@@ -769,7 +936,7 @@ function startConn(){
   catch(e){showErr(e.message);sched();return;}
   ws.onopen=()=>{
     updConn(true);hideErr();
-    if(userToken&&!isGuest) ws.send(JSON.stringify({authorize:userToken}));
+    if(userToken&&!isGuest)ws.send(JSON.stringify({authorize:userToken}));
     else subAll();
   };
   ws.onmessage=e=>{
@@ -789,10 +956,7 @@ function startConn(){
 }
 function subAll(){IDX.forEach(i=>ws.send(JSON.stringify({ticks:i.s,subscribe:1})));}
 function sched(){clearTimeout(rtimer);rtimer=setTimeout(startConn,4000);}
-function updBal(b){
-  if(!b)return;
-  document.getElementById('balVal').textContent=parseFloat(b.balance).toFixed(2);
-}
+function updBal(b){if(!b)return;document.getElementById('balVal').textContent=parseFloat(b.balance).toFixed(2);}
 
 // ══ TICK ══
 function onTick(tk){
@@ -813,7 +977,10 @@ function onTick(tk){
   updateRow(tk.symbol);updateDC(tk.symbol);updateSum();
   document.getElementById('STK').textContent=total.toLocaleString();
   document.getElementById('TT').textContent=total;
-  if(AI.running&&AI.mode==='pioneer') aiTick(tk.symbol);
+  if(AI.running&&AI.mode==='pioneer')aiTick(tk.symbol);
+  // manual auto-fire on tick if waiting
+  if(MAN.running&&!AI.inTrade&&!AI.pendingResult&&Date.now()-lastTradeTime>1500)
+    manFireNext();
 }
 
 // ══ ANALYSIS ══
@@ -843,16 +1010,13 @@ function ana(sym){
   const mxF=Math.max(...fr),mnF=Math.min(...fr.filter(f=>f>0))||0;
   const hotD=fr.indexOf(mxF),coldD=fr.indexOf(mnF);
   let score=0;
-  if(isCon)score+=35;
-  if(n>=50)score+=15; else if(n>=30)score+=8;
-  if((mxF/tot*100)>14)score+=20;
-  if(vl<50)score+=15;
-  if(Math.abs(ep-50)>6)score+=10;
+  if(isCon)score+=35;if(n>=50)score+=15;else if(n>=30)score+=8;
+  if((mxF/tot*100)>14)score+=20;if(vl<50)score+=15;if(Math.abs(ep-50)>6)score+=10;
   score=Math.min(100,score);
   const eoR=()=>{if(!isCon)return{l:'AVOID',c:'av',t:''};const b=Math.abs(ep-50);if(b>8)return{l:(ep>50?'EVEN':'ODD')+' ▲',c:'sb',t:Math.round(Math.max(ep,op))+'%'};if(b>4)return{l:ep>50?'EVEN':'ODD',c:'by',t:Math.round(Math.max(ep,op))+'%'};return{l:'NEUTRAL',c:'nt',t:'~50%'};};
   const o4R=()=>{if(!isCon)return{l:'AVOID',c:'av',t:''};const b=Math.abs(o4-50);if(b>8)return{l:(o4>50?'OVER4':'UNDER5')+' ▲',c:'sb',t:Math.round(Math.max(o4,u5))+'%'};if(b>3)return{l:o4>50?'OVER4':'UNDER5',c:'by',t:Math.round(Math.max(o4,u5))+'%'};return{l:'NEUTRAL',c:'nt',t:'~50%'};};
   const o2R=()=>{if(n<20)return{l:'LOADING',c:'wt',t:''};if(isCon)return{l:(o2>=u7?'OVER2':'UNDER7')+' ★',c:'sb',t:'~70%'};return{l:o2>=u7?'OVER2':'UNDER7',c:'by',t:'70%'};};
-  const difR=()=>{if(n<15)return{l:'LOADING',c:'wt',t:''};const hp=(mxF/tot*100);if(hp>15)return{l:'DIFF '+hotD+' ★',c:'sb',t:'d'+hotD+' at '+Math.round(hp)+'%'};return{l:'DIFF '+hotD,c:'by',t:'90% base'};};
+  const difR=()=>{if(n<15)return{l:'LOADING',c:'wt',t:''};const hp=(mxF/tot*100);if(hp>15)return{l:'DIFF '+hotD+' ★',c:'sb',t:'d'+hotD+' at '+Math.round(hp)+'%'};return{l:'DIFF '+hotD,c:'by',t:'90%'};};
   const matR=()=>{if(n<30)return{l:'LOADING',c:'wt',t:''};if((mnF/tot*100)<5&&isCon)return{l:'MATCH '+coldD,c:'wt',t:'cold'};return{l:'AVOID',c:'av',t:'10%'};};
   return{isCon,ms,vl,ep,op,o4,u5,o2,u7,hotD,coldD,fr,tot,score,
     eo:eoR(),o4r:o4R(),o2r:o2R(),dif:difR(),mat:matR()};
@@ -866,16 +1030,13 @@ function aiLog(msg,cls){
   div.className='ai-log-line '+(cls||'info');
   div.innerHTML='<span class="ts">'+now+'</span>'+msg;
   el.appendChild(div);el.scrollTop=el.scrollHeight;
-  while(el.children.length>62)el.removeChild(el.children[1]);
+  while(el.children.length>80)el.removeChild(el.children[1]);
 }
 function setAIState(state){
   AI.state=state;
   const b=document.getElementById('aiStateBadge');
-  const map={
-    idle:{cls:'idle',txt:'⏸ IDLE'},scanning:{cls:'scanning',txt:'🔍 SCANNING'},
-    trading:{cls:'trading',txt:'⚡ TRADING'},waiting:{cls:'waiting',txt:'⏳ WAITING'},
-    stopped:{cls:'stopped',txt:'🛑 STOPPED'}
-  };
+  const map={idle:{cls:'idle',txt:'⏸ IDLE'},scanning:{cls:'scanning',txt:'🔍 SCANNING'},
+    trading:{cls:'trading',txt:'⚡ TRADING'},waiting:{cls:'waiting',txt:'⏳ WAITING'},stopped:{cls:'stopped',txt:'🛑 STOPPED'}};
   const s=map[state]||map.idle;
   b.className='ai-state-badge '+s.cls;b.textContent=s.txt;
 }
@@ -886,17 +1047,13 @@ function findBestMarket(){
   if(tgt!=='AUTO'){
     const s=ST[tgt];
     if(!s||!s.conn||s.digits.length<30)return null;
-    try{const a=ana(tgt);if(a.score<45)return null;return{sym:tgt,a};}
-    catch(e){return null;}
+    try{const a=ana(tgt);if(a.score<45)return null;return{sym:tgt,a};}catch(e){return null;}
   }
   let best=null,bestScore=0;
   IDX.forEach(i=>{
     const s=ST[i.s];
     if(!s||!s.conn||s.digits.length<30)return;
-    try{
-      const a=ana(i.s);
-      if(a.score>bestScore){bestScore=a.score;best={sym:i.s,a};}
-    }catch(e){}
+    try{const a=ana(i.s);if(a.score>bestScore){bestScore=a.score;best={sym:i.s,a};}}catch(e){}
   });
   return best&&best.a.score>=45?best:null;
 }
@@ -912,8 +1069,7 @@ function drawEquity(){
   const pts=AI.equityPoints;
   if(pts.length<2){
     ctx.strokeStyle='rgba(138,146,164,.2)';ctx.lineWidth=1;
-    ctx.beginPath();ctx.moveTo(0,35);ctx.lineTo(W,35);ctx.stroke();
-    return;
+    ctx.beginPath();ctx.moveTo(0,35);ctx.lineTo(W,35);ctx.stroke();return;
   }
   const mn=Math.min(...pts),mx=Math.max(...pts),range=mx-mn||1;
   const toY=v=>5+(60*(1-(v-mn)/range));
@@ -943,8 +1099,8 @@ function drawEquity(){
 // ══ PIONEER AI TICK ══
 function aiTick(sym){
   if(!AI.running||AI.inTrade||AI.pendingResult)return;
-  if(AI.consecLoss>=5){
-    if(AI.state!=='stopped'){setAIState('stopped');aiLog('🛑 CIRCUIT BREAKER: 5 consecutive losses.','danger');stopAI();}
+  if(AI.martStep>=5||AI.consecLoss>=5){
+    if(AI.state!=='stopped'){setAIState('stopped');aiLog('🛑 CIRCUIT BREAKER: max losses reached.','danger');stopAI();}
     return;
   }
   const tp=parseFloat(document.getElementById('cfgTP').value)||15;
@@ -958,56 +1114,18 @@ function aiTick(sym){
   const{sym:tradeSym,a}=market;
   const ix=IDX.find(i=>i.s===tradeSym);
   const stake=calcStake(AI.martStep);
-
   let contractCode,barrierDigit,typeLabel;
-
   if(AI.martStep===0){
-    // ── PIONEER PRIMARY: DIFFERS avoid hot digit ──
-    contractCode='DIGITDIFF';
-    barrierDigit=a.hotD;
-    typeLabel='DIFFER';
-    aiLog('🎯 Step 1 PRIMARY | '+ix.n+' | DIFFERS d.'+barrierDigit+' ('+Math.round(a.fr[barrierDigit]/a.tot*100)+'% freq) | $'+stake.toFixed(2)+' | Score:'+a.score,'info');
+    contractCode='DIGITDIFF';barrierDigit=a.hotD;typeLabel='DIFFER';
+    aiLog('🎯 S1 PRIMARY | '+ix.n+' | DIFFERS d.'+barrierDigit+' ('+Math.round(a.fr[barrierDigit]/a.tot*100)+'%) | $'+stake.toFixed(2)+' | Score:'+a.score,'info');
   } else {
-    // ── PIONEER RECOVERY: OVER2 immediately ──
-    contractCode='DIGITOVER';
-    barrierDigit=2;
-    typeLabel='OVER2';
-    aiLog('🔄 Step '+(AI.martStep+1)+' RECOVERY | '+ix.n+' | OVER2 ('+a.o2.toFixed(0)+'% base) | $'+stake.toFixed(2),'warn');
+    contractCode='DIGITOVER';barrierDigit=2;typeLabel='OVER2';
+    aiLog('🔄 S'+(AI.martStep+1)+' RECOVERY | '+ix.n+' | OVER2 ('+a.o2.toFixed(0)+'%) | $'+stake.toFixed(2),'warn');
   }
-
   if(tradeSym.includes('HZ')&&ST[tradeSym].tickSpeed&&ST[tradeSym].tickSpeed<1200)
     aiLog('⚡ 1s index '+ix.n+' ('+ST[tradeSym].tickSpeed+'ms) — tight window','warn');
-
   lastTradeTime=Date.now();
   placeTrade(tradeSym,contractCode,stake,barrierDigit,typeLabel,false);
-}
-
-// ══ MANUAL FIRE ══
-function manualFire(){
-  if(!userToken||isGuest){aiLog('⚠ Token required.','danger');return;}
-  if(!ws||ws.readyState!==1){aiLog('⚠ Not connected.','warn');return;}
-  if(AI.inTrade||AI.pendingResult){aiLog('⚠ Trade already in progress.','warn');return;}
-  const tp=parseFloat(document.getElementById('cfgTP').value)||15;
-  const sl=parseFloat(document.getElementById('cfgSL').value)||10;
-  if(AI.sessPnl>=tp){aiLog('🎯 TP reached — reset to continue.','warn');return;}
-  if(AI.sessPnl<=-Math.abs(sl)){aiLog('🛑 SL reached — reset to continue.','warn');return;}
-  if(AI.consecLoss>=5){aiLog('🛑 Circuit breaker active — reset to continue.','warn');return;}
-  const code=document.getElementById('manContract').value;
-  const stake=parseFloat(document.getElementById('manStake').value)||5;
-  const barrier=parseInt(document.getElementById('manBarrier').value)||2;
-  const idxSel=document.getElementById('manIndex').value;
-  AI.manOrigStake=stake;AI.manCurrentStake=stake;
-  let sym=null;
-  if(idxSel==='AUTO'){
-    const market=findBestMarket();
-    if(!market){aiLog('⚠ No suitable market right now — try again shortly.','warn');return;}
-    sym=market.sym;
-  } else {sym=idxSel;}
-  const typeLabel=code==='DIGITDIFF'?'DIFFER':code==='DIGITOVER'?'OVER2':code==='DIGITUNDER'?'UNDER7':code==='DIGITEVEN'?'EVEN':'ODD';
-  const actualBarrier=(code==='DIGITEVEN'||code==='DIGITODD')?0:barrier;
-  const ix=IDX.find(i=>i.s===sym);
-  aiLog('✏️ MANUAL: '+typeLabel+' d.'+actualBarrier+' $'+stake.toFixed(2)+' on '+(ix?ix.n:sym),'info');
-  placeTrade(sym,code,stake,actualBarrier,typeLabel,true);
 }
 
 // ══ PLACE TRADE ══
@@ -1019,9 +1137,9 @@ function placeTrade(sym,code,stake,barrier,typeLabel,isManual){
   const ix=IDX.find(i=>i.s===sym);
   document.getElementById('curTrade').classList.add('active');
   document.getElementById('ctIndex').textContent=(ix?ix.n:sym)+(isManual?' ✏️':' 🤖');
-  document.getElementById('ctContract').textContent=typeLabel==='DIFFER'?'DIFFERS d.'+barrier:typeLabel==='OVER2'?'OVER 2':typeLabel;
+  document.getElementById('ctContract').textContent=typeLabel==='DIFFER'?'DIFFERS d.'+barrier:typeLabel==='OVER2'?'OVER 2':typeLabel+(typeLabel==='DIFFER'?'':' ');
   document.getElementById('ctStake').textContent='$'+stake.toFixed(2);
-  document.getElementById('ctDigit').textContent=typeLabel==='DIFFER'?'Avoid digit '+barrier:typeLabel==='OVER2'?'Last digit > 2':'See contract';
+  document.getElementById('ctDigit').textContent=typeLabel==='DIFFER'?'Avoid digit '+barrier:typeLabel==='OVER2'?'Last > 2':typeLabel;
   document.getElementById('ctId').textContent='Placing…';
   document.getElementById('ctPayout').textContent='—';
   document.getElementById('ctStatus').textContent='SENDING…';
@@ -1035,7 +1153,7 @@ function placeTrade(sym,code,stake,barrier,typeLabel,isManual){
       aiLog('⚠ Trade timeout — resetting.','warn');
       AI.inTrade=false;AI.pendingResult=false;
       document.getElementById('curTrade').classList.remove('active');
-      setAIState(AI.running?'scanning':'idle');
+      setAIState(AI.running?'scanning':MAN.running?'trading':'idle');
     }
   },15000);
 }
@@ -1047,9 +1165,8 @@ function onBuy(msg){
     clearTimeout(AI.tradeTimer);
     aiLog('❌ Buy error: '+(msg.error.message||msg.error.code),'danger');
     AI.inTrade=false;AI.pendingResult=false;
-    if(msg.error.code==='InsufficientBalance'){aiLog('🛑 Insufficient balance.','danger');stopAI();}
-    setAIState(AI.running?'scanning':'idle');
-    return;
+    if(msg.error.code==='InsufficientBalance'){aiLog('🛑 Insufficient balance.','danger');stopAI();manualStop();}
+    setAIState(AI.running?'scanning':MAN.running?'trading':'idle');return;
   }
   if(!msg.buy)return;
   AI.activeCid=msg.buy.contract_id;
@@ -1075,66 +1192,68 @@ function onContract(poc){
   AI.sessPnl=Math.round((AI.sessPnl+profit)*100)/100;
   AI.equityPoints.push(AI.sessPnl);
   if(AI.equityPoints.length>300)AI.equityPoints.shift();
-  const stepEl=document.getElementById('lad'+stepAtResult);
 
-  if(won){
-    AI.wins++;AI.consecLoss=0;
-    if(stepEl&&AI.mode==='pioneer'){stepEl.classList.remove('active');stepEl.classList.add('won');}
-    if(AI.mode==='pioneer'){
-      aiLog('✅ WIN +$'+profit.toFixed(2)+' at step '+(stepAtResult+1)+' | Resetting to step 1 (DIFFERS)','success');
-      AI.martStep=0;
-      setTimeout(()=>{
-        for(let i=0;i<5;i++){const e=document.getElementById('lad'+i);if(e)e.classList.remove('won','lost','active');}
-        updateLadderUI();
-      },1000);
-    } else {
-      const onWin=document.getElementById('manOnWin').value;
-      aiLog('✅ WIN +$'+profit.toFixed(2)+(onWin==='reset'?' | Stake reset':''),'success');
-      if(onWin==='reset') AI.manCurrentStake=AI.manOrigStake;
-      if(onWin==='stop') setAIState('idle');
-    }
-  } else {
-    AI.losses++;AI.consecLoss++;
-    if(stepEl&&AI.mode==='pioneer'){stepEl.classList.remove('active');stepEl.classList.add('lost');}
-    if(AI.mode==='pioneer'){
-      if(AI.martStep<4){
-        AI.martStep++;
-        const nextStake=calcStake(AI.martStep);
-        const nextType=AI.martStep===1?'OVER2 (first recovery)':'OVER2 (recovery ×'+AI.mult+')';
-        aiLog('❌ LOSS -$'+Math.abs(profit).toFixed(2)+' | Step '+(AI.martStep+1)+': '+nextType+' $'+nextStake.toFixed(2),'danger');
-      } else {
-        aiLog('❌ LOSS at step 5 — sequence exhausted. Circuit breaker.','danger');
-      }
-    } else {
-      const onLoss=document.getElementById('manOnLoss').value;
-      const mult=parseFloat(document.getElementById('cfgMult').value)||3.6;
-      if(onLoss==='martingale'){
-        AI.manCurrentStake=Math.round(AI.manCurrentStake*mult*100)/100;
-        document.getElementById('manStake').value=AI.manCurrentStake.toFixed(2);
-        aiLog('❌ LOSS | Martingale ×'+mult+' → $'+AI.manCurrentStake.toFixed(2),'danger');
-      } else if(onLoss==='stop'){
-        aiLog('❌ LOSS | Stop triggered.','danger');setAIState('idle');
-      } else {
-        aiLog('❌ LOSS | Repeating $'+AI.manCurrentStake.toFixed(2),'danger');
-      }
-    }
-  }
-
-  addTradeLog(AI.activeSym,AI.activeType,AI.activeDigit,stake,profit,won,stepAtResult);
-  updateAIStats();drawEquity();
   document.getElementById('ctStatus').textContent=won?'WON ✅':'LOST ❌';
   document.getElementById('ctStatus').style.color=won?'var(--green)':'var(--red)';
 
-  setTimeout(()=>{
-    document.getElementById('curTrade').classList.remove('active');
-    AI.activeCid=null;
-    if(AI.mode==='pioneer'&&AI.running){
-      if(AI.consecLoss>=5){setAIState('stopped');aiLog('🛑 5 losses — AI stopped.','danger');stopAI();}
-      else{setAIState('scanning');updateLadderUI();}
-    } else if(AI.mode==='manual'){
-      setAIState('idle');
+  if(MAN.running){
+    // ── MANUAL result ──
+    const stepEl=null;
+    if(won){
+      AI.wins++;AI.consecLoss=0;MAN.lossStreak=0;
+      aiLog('✅ [M] WIN +$'+profit.toFixed(2),'success');
+      if(MAN.onWin==='reset'){MAN.currentStake=MAN.origStake;}
+      else if(MAN.onWin==='stop'){addTradeLog(AI.activeSym,AI.activeType,AI.activeDigit,stake,profit,won,'M');updateAIStats();drawEquity();setTimeout(()=>{document.getElementById('curTrade').classList.remove('active');AI.activeCid=null;manualStop();},1200);return;}
+    } else {
+      AI.losses++;AI.consecLoss++;MAN.lossStreak++;
+      if(MAN.onLoss==='martingale'){
+        MAN.currentStake=Math.round(MAN.currentStake*MAN.mult*100)/100;
+        aiLog('❌ [M] LOSS | Martingale ×'+MAN.mult+' → $'+MAN.currentStake.toFixed(2)+'  streak:'+MAN.lossStreak+'/'+MAN.maxLoss,'danger');
+      } else if(MAN.onLoss==='stop'){
+        addTradeLog(AI.activeSym,AI.activeType,AI.activeDigit,stake,profit,won,'M');updateAIStats();drawEquity();setTimeout(()=>{document.getElementById('curTrade').classList.remove('active');AI.activeCid=null;manualStop();},1200);return;
+      } else {
+        aiLog('❌ [M] LOSS | Repeating $'+MAN.currentStake.toFixed(2)+'  streak:'+MAN.lossStreak+'/'+MAN.maxLoss,'danger');
+      }
     }
-  },1200);
+    document.getElementById('manNextStake').textContent='$'+MAN.currentStake.toFixed(2);
+    document.getElementById('manLossCount').textContent='Loss streak: '+MAN.lossStreak;
+    addTradeLog(AI.activeSym,AI.activeType,AI.activeDigit,stake,profit,won,'M');
+    updateAIStats();drawEquity();
+    setTimeout(()=>{
+      document.getElementById('curTrade').classList.remove('active');
+      AI.activeCid=null;
+      if(MAN.running) setTimeout(manFireNext, 600);
+    },1200);
+  } else {
+    // ── PIONEER result ──
+    const stepEl=document.getElementById('lad'+stepAtResult);
+    if(won){
+      AI.wins++;AI.consecLoss=0;
+      if(stepEl){stepEl.classList.remove('active');stepEl.classList.add('won');}
+      aiLog('✅ WIN +$'+profit.toFixed(2)+' at S'+(stepAtResult+1)+' | Reset to S1 DIFFERS','success');
+      AI.martStep=0;
+      setTimeout(()=>{for(let i=0;i<5;i++){const e=document.getElementById('lad'+i);if(e)e.classList.remove('won','lost','active');}updateLadderUI();},1000);
+    } else {
+      AI.losses++;AI.consecLoss++;
+      if(stepEl){stepEl.classList.remove('active');stepEl.classList.add('lost');}
+      if(AI.martStep<4){
+        AI.martStep++;
+        aiLog('❌ LOSS -$'+Math.abs(profit).toFixed(2)+' | S'+(AI.martStep+1)+' OVER2 $'+calcStake(AI.martStep).toFixed(2),'danger');
+      } else {
+        aiLog('❌ LOSS at S5 — sequence done. Circuit breaker.','danger');
+      }
+    }
+    addTradeLog(AI.activeSym,AI.activeType,AI.activeDigit,stake,profit,won,stepAtResult);
+    updateAIStats();drawEquity();
+    setTimeout(()=>{
+      document.getElementById('curTrade').classList.remove('active');
+      AI.activeCid=null;
+      if(AI.running){
+        if(AI.consecLoss>=5){setAIState('stopped');aiLog('🛑 5 losses — AI stopped.','danger');stopAI();}
+        else{setAIState('scanning');updateLadderUI();}
+      }
+    },1200);
+  }
 }
 
 // ══ TRADE LOG ══
@@ -1144,7 +1263,7 @@ function addTradeLog(sym,type,digit,stake,profit,won,step){
   const entry=document.createElement('div');
   entry.className='log-entry '+(won?'win':profit===0?'pending':'loss');
   const pnlCls=profit>0?'pnl-pos':profit<0?'pnl-neg':'pnl-zero';
-  const stepLbl=AI.mode==='manual'?'[M]':(step===0?'DIFF':'OVER2 S'+(step+1));
+  const stepLbl=step==='M'?'[M]':(step===0?'DIFF':'OVER2 S'+(step+1));
   entry.innerHTML=
     '<div>'+now+'</div>'+
     '<div>'+(ix?ix.n:sym)+'</div>'+
@@ -1159,7 +1278,8 @@ function addTradeLog(sym,type,digit,stake,profit,won,step){
 // ══ AI CONTROLS ══
 function startAI(){
   if(!userToken||isGuest){aiLog('⚠ Token required.','danger');return;}
-  if(AI.mode==='manual'){aiLog('ℹ️ Manual mode active — use the FIRE button below. Switch to Pioneer for auto-trading.','info');return;}
+  if(AI.mode==='manual'){aiLog('ℹ️ Switch to Pioneer mode to use START.','info');return;}
+  if(MAN.running){aiLog('⚠ Stop manual first.','warn');return;}
   AI.baseStake=parseFloat(document.getElementById('cfgStake').value)||5;
   AI.mult=parseFloat(document.getElementById('cfgMult').value)||3.6;
   AI.tp=parseFloat(document.getElementById('cfgTP').value)||15;
@@ -1168,35 +1288,31 @@ function startAI(){
   AI.running=true;
   document.getElementById('startBtn').disabled=true;
   document.getElementById('stopBtn').disabled=false;
-  ['cfgStake','cfgMult','cfgTP','cfgSL','cfgIndex','modePioneer','modeManual'].forEach(id=>{
-    const el=document.getElementById(id);if(el)el.disabled=true;
-  });
+  ['cfgStake','cfgMult','cfgTP','cfgSL','cfgIndex','modePioneer','modeManual'].forEach(id=>{const el=document.getElementById(id);if(el)el.disabled=true;});
   updateLadderUI();setAIState('scanning');
   const maxExp=[0,1,2,3,4].reduce((s,i)=>s+calcStake(i),0);
   aiLog('🚀 PIONEER STARTED — Base:$'+AI.baseStake+' Mult:×'+AI.mult+' TP:$'+AI.tp+' SL:$'+AI.sl,'success');
-  aiLog('🎯 Strategy: DIFFERS primary → OVER2 recovery on every loss','info');
-  aiLog('⚠ Max exposure per sequence: $'+maxExp.toFixed(2),'warn');
+  aiLog('⚠ Max exposure: $'+maxExp.toFixed(2),'warn');
 }
-
 function stopAI(){
   AI.running=false;AI.inTrade=false;AI.pendingResult=false;
   clearTimeout(AI.tradeTimer);
   document.getElementById('startBtn').disabled=false;
   document.getElementById('stopBtn').disabled=true;
-  ['cfgStake','cfgMult','cfgTP','cfgSL','cfgIndex','modePioneer','modeManual'].forEach(id=>{
-    const el=document.getElementById(id);if(el)el.disabled=false;
-  });
+  ['cfgStake','cfgMult','cfgTP','cfgSL','cfgIndex','modePioneer','modeManual'].forEach(id=>{const el=document.getElementById(id);if(el)el.disabled=false;});
   if(AI.state!=='stopped')setAIState('idle');
-  aiLog('⏹ AI stopped.','warn');
+  aiLog('⏹ Pioneer stopped.','warn');
 }
-
 function resetAI(){
-  stopAI();
+  stopAI();manualStop();
   AI.wins=0;AI.losses=0;AI.totalPnl=0;AI.sessPnl=0;
   AI.consecLoss=0;AI.martStep=0;AI.activeCid=null;
-  AI.equityPoints=[0];AI.manCurrentStake=AI.manOrigStake;
+  AI.equityPoints=[0];
+  MAN.lossStreak=0;MAN.currentStake=MAN.origStake;
   setAIState('idle');updateAIStats();drawEquity();
   document.getElementById('curTrade').classList.remove('active');
+  document.getElementById('manNextStake').textContent='$'+(MAN.origStake||5).toFixed(2);
+  document.getElementById('manLossCount').textContent='Loss streak: 0';
   document.getElementById('tradeLog').innerHTML=
     '<div class="log-entry log-header"><div>TIME</div><div>INDEX</div><div>TYPE</div><div>STAKE</div><div>RESULT</div><div>P&L</div></div>';
   for(let i=0;i<5;i++){const e=document.getElementById('lad'+i);if(e)e.classList.remove('won','lost','active');}
@@ -1214,9 +1330,12 @@ function updateAIStats(){
   pe.textContent=(AI.totalPnl>=0?'+':'')+AI.totalPnl.toFixed(2);
   pe.style.color=AI.totalPnl>=0?'var(--green)':'var(--red)';
   document.getElementById('astCL').textContent=AI.consecLoss;
-  if(AI.mode==='manual'){
+  if(MAN.running){
+    document.getElementById('astMS').textContent='[M] '+MAN.typeLabel;
+    document.getElementById('astNS').textContent='$'+MAN.currentStake.toFixed(2);
+  } else if(AI.mode==='manual'){
     document.getElementById('astMS').textContent='MANUAL';
-    document.getElementById('astNS').textContent='$'+AI.manCurrentStake.toFixed(2);
+    document.getElementById('astNS').textContent='$'+(MAN.origStake||5).toFixed(2);
   } else {
     document.getElementById('astMS').textContent=(AI.martStep===0?'DIFFERS':'OVER2')+' S'+(AI.martStep+1);
     document.getElementById('astNS').textContent='$'+calcStake(AI.martStep).toFixed(2);
@@ -1227,12 +1346,7 @@ function updateAIStats(){
   document.getElementById('sessPnlSub').textContent=tot+' trades';
   // tick speed
   let bestSym=null,bestScore=0;
-  IDX.forEach(i=>{
-    const s=ST[i.s];
-    if(s.conn&&s.digits.length>10){
-      try{const a=ana(i.s);if(a.score>bestScore){bestScore=a.score;bestSym=i.s;}}catch(e){}
-    }
-  });
+  IDX.forEach(i=>{const s=ST[i.s];if(s.conn&&s.digits.length>10){try{const a=ana(i.s);if(a.score>bestScore){bestScore=a.score;bestSym=i.s;}}catch(e){}}});
   if(bestSym&&ST[bestSym].tickSpeed){
     const spd=ST[bestSym].tickSpeed,el=document.getElementById('astTS');
     const ix=IDX.find(i=>i.s===bestSym);
@@ -1246,17 +1360,12 @@ function updateAIStats(){
 function bdg(r){return '<span class="b '+r.c+'" title="'+r.t+'">'+r.l+'</span>';}
 function ldHTML(sym){
   const d=ST[sym].digits.slice(-10);
-  return '<div class="lds">'+d.map((v,i)=>{
-    const c=i===d.length-1?'n':(v%2===0?'e':'o');
-    return '<div class="ld2 '+c+'">'+v+'</div>';
-  }).join('')+'</div>';
+  return '<div class="lds">'+d.map((v,i)=>{const c=i===d.length-1?'n':(v%2===0?'e':'o');return '<div class="ld2 '+c+'">'+v+'</div>';}).join('')+'</div>';
 }
 function fgHTML(sym){
   const s=ST[sym],tot=s.freq.reduce((a,b)=>a+b,0)||1;
-  return '<div class="fg">'+s.freq.map((f,d)=>{
-    const p=f/tot*100,c=p>13?'hot':p<7&&f>0?'cold':p>11?'warm':'';
-    return '<div class="fc '+c+'" title="d'+d+': '+f+' ('+p.toFixed(1)+'%)">'+d+'<br><span style="font-size:6px">'+Math.round(p)+'%</span></div>';
-  }).join('')+'</div>';
+  return '<div class="fg">'+s.freq.map((f,d)=>{const p=f/tot*100,c=p>13?'hot':p<7&&f>0?'cold':p>11?'warm':'';
+    return '<div class="fc '+c+'" title="d'+d+': '+f+' ('+p.toFixed(1)+'%)">'+d+'<br><span style="font-size:6px">'+Math.round(p)+'%</span></div>';}).join('')+'</div>';
 }
 function vBar(lv){
   const col=lv<35?'var(--green)':lv<65?'var(--yellow)':'var(--red)';
@@ -1265,8 +1374,7 @@ function vBar(lv){
 function initTable(){
   document.getElementById('TB').innerHTML=IDX.map(i=>
     '<tr id="R-'+i.s+'"><td class="L"><div class="iname">'+i.n+'</div><div class="isub">'+i.sub+'</div></td>'+
-    Array(11).fill('<td><div class="sh" style="width:55px;margin:auto"></div></td>').join('')+'</tr>'
-  ).join('');
+    Array(11).fill('<td><div class="sh" style="width:55px;margin:auto"></div></td>').join('')+'</tr>').join('');
 }
 function updateRow(sym){
   const row=document.getElementById('R-'+sym);if(!row)return;
@@ -1285,8 +1393,7 @@ function updateRow(sym){
     '<td><div class="pcell '+dir+'">'+(p?p.toFixed(2):'—')+'</div></td>'+
     '<td>'+vBar(a.vl)+'</td>'+
     '<td><div class="'+msCls+'">'+msIcon+' '+a.ms+'</div><div style="font-size:8px;color:var(--muted);margin-top:1px;">'+(a.isCon?'✓ Digits open':'✗ Wait')+'</div></td>'+
-    '<td>'+ldHTML(sym)+'</td>'+
-    '<td>'+fgHTML(sym)+'</td>'+
+    '<td>'+ldHTML(sym)+'</td><td>'+fgHTML(sym)+'</td>'+
     '<td>'+bdg(a.eo)+'<div style="font-size:7px;color:var(--muted);margin-top:2px;">E:'+a.ep.toFixed(0)+'% O:'+a.op.toFixed(0)+'%</div></td>'+
     '<td>'+bdg(a.o4r)+'<div style="font-size:7px;color:var(--muted);margin-top:2px;">O:'+a.o4.toFixed(0)+'% U:'+a.u5.toFixed(0)+'%</div></td>'+
     '<td>'+bdg(a.o2r)+'<div style="font-size:7px;color:var(--muted);margin-top:2px;">~70%</div></td>'+
@@ -1300,8 +1407,7 @@ function initDC(){
     '<div class="dcard"><div class="dtitle"><span>'+i.n+'</span><span style="font-size:8px;color:var(--muted);font-family:Space Mono,monospace" id="DCS-'+i.s+'">LOADING</span></div>'+
     '<div class="dbars">'+Array(10).fill(0).map((_,d)=>
       '<div class="dbw"><div class="dpct" id="DCP-'+i.s+'-'+d+'">0%</div><div class="dbar" id="DCB-'+i.s+'-'+d+'" style="height:2px;background:var(--accent)"></div><div class="ddig">'+d+'</div></div>'
-    ).join('')+'</div></div>'
-  ).join('');
+    ).join('')+'</div></div>').join('');
 }
 function updateDC(sym){
   const s=ST[sym],tot=s.freq.reduce((a,b)=>a+b,0)||1,mxF=Math.max(...s.freq)||1;
