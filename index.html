@@ -262,7 +262,7 @@ td.L{text-align:left;padding-left:12px;}
 
 <!-- ══════════ LOGIN ══════════ -->
 
-<div id="loginPage">
+<div id="loginPage" style="display:flex;">
   <div class="lcard">
     <div class="llogo"><div class="ldot-big"></div><div class="ltitle">DERIV <span>AI TRADER</span></div></div>
     <div class="lsub">Live analysis + AI trading engine<br>Connect your Deriv account to begin</div>
@@ -289,7 +289,7 @@ td.L{text-align:left;padding-left:12px;}
 
 <!-- ══════════ DASHBOARD ══════════ -->
 
-<div id="dashPage">
+<div id="dashPage" style="display:none;">
 <div class="wrap">
 
   <header>
@@ -482,6 +482,27 @@ td.L{text-align:left;padding-left:12px;}
     <div class="mart-step" id="ms4">5</div>
   </div>
   <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;" id="martStakeDisplay"></div>
+</div>
+
+
+<!-- AI Controls -->
+<div class="ai-controls">
+  <button class="ai-btn start" id="startBtn" onclick="startAI()">▶ START AI</button>
+  <button class="ai-btn stop" id="stopBtn" onclick="stopAI()" disabled>■ STOP AI</button>
+  <button class="ai-btn reset" id="resetBtn" onclick="resetAI()">↺ RESET</button>
+
+</div>
+
+<!-- Session P&L quick bar -->
+<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
+  <div class="ast"><div class="ast-label">Wins</div><div class="ast-val" style="color:var(--green)" id="astW">0</div></div>
+  <div class="ast"><div class="ast-label">Losses</div><div class="ast-val" style="color:var(--red)" id="astL">0</div></div>
+  <div class="ast"><div class="ast-label">Win Rate</div><div class="ast-val" id="astWR">—</div></div>
+  <div class="ast"><div class="ast-label">Total P&L</div><div class="ast-val" id="astPnl">+0.00</div></div>
+  <div class="ast"><div class="ast-label">Streak</div><div class="ast-val" id="astCL" style="color:var(--yellow)">0</div></div>
+  <div class="ast"><div class="ast-label">Current Step</div><div class="ast-val" id="astMS">DIFFERS S1</div></div>
+  <div class="ast"><div class="ast-label">Next Stake</div><div class="ast-val" id="astNS" style="color:var(--accent)">$5.00</div></div>
+  <div class="ast"><div class="ast-label">Tick Speed</div><div class="ast-val" id="astTS">—</div></div>
 </div>
 
 <!-- Current trade -->
