@@ -446,10 +446,11 @@ td.L{text-align:left;padding-left:12px;}
       <div class="cfg-label">BARRIER / DIGIT</div>
       <input class="cfg-input" id="manBarrier" type="number" value="2" min="0" max="9" step="1"/>
       <div style="font-size:8px;color:var(--dim);margin-top:3px;font-family:'Space Mono',monospace">DIFFERS/OVER/UNDER only</div>
+      <div id="manAiDrivenHint" style="display:none;font-size:8px;color:var(--green);margin-top:3px;font-family:'Space Mono',monospace">⚡ AI picks barrier · 15ms speed</div>
     </div>
     <div class="cfg-block">
       <div class="cfg-label">INDEX</div>
-      <select class="cfg-select" id="manIndex">
+      <select class="cfg-select" id="manIndex" onchange="onManContractChange()">
         <option value="AUTO">AUTO (AI picks)</option>
         <option value="R_10">V10</option>
         <option value="R_25">V25</option>
@@ -689,7 +690,7 @@ const IDX=[
 // ══ MARKET STATE ══
 const ST={};
 IDX.forEach(i=>{ST[i.s]={prices:[],digits:[],freq:new Array(10).fill(0),last:null,conn:false,ticks:0,tickTimes:[]};});
-let total=0,ws=null,rtimer=null,userToken=null,isGuest=false,lastTradeTime=0;
+let total=0,ws=null,rtimer=null,userToken=null,isGuest=false,lastTradeTime=0,lastManTradeTime=0;
 
 // ══ AI STATE ══
 const AI={
@@ -712,6 +713,7 @@ const MAN={
   code:'DIGITDIFF', barrier:2, typeLabel:'DIFFER',
   sym:null, mult:3.6,
   onLoss:'repeat', onWin:'reset',
+  aiDriven:false,  // true when DIFFERS uses AI scanner for barrier+market
 };
 
 // ══ SCALPER STATE ══
@@ -833,6 +835,15 @@ function onManContractChange(){
   const code=document.getElementById('manContract').value;
   const needsBarrier=(code==='DIGITDIFF'||code==='DIGITOVER'||code==='DIGITUNDER');
   document.getElementById('manBarrierBlock').style.opacity=needsBarrier?'1':'0.4';
+  // Show AI-driven hint when DIFFERS + AUTO
+  const isAIDriven=(code==='DIGITDIFF');
+  const idxEl=document.getElementById('manIndex');
+  const hintEl=document.getElementById('manAiDrivenHint');
+  if(hintEl&&isAIDriven&&idxEl&&idxEl.value==='AUTO'){
+    hintEl.style.display='block';
+  } else if(hintEl){
+    hintEl.style.display='none';
+  }
   const multEl=document.getElementById('manMult');
   const hint=document.getElementById('manMultHint');
   if(code==='DIGITEVEN'||code==='DIGITODD'){
@@ -988,7 +999,7 @@ function onTick(tk){
   document.getElementById('TT').textContent=total;
   if(AI.running&&AI.mode==='pioneer') aiTick(tk.symbol);
   if(SC.running&&AI.mode==='scalper'&&!AI.inTrade&&!AI.pendingResult&&Date.now()-lastTradeTime>1800) scalperTick();
-  if(MAN.running&&!AI.inTrade&&!AI.pendingResult&&Date.now()-lastTradeTime>1500) manFireNext();
+  if(MAN.running&&!AI.inTrade&&!AI.pendingResult&&Date.now()-lastManTradeTime>(MAN.aiDriven?15:1500)) manFireNext();
 }
 
 // ══ ANALYSIS (exact v3) ══
@@ -1241,6 +1252,8 @@ function manualStart(){
   if(AI.sessPnl<=-Math.abs(sl)){aiLog('🛑 SL reached — reset stats.','warn');return;}
   MAN.code=document.getElementById('manContract').value;
   MAN.barrier=parseInt(document.getElementById('manBarrier').value)||2;
+  // AI-driven mode: DIFFERS + AUTO index — scanner picks market + hot digit at 15ms
+  MAN.aiDriven=(MAN.code==='DIGITDIFF'&&document.getElementById('manIndex').value==='AUTO');
   MAN.origStake=parseFloat(document.getElementById('manStake').value)||5;
   MAN.currentStake=MAN.origStake;
   MAN.mult=parseFloat(document.getElementById('manMult').value)||3.6;
@@ -1256,9 +1269,14 @@ function manualStart(){
   ['manContract','manStake','manBarrier','manIndex','manOnLoss','manMult','manOnWin','manMaxLoss','modePioneer','modeManual','modeScalper']
     .forEach(id=>{const el=document.getElementById(id);if(el)el.disabled=true;});
   setAIState('trading');
-  document.getElementById('manRunning').textContent='▶ RUNNING';
+  document.getElementById('manRunning').textContent=MAN.aiDriven?'▶ AI-DRIVEN':'▶ RUNNING';
   document.getElementById('manRunning').style.color='var(--green)';
-  aiLog('▶ MANUAL: '+MAN.typeLabel+' $'+MAN.origStake.toFixed(2)+' Mult:×'+MAN.mult+' MaxLoss:'+MAN.maxLoss,'success');
+  if(MAN.aiDriven){
+    aiLog('🤖 MANUAL AI-DRIVEN DIFFERS — scanner picks market+barrier at 15ms speed','success');
+    aiLog('ℹ️ Waits for consolidating market · avoids hottest digit · fires at 15ms','info');
+  } else {
+    aiLog('▶ MANUAL: '+MAN.typeLabel+' $'+MAN.origStake.toFixed(2)+' Mult:×'+MAN.mult+' MaxLoss:'+MAN.maxLoss,'success');
+  }
   manFireNext();
 }
 function manualStop(){
@@ -1282,14 +1300,36 @@ function manFireNext(){
   if(MAN.lossStreak>=MAN.maxLoss){aiLog('🛑 Max losses reached.','danger');manualStop();return;}
   document.getElementById('manNextStake').textContent='$'+MAN.currentStake.toFixed(2);
   document.getElementById('manLossCount').textContent='Loss streak: '+MAN.lossStreak;
-  const idxSel=document.getElementById('manIndex').value;
-  let sym;
-  if(idxSel==='AUTO'){const market=findBestMarket();sym=market?market.sym:IDX[3].s;}
-  else sym=idxSel;
+
+  let sym, barrier=MAN.barrier;
+
+  if(MAN.aiDriven){
+    // ── AI-DRIVEN DIFFERS: scanner picks best market + hottest digit live ──
+    const market=findBestMarket();
+    if(!market){
+      // no valid market yet — spin at 15ms until one appears, don't log spam
+      return;
+    }
+    // require consolidating market for DIFFERS
+    if(!market.a.isCon) return;
+    sym=market.sym;
+    barrier=market.a.hotD; // hottest digit = most likely to repeat = best to avoid
+    MAN.barrier=barrier;   // update for result logging
+    const ix=IDX.find(i=>i.s===sym);
+    const hotPct=Math.round(market.a.fr[barrier]/market.a.tot*100);
+    aiLog('🤖 [M] AI DIFFERS d.'+barrier+' ('+hotPct+'% hot) $'+MAN.currentStake.toFixed(2)+' on '+ix.n+' Score:'+market.a.score,'info');
+  } else {
+    // ── MANUAL: use user-set index and barrier ──
+    const idxSel=document.getElementById('manIndex').value;
+    if(idxSel==='AUTO'){const market=findBestMarket();sym=market?market.sym:IDX[3].s;}
+    else sym=idxSel;
+    const ix=IDX.find(i=>i.s===sym);
+    aiLog('✏️ [M] '+MAN.typeLabel+' $'+MAN.currentStake.toFixed(2)+' on '+(ix?ix.n:sym)+' streak:'+MAN.lossStreak,'info');
+  }
+
   MAN.sym=sym;
-  const ix=IDX.find(i=>i.s===sym);
-  aiLog('✏️ [M] '+MAN.typeLabel+' $'+MAN.currentStake.toFixed(2)+' on '+(ix?ix.n:sym)+' streak:'+MAN.lossStreak,'info');
-  placeTrade(sym,MAN.code,MAN.currentStake,MAN.barrier,MAN.typeLabel,'manual');
+  lastManTradeTime=Date.now();
+  placeTrade(sym,MAN.code,MAN.currentStake,barrier,MAN.typeLabel,'manual');
 }
 
 // ══ SCALPER START / STOP ══
