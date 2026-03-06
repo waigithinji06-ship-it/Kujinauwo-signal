@@ -433,7 +433,7 @@ td.L{text-align:left;padding-left:12px;}
         <div class="ct-item"><div class="ct-lbl">INDEX</div><div class="ct-val" id="ctIndex">—</div></div>
         <div class="ct-item"><div class="ct-lbl">CONTRACT</div><div class="ct-val" id="ctContract">—</div></div>
         <div class="ct-item"><div class="ct-lbl">STAKE</div><div class="ct-val" id="ctStake">—</div></div>
-        <div class="ct-item"><div class="ct-lbl">PAYOUT</div><div class="ct-val" id="ctPayout">—</div></div>
+        <div class="ct-item"><div class="ct-lbl">NET PROFIT</div><div class="ct-val" id="ctPayout">—</div></div>
         <div class="ct-item"><div class="ct-lbl">STATUS</div><div class="ct-val" id="ctStatus" style="color:var(--yellow)">—</div></div>
       </div>
       <div style="font-size:8px;color:var(--dim);font-family:'Space Mono',monospace;margin-top:4px;" id="ctDigit"></div>
@@ -691,7 +691,7 @@ const AI={
   wins:0, losses:0, totalPnl:0, sessPnl:0,
   equityPoints:[0],
   activeCid:null, activeSym:null, activeType:null, activeDigit:null,
-  activeSource:null, inTrade:false, pendingResult:false, tradeTimer:null,
+  activeSource:null, inTrade:false, pendingResult:false, tradeTimer:null, lateTimer:null,
 };
 
 // ══ MANUAL STATE ══
@@ -1601,7 +1601,16 @@ function scalperStop(){
 // ══ PLACE TRADE ══
 function placeTrade(sym,code,stake,barrier,typeLabel,source){
   if(!userToken||isGuest){aiLog('⚠ Token required.','danger');setAIState('idle');return;}
-  if(!ws||ws.readyState!==1){aiLog('⚠ WS not connected.','warn');return;}
+  if(!ws||ws.readyState!==1){aiLog('⚠ WS not connected — skipping trade.','warn');return;}
+  // Lag guard: check tick recency — if no tick in last 5s, WS is stale
+  const s=ST[sym];
+  if(s&&s.tickTimes&&s.tickTimes.length>0){
+    const lastTick=s.tickTimes[s.tickTimes.length-1];
+    if(Date.now()-lastTick>5000){
+      aiLog('⚠ '+sym+' feed stale ('+Math.round((Date.now()-lastTick)/1000)+'s) — skipping to avoid lag loss','warn');
+      return;
+    }
+  }
   AI.inTrade=true;AI.activeSym=sym;AI.activeType=typeLabel;AI.activeDigit=barrier;AI.activeSource=source;
   setAIState('trading');
   const ix=IDX.find(i=>i.s===sym);
@@ -1630,10 +1639,27 @@ function placeTrade(sym,code,stake,barrier,typeLabel,source){
   ws.send(JSON.stringify(order));
   AI.tradeTimer=setTimeout(()=>{
     if(AI.pendingResult){
-      aiLog('⚠ Timeout — resetting.','warn');
-      AI.inTrade=false;AI.pendingResult=false;
-      document.getElementById('curTrade').classList.remove('active');
-      setAIState(AI.running||SC.running||MAN.running||TR.running?'scanning':'idle');
+      // Trade timed out — keep contract ID live for 30 more seconds
+      // in case Deriv settles late, so onContract can still catch it
+      aiLog('⚠ Trade taking long — waiting 30s for Deriv result…','warn');
+      // Extended wait: if still pending after 30 more seconds, record as loss
+      AI.lateTimer=setTimeout(()=>{
+        if(AI.pendingResult&&AI.activeCid){
+          const lostStake=parseFloat(document.getElementById('ctStake').textContent.replace('$',''))||0;
+          aiLog('❌ Trade timeout — recording as loss ($'+lostStake.toFixed(2)+')','danger');
+          AI.pendingResult=false;AI.inTrade=false;
+          AI.losses++;AI.consecLoss++;
+          const lostAmt=-lostStake;
+          AI.totalPnl=Math.round((AI.totalPnl+lostAmt)*100)/100;
+          AI.sessPnl=Math.round((AI.sessPnl+lostAmt)*100)/100;
+          AI.equityPoints.push(AI.sessPnl);
+          addTradeLog(AI.activeSym,AI.activeType,'timeout',lostStake,lostAmt,false,'TIMEOUT');
+          AI.activeCid=null;
+          updateAIStats();drawEquity();
+          document.getElementById('curTrade').classList.remove('active');
+          setAIState(AI.running||SC.running||MAN.running||TR.running?'scanning':'idle');
+        }
+      },30000);
     }
   },15000);
 }
@@ -1651,7 +1677,10 @@ function onBuy(msg){
   if(!msg.buy)return;
   AI.activeCid=msg.buy.contract_id;
   document.getElementById('ctId').textContent='#'+AI.activeCid;
-  document.getElementById('ctPayout').textContent='$'+parseFloat(msg.buy.payout||0).toFixed(2);
+  const grossPay=parseFloat(msg.buy.payout||0);
+  const buyPrice=parseFloat(msg.buy.buy_price||stake||0);
+  const estNet=grossPay-buyPrice;
+  document.getElementById('ctPayout').textContent=(estNet>=0?'+':'')+estNet.toFixed(2);
   document.getElementById('ctStatus').textContent='ACTIVE ⚡';
   document.getElementById('ctStatus').style.color='var(--green)';
   aiLog('✅ #'+AI.activeCid+' open — Payout: $'+parseFloat(msg.buy.payout||0).toFixed(2),'success');
@@ -1660,9 +1689,15 @@ function onBuy(msg){
 
 // ══ CONTRACT RESULT ══
 function onContract(poc){
-  if(!poc||poc.contract_id!==AI.activeCid)return;
+  if(!poc)return;
+  // Accept late results if contract matches (even after timeout reset)
+  if(poc.contract_id!==AI.activeCid){
+    // Check if it's a recently timed-out contract we should still record
+    if(!AI.pendingResult||poc.status==='open')return;
+  }
   if(poc.status==='open')return;
   clearTimeout(AI.tradeTimer);
+  clearTimeout(AI.lateTimer);
   const won=poc.is_sold&&poc.profit>0;
   const profit=parseFloat(poc.profit||0);
   const stake=parseFloat(poc.buy_price||0);
@@ -1809,7 +1844,7 @@ function startAI(){
 function stopAI(){
   if(!AI.running)return;
   AI.running=false;AI.inTrade=false;AI.pendingResult=false;
-  clearTimeout(AI.tradeTimer);
+  clearTimeout(AI.tradeTimer);clearTimeout(AI.lateTimer);
   document.getElementById('startBtn').disabled=false;
   document.getElementById('stopBtn').disabled=true;
   ['cfgStake','cfgMult','cfgTP','cfgSL','cfgIndex','modePioneer','modeManual','modeScalper','modeTrend']
