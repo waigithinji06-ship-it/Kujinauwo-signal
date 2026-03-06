@@ -363,6 +363,11 @@ td.L{text-align:left;padding-left:12px;}
       <div class="mode-name">SCALPER</div>
       <div class="mode-desc">OVER2/UNDER7 primary<br>AI picks recovery barrier · 2.1× · 4 steps</div>
     </div>
+    <div class="mode-btn" id="modeTrend" onclick="setMode('trend')">
+      <div class="mode-icon">📈</div>
+      <div class="mode-name">TREND</div>
+      <div class="mode-desc">CALL/PUT · EMA+RSI+Momentum<br>AI barrier · 30% payout · 5 ticks · 3.6×</div>
+    </div>
   </div>
 </div>
 
@@ -577,6 +582,83 @@ td.L{text-align:left;padding-left:12px;}
   </div>
   <div style="font-size:9px;color:var(--dim);font-family:'Space Mono',monospace;text-align:center;">Win at any step → full reset · Loss at step 4 → circuit breaker · Respects TP / SL</div>
 </div>
+
+<!-- TREND PANEL -->
+<div id="trendPanel" style="display:none;margin-bottom:14px;">
+  <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:2px;margin-bottom:10px;">📈 TREND — CALL / PUT · EMA + RSI + MOMENTUM</div>
+
+  <!-- Signal indicators -->
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px;" id="trendSignals">
+    <div class="cfg-block" style="text-align:center;">
+      <div style="font-size:7px;color:var(--muted);font-family:'Space Mono',monospace;margin-bottom:4px;">EMA</div>
+      <div id="trendEma" style="font-size:11px;font-weight:700;color:var(--dim);">—</div>
+    </div>
+    <div class="cfg-block" style="text-align:center;">
+      <div style="font-size:7px;color:var(--muted);font-family:'Space Mono',monospace;margin-bottom:4px;">RSI</div>
+      <div id="trendRsi" style="font-size:11px;font-weight:700;color:var(--dim);">—</div>
+    </div>
+    <div class="cfg-block" style="text-align:center;">
+      <div style="font-size:7px;color:var(--muted);font-family:'Space Mono',monospace;margin-bottom:4px;">MOMENTUM</div>
+      <div id="trendMom" style="font-size:11px;font-weight:700;color:var(--dim);">—</div>
+    </div>
+    <div class="cfg-block" style="text-align:center;">
+      <div style="font-size:7px;color:var(--muted);font-family:'Space Mono',monospace;margin-bottom:4px;">SIGNAL</div>
+      <div id="trendSig" style="font-size:11px;font-weight:700;color:var(--dim);">WAIT</div>
+    </div>
+  </div>
+
+  <!-- 5-step ladder -->
+  <div style="margin-bottom:12px;">
+    <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:2px;margin-bottom:8px;display:flex;justify-content:space-between;">
+      <span>TREND LADDER (3.6×)</span><span id="trendExposure" style="color:var(--red)"></span>
+    </div>
+    <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;">
+      <div class="lad-step over" id="tlad0"><div class="lad-num">STEP 1</div><div class="lad-type" id="tladt0">CALL/PUT</div><div class="lad-stake" id="tlads0">$1.00</div><div class="lad-sub">primary</div></div>
+      <div class="lad-arrow">→</div>
+      <div class="lad-step over" id="tlad1"><div class="lad-num">STEP 2</div><div class="lad-type" id="tladt1">CALL/PUT</div><div class="lad-stake" id="tlads1">$3.60</div><div class="lad-sub">×3.6</div></div>
+      <div class="lad-arrow">→</div>
+      <div class="lad-step over" id="tlad2"><div class="lad-num">STEP 3</div><div class="lad-type" id="tladt2">CALL/PUT</div><div class="lad-stake" id="tlads2">$12.96</div><div class="lad-sub">×3.6²</div></div>
+      <div class="lad-arrow">→</div>
+      <div class="lad-step over" id="tlad3"><div class="lad-num">STEP 4</div><div class="lad-type" id="tladt3">CALL/PUT</div><div class="lad-stake" id="tlads3">$46.66</div><div class="lad-sub">×3.6³</div></div>
+      <div class="lad-arrow">→</div>
+      <div class="lad-step over final" id="tlad4"><div class="lad-num">STEP 5</div><div class="lad-type" id="tladt4">CALL/PUT</div><div class="lad-stake" id="tlads4">$167.96</div><div class="lad-sub">×3.6⁴</div></div>
+    </div>
+  </div>
+
+  <!-- Config -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:10px;">
+    <div class="cfg-block">
+      <div class="cfg-label">BASE STAKE ($)</div>
+      <input class="cfg-input" id="trendStake" type="number" value="1.00" min="0.35" step="0.50" oninput="refreshTrendLadder()"/>
+    </div>
+    <div class="cfg-block">
+      <div class="cfg-label">TICKS DURATION</div>
+      <input class="cfg-input" id="trendTicks" type="number" value="5" min="1" max="10" step="1"/>
+      <div style="font-size:8px;color:var(--dim);margin-top:3px;font-family:'Space Mono',monospace">5 recommended</div>
+    </div>
+    <div class="cfg-block">
+      <div class="cfg-label">TARGET PAYOUT %</div>
+      <input class="cfg-input" id="trendPayout" type="number" value="30" min="10" max="90" step="5"/>
+      <div style="font-size:8px;color:var(--dim);margin-top:3px;font-family:'Space Mono',monospace">AI sets barrier to hit this</div>
+    </div>
+    <div class="cfg-block">
+      <div class="cfg-label">MIN RSI SWING</div>
+      <input class="cfg-input" id="trendRsiThresh" type="number" value="60" min="50" max="80" step="5"/>
+      <div style="font-size:8px;color:var(--dim);margin-top:3px;font-family:'Space Mono',monospace">RSI must exceed this from center</div>
+    </div>
+  </div>
+
+  <!-- Barrier info -->
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 12px;margin-bottom:10px;font-family:'Space Mono',monospace;font-size:9px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;">
+    <span style="color:var(--muted);">BARRIER</span>
+    <span>CALL <span id="trendBarrierCall" style="color:var(--green);font-weight:700;">calculating…</span></span>
+    <span>PUT <span id="trendBarrierPut" style="color:var(--red);font-weight:700;">calculating…</span></span>
+    <span style="color:var(--muted);">STEP <span id="trendStepDisp" style="color:var(--accent);font-weight:700;">1/5</span></span>
+    <span id="trendRunning" style="color:var(--dim);">⏸ IDLE</span>
+  </div>
+  <div style="font-size:9px;color:var(--dim);font-family:'Space Mono',monospace;text-align:center;margin-bottom:6px;">EMA(5/20) + RSI(14) + Momentum must ALL agree · Win → reset · Respects TP/SL</div>
+</div>
+
 <!-- AI Controls -->
 <div class="ai-controls">
   <button class="ai-btn start" id="startBtn" onclick="startAI()">▶ START AI</button>
@@ -694,40 +776,222 @@ let total=0,ws=null,rtimer=null,userToken=null,isGuest=false,lastTradeTime=0,las
 
 // ══ AI STATE ══
 const AI={
-  running:false, state:'idle',
-  mode:'pioneer',
+  running:false, state:'idle', mode:'pioneer',
   baseStake:5, mult:3.6, tp:15, sl:10,
   martStep:0, consecLoss:0,
   wins:0, losses:0, totalPnl:0, sessPnl:0,
   equityPoints:[0],
   activeCid:null, activeSym:null, activeType:null, activeDigit:null,
-  inTrade:false, pendingResult:false,
-  tradeTimer:null,
+  activeSource:null, inTrade:false, pendingResult:false, tradeTimer:null,
 };
 
 // ══ MANUAL STATE ══
 const MAN={
-  running:false,
-  origStake:5, currentStake:5,
+  running:false, origStake:5, currentStake:5,
   lossStreak:0, maxLoss:5,
   code:'DIGITDIFF', barrier:2, typeLabel:'DIFFER',
-  sym:null, mult:3.6,
-  onLoss:'repeat', onWin:'reset',
-  aiDriven:false,  // true when DIFFERS uses AI scanner for barrier+market
+  sym:null, mult:3.6, onLoss:'repeat', onWin:'reset', aiDriven:false,
 };
 
 // ══ SCALPER STATE ══
-const SC={
+const SC={running:false, step:0, baseStake:5, mult:2.1, direction:'OVER', consecLoss:0};
+
+// ══ TREND STATE ══
+const TR={
   running:false,
-  step:0,           // 0-3
-  baseStake:5,
-  mult:2.1,
-  // current sequence direction — set at step 0, held for full sequence
-  direction:'OVER', // 'OVER' or 'UNDER'
-  // barriers: [primary, recovery1, recovery2, recovery3]
-  // AI picks recovery barriers dynamically each step
+  step:0,           // 0-4 martingale step
+  baseStake:1,
+  mult:3.6,
+  ticks:5,
+  targetPayout:30,  // % e.g. 30 = $1 → $1.30
   consecLoss:0,
+  lastDirection:null, // 'CALL' or 'PUT' — held for sequence
 };
+
+// ══ TECHNICAL ANALYSIS FUNCTIONS ══
+
+// EMA calculation
+function calcEMA(prices, period){
+  if(prices.length<period) return null;
+  const k=2/(period+1);
+  let ema=prices.slice(0,period).reduce((a,b)=>a+b,0)/period;
+  for(let i=period;i<prices.length;i++) ema=prices[i]*k+ema*(1-k);
+  return ema;
+}
+
+// RSI calculation (14 period)
+function calcRSI(prices, period=14){
+  if(prices.length<period+1) return null;
+  const slice=prices.slice(-(period+1));
+  let gains=0,losses=0;
+  for(let i=1;i<slice.length;i++){
+    const d=slice[i]-slice[i-1];
+    if(d>0) gains+=d; else losses+=Math.abs(d);
+  }
+  if(losses===0) return 100;
+  const rs=gains/losses;
+  return 100-(100/(1+rs));
+}
+
+// Momentum — compare avg of last 3 vs avg of previous 3
+function calcMomentum(prices){
+  if(prices.length<6) return null;
+  const recent=prices.slice(-3).reduce((a,b)=>a+b,0)/3;
+  const prev=prices.slice(-6,-3).reduce((a,b)=>a+b,0)/3;
+  return recent-prev;
+}
+
+// ══ AI BARRIER CALCULATOR ══
+// Derives barrier offset from index volatility to target ~30% payout
+// Deriv CALL/PUT: negative barrier = price must close above (entry + barrier)
+// To get ~30% payout we need barrier around -0.3 to -1.5× the avg tick range
+// Formula: barrier = -(avgRange × payoutFactor) where payoutFactor tunes payout
+function calcBarrier(sym, targetPayoutPct){
+  const s=ST[sym];
+  if(!s||s.prices.length<20) return{call:'-0.0010',put:'+0.0010'};
+  const pr=s.prices.slice(-20);
+  // average tick-to-tick range
+  let totalRange=0;
+  for(let i=1;i<pr.length;i++) totalRange+=Math.abs(pr[i]-pr[i-1]);
+  const avgRange=totalRange/(pr.length-1);
+  // payout factor: higher offset = harder to win = lower payout
+  // target 30% payout needs offset ~= 1.5× avg range per tick × duration
+  const targetPct=targetPayoutPct/100; // 0.30
+  // empirical: payout ≈ 100% × (1 - offset/(avgRange×ticks))
+  // → offset = avgRange × ticks × (1 - targetPct/1) × 0.6
+  const ticks=parseInt(document.getElementById('trendTicks').value)||5;
+  const offset=Math.max(avgRange*0.5, avgRange*ticks*(1-targetPct)*0.15);
+  // round to 4 decimal places, minimum 0.0001
+  const rounded=Math.max(0.0001, parseFloat(offset.toFixed(4)));
+  return{
+    call:'-'+rounded.toFixed(4),
+    put:'+'+rounded.toFixed(4),
+    raw:rounded
+  };
+}
+
+// ══ TREND ANALYSIS — all three indicators ══
+function trendAna(sym){
+  const s=ST[sym];
+  if(!s||s.prices.length<25) return null;
+  const pr=s.prices;
+
+  const ema5=calcEMA(pr,5);
+  const ema20=calcEMA(pr,20);
+  const rsi=calcRSI(pr,14);
+  const mom=calcMomentum(pr);
+  const rsiThresh=parseFloat(document.getElementById('trendRsiThresh').value)||60;
+
+  if(ema5===null||ema20===null||rsi===null||mom===null) return null;
+
+  // EMA signal
+  const emaDiff=ema5-ema20;
+  const emaSig=emaDiff>0?'CALL':emaDiff<0?'PUT':null;
+
+  // RSI signal — must be pushed away from 50
+  const rsiSig=rsi>(50+rsiThresh/2)?'PUT':rsi<(50-rsiThresh/2)?'CALL':null;
+  // (overbought RSI → expect reversal down → PUT; oversold → CALL)
+
+  // Momentum signal
+  const momSig=mom>0?'CALL':mom<0?'PUT':null;
+
+  // All three must agree
+  let signal=null;
+  if(emaSig&&rsiSig&&momSig&&emaSig===rsiSig&&rsiSig===momSig) signal=emaSig;
+
+  // Strength score
+  const emaStrength=Math.abs(emaDiff/ema20*1000);
+  const rsiStrength=Math.abs(rsi-50);
+  const momStrength=Math.abs(mom/pr[pr.length-1]*10000);
+  const score=Math.min(100, Math.round(emaStrength*10+rsiStrength+momStrength));
+
+  return{ema5,ema20,emaDiff,emaSig,rsi,rsiSig,mom,momSig,signal,score,
+    emaStr:emaStrength.toFixed(2),rsiStr:rsiStrength.toFixed(1),momStr:momStrength.toFixed(2)};
+}
+
+// ══ FIND BEST TREND MARKET ══
+function findTrendMarket(){
+  let best=null, bestScore=0;
+  IDX.forEach(i=>{
+    const s=ST[i.s];
+    if(!s||!s.conn||s.prices.length<25) return;
+    try{
+      const t=trendAna(i.s);
+      if(!t||!t.signal) return;
+      // require all three aligned + minimum score
+      if(t.score>bestScore){bestScore=t.score;best={sym:i.s,t};}
+    }catch(e){}
+  });
+  return best&&best.t.score>=20?best:null;
+}
+
+// ══ TREND LADDER ══
+function calcTrendStake(step){
+  let s=TR.baseStake;
+  for(let i=0;i<step;i++) s=Math.round(s*TR.mult*100)/100;
+  return s;
+}
+function refreshTrendLadder(){
+  TR.baseStake=parseFloat(document.getElementById('trendStake').value)||1;
+  let totalExp=0;
+  for(let i=0;i<5;i++){
+    const stake=calcTrendStake(i); totalExp+=stake;
+    const se=document.getElementById('tlads'+i);
+    if(se) se.textContent='$'+stake.toFixed(2);
+  }
+  const exp=document.getElementById('trendExposure');
+  if(exp) exp.textContent='Max: $'+totalExp.toFixed(2);
+}
+function updateTrendLadderUI(){
+  for(let i=0;i<5;i++){
+    const el=document.getElementById('tlad'+i);if(!el)continue;
+    el.classList.remove('active','won','lost');
+    if(i<TR.step) el.classList.add('lost');
+    else if(i===TR.step&&TR.running) el.classList.add('active');
+  }
+  const sd=document.getElementById('trendStepDisp');
+  if(sd) sd.textContent=(TR.step+1)+'/5';
+}
+
+// ══ UPDATE TREND SIGNAL DISPLAY ══
+function updateTrendDisplay(sym){
+  if(AI.mode!=='trend') return;
+  if(!sym||!ST[sym]||ST[sym].prices.length<25){
+    document.getElementById('trendEma').textContent='—';
+    document.getElementById('trendRsi').textContent='—';
+    document.getElementById('trendMom').textContent='—';
+    document.getElementById('trendSig').textContent='WAIT';
+    return;
+  }
+  try{
+    const t=trendAna(sym);
+    if(!t) return;
+    const eEl=document.getElementById('trendEma');
+    const rEl=document.getElementById('trendRsi');
+    const mEl=document.getElementById('trendMom');
+    const sEl=document.getElementById('trendSig');
+    // EMA
+    eEl.textContent=t.emaSig||'—';
+    eEl.style.color=t.emaSig==='CALL'?'var(--green)':t.emaSig==='PUT'?'var(--red)':'var(--muted)';
+    // RSI
+    rEl.textContent=t.rsiSig?t.rsiSig+' '+t.rsi.toFixed(0):'—';
+    rEl.style.color=t.rsiSig==='CALL'?'var(--green)':t.rsiSig==='PUT'?'var(--red)':'var(--muted)';
+    // Momentum
+    mEl.textContent=t.momSig||'—';
+    mEl.style.color=t.momSig==='CALL'?'var(--green)':t.momSig==='PUT'?'var(--red)':'var(--muted)';
+    // Composite signal
+    if(t.signal){
+      sEl.textContent=t.signal+' ★';
+      sEl.style.color=t.signal==='CALL'?'var(--green)':'var(--red)';
+    } else {
+      sEl.textContent='WAIT';sEl.style.color='var(--muted)';
+    }
+    // Update barriers
+    const barr=calcBarrier(sym, parseFloat(document.getElementById('trendPayout').value)||30);
+    document.getElementById('trendBarrierCall').textContent=barr.call;
+    document.getElementById('trendBarrierPut').textContent=barr.put;
+  }catch(e){}
+}
 
 // ══ PIONEER STAKE CALC ══
 function calcStake(step){
@@ -742,14 +1006,12 @@ function calcScalperStake(step){
   for(let i=0;i<step;i++) s=Math.round(s*SC.mult*100)/100;
   return s;
 }
-
 function refreshScalperLadder(){
   SC.baseStake=parseFloat(document.getElementById('scalperStake').value)||5;
   SC.mult=parseFloat(document.getElementById('scalperMult').value)||2.1;
   let totalExp=0;
   for(let i=0;i<4;i++){
-    const stake=calcScalperStake(i);
-    totalExp+=stake;
+    const stake=calcScalperStake(i); totalExp+=stake;
     const se=document.getElementById('slads'+i);
     if(se) se.textContent='$'+stake.toFixed(2);
   }
@@ -758,11 +1020,9 @@ function refreshScalperLadder(){
   const ns=document.getElementById('scalperNextStake');
   if(ns) ns.textContent='$'+calcScalperStake(SC.step).toFixed(2);
 }
-
 function updateScalperLadderUI(){
   for(let i=0;i<4;i++){
-    const el=document.getElementById('slad'+i);
-    if(!el)continue;
+    const el=document.getElementById('slad'+i);if(!el)continue;
     el.classList.remove('active','won','lost');
     if(i<SC.step) el.classList.add('lost');
     else if(i===SC.step&&SC.running) el.classList.add('active');
@@ -775,18 +1035,21 @@ function updateScalperLadderUI(){
 
 // ══ MODE ══
 function setMode(m){
-  if(AI.running||MAN.running||SC.running)return;
+  if(AI.running||MAN.running||SC.running||TR.running)return;
   AI.mode=m;
-  ['pioneer','manual','scalper'].forEach(x=>{
-    const el=document.getElementById('mode'+x.charAt(0).toUpperCase()+x.slice(1));
-    if(el) el.classList.toggle('active', x===m);
+  ['pioneer','manual','scalper','trend'].forEach(x=>{
+    const id='mode'+x.charAt(0).toUpperCase()+x.slice(1);
+    const el=document.getElementById(id);
+    if(el) el.classList.toggle('active',x===m);
   });
-  document.getElementById('ladderPanel').style.display   = m==='pioneer'?'block':'none';
-  document.getElementById('manualPanel').style.display   = m==='manual' ?'block':'none';
-  document.getElementById('scalperPanel').style.display  = m==='scalper'?'block':'none';
+  document.getElementById('ladderPanel').style.display  =m==='pioneer'?'block':'none';
+  document.getElementById('manualPanel').style.display  =m==='manual' ?'block':'none';
+  document.getElementById('scalperPanel').style.display =m==='scalper'?'block':'none';
+  document.getElementById('trendPanel').style.display   =m==='trend'  ?'block':'none';
   if(m==='pioneer') refreshLadder();
   if(m==='scalper') refreshScalperLadder();
-  aiLog('🔄 Mode: '+(m==='pioneer'?'Pioneer':m==='scalper'?'Scalper':'Manual Feed'),'info');
+  if(m==='trend')   refreshTrendLadder();
+  aiLog('🔄 Mode: '+(m==='pioneer'?'Pioneer':m==='scalper'?'Scalper':m==='trend'?'Trend':'Manual Feed'),'info');
 }
 
 // ══ PIONEER LADDER ══
@@ -795,7 +1058,7 @@ function refreshLadder(){
   const subs=['primary','recovery ×'+AI.mult,'recovery ×'+AI.mult+'²','recovery ×'+AI.mult+'³','recovery ×'+AI.mult+'⁴'];
   let totalExp=0;
   for(let i=0;i<5;i++){
-    const stake=calcStake(i); totalExp+=stake;
+    const stake=calcStake(i);totalExp+=stake;
     const el=document.getElementById('lad'+i);
     if(el){
       el.className='lad-step '+(i===0?'differ':i===4?'over final':'over');
@@ -835,17 +1098,13 @@ function onManContractChange(){
   const code=document.getElementById('manContract').value;
   const needsBarrier=(code==='DIGITDIFF'||code==='DIGITOVER'||code==='DIGITUNDER');
   document.getElementById('manBarrierBlock').style.opacity=needsBarrier?'1':'0.4';
-  // Show AI-driven hint when DIFFERS + AUTO
+  const multEl=document.getElementById('manMult');
+  const hint=document.getElementById('manMultHint');
   const isAIDriven=(code==='DIGITDIFF');
   const idxEl=document.getElementById('manIndex');
   const hintEl=document.getElementById('manAiDrivenHint');
-  if(hintEl&&isAIDriven&&idxEl&&idxEl.value==='AUTO'){
-    hintEl.style.display='block';
-  } else if(hintEl){
-    hintEl.style.display='none';
-  }
-  const multEl=document.getElementById('manMult');
-  const hint=document.getElementById('manMultHint');
+  if(hintEl&&isAIDriven&&idxEl&&idxEl.value==='AUTO'){hintEl.style.display='block';}
+  else if(hintEl){hintEl.style.display='none';}
   if(code==='DIGITEVEN'||code==='DIGITODD'){
     if(multEl.value==='3.6')multEl.value='2.1';
     hint.textContent='~50% probability · 2.1-2.5 recommended';
@@ -867,9 +1126,7 @@ function updateManPreview(){
   const stake=parseFloat(document.getElementById('manStake').value)||5;
   const onLoss=document.getElementById('manOnLoss').value;
   const mult=parseFloat(document.getElementById('manMult').value)||3.6;
-  const next=onLoss==='martingale'&&MAN.lossStreak>0
-    ?Math.round(MAN.currentStake*mult*100)/100
-    :MAN.currentStake||stake;
+  const next=onLoss==='martingale'&&MAN.lossStreak>0?Math.round(MAN.currentStake*mult*100)/100:MAN.currentStake||stake;
   document.getElementById('manNextStake').textContent='$'+next.toFixed(2);
 }
 
@@ -890,7 +1147,7 @@ function doLogin(){
 }
 function doGuest(){isGuest=true;userToken=null;launchDash(null);}
 function doLogout(){
-  stopAI();manualStop();scalperStop();
+  stopAI();manualStop();scalperStop();trendStop();
   if(ws){ws.onclose=null;ws.close();}
   clearTimeout(rtimer);
   userToken=null;isGuest=false;
@@ -947,7 +1204,7 @@ function launchDash(auth){
   }
   AI.baseStake=parseFloat(document.getElementById('cfgStake').value)||5;
   AI.mult=parseFloat(document.getElementById('cfgMult').value)||3.6;
-  initTable();initDC();refreshLadder();refreshScalperLadder();drawEquity();startConn();
+  initTable();initDC();refreshLadder();refreshScalperLadder();refreshTrendLadder();drawEquity();startConn();
 }
 
 // ══ WEBSOCKET ══
@@ -999,7 +1256,10 @@ function onTick(tk){
   document.getElementById('TT').textContent=total;
   if(AI.running&&AI.mode==='pioneer') aiTick(tk.symbol);
   if(SC.running&&AI.mode==='scalper'&&!AI.inTrade&&!AI.pendingResult&&Date.now()-lastTradeTime>1800) scalperTick();
+  if(TR.running&&AI.mode==='trend'&&!AI.inTrade&&!AI.pendingResult&&Date.now()-lastTradeTime>1800) trendTick();
   if(MAN.running&&!AI.inTrade&&!AI.pendingResult&&Date.now()-lastManTradeTime>(MAN.aiDriven?15:1500)) manFireNext();
+  // update trend signal display on each tick
+  if(AI.mode==='trend') updateTrendDisplay(tk.symbol);
 }
 
 // ══ ANALYSIS (exact v3) ══
@@ -1028,7 +1288,7 @@ function ana(sym){
   const o2=[3,4,5,6,7,8,9].reduce((a,d)=>a+(fr[d]||0),0)/tot*100,u7=100-o2;
   const mxF=Math.max(...fr),mnF=Math.min(...fr.filter(f=>f>0))||0;
   const hotD=fr.indexOf(mxF),coldD=fr.indexOf(mnF);
-  // confidence score for AI (0-100) — exact v3
+  // confidence score — exact v3
   let score=0;
   if(isCon) score+=30;
   if(n>=30) score+=10;
@@ -1065,12 +1325,11 @@ function setAIState(state){
   b.className='ai-state-badge '+s.cls;b.textContent=s.txt;
 }
 
-// ══ MARKET FINDER (general) ══
+// ══ MARKET FINDER ══
 function findBestMarket(){
   const tgt=document.getElementById('cfgIndex').value;
   if(tgt!=='AUTO'){
-    const s=ST[tgt];
-    if(!s||!s.conn||s.digits.length<30)return null;
+    const s=ST[tgt];if(!s||!s.conn||s.digits.length<30)return null;
     try{const a=ana(tgt);if(a.score<45)return null;return{sym:tgt,a};}catch(e){return null;}
   }
   let best=null,bestScore=0;
@@ -1082,54 +1341,36 @@ function findBestMarket(){
 }
 
 // ══ SCALPER MARKET FINDER ══
-// Scans all indices, picks highest OVER% or UNDER% above threshold
-// Returns {sym, a, direction:'OVER'|'UNDER', primaryBarrier, primaryPct}
 function findScalperMarket(){
   const bias=document.getElementById('scalperBias').value;
   const thresh=parseFloat(document.getElementById('scalperThresh').value)||65;
-  let best=null, bestPct=0;
+  let best=null,bestPct=0;
   IDX.forEach(i=>{
-    const s=ST[i.s];
-    if(!s||!s.conn||s.digits.length<30)return;
+    const s=ST[i.s];if(!s||!s.conn||s.digits.length<30)return;
     try{
-      const a=ana(i.s);
-      if(!a.isCon)return; // only trade consolidating markets
-      // OVER side — o2 = % of last digits that are 3-9 (over 2)
-      if(bias!=='UNDER'&&a.o2>=thresh){
-        if(a.o2>bestPct){bestPct=a.o2;best={sym:i.s,a,direction:'OVER',primaryBarrier:2,primaryPct:a.o2};}
-      }
-      // UNDER side — u7 = % under 7 (digits 0-6)
-      if(bias!=='OVER'&&a.u7>=thresh){
-        if(a.u7>bestPct){bestPct=a.u7;best={sym:i.s,a,direction:'UNDER',primaryBarrier:7,primaryPct:a.u7};}
-      }
+      const a=ana(i.s);if(!a.isCon)return;
+      if(bias!=='UNDER'&&a.o2>=thresh&&a.o2>bestPct){bestPct=a.o2;best={sym:i.s,a,direction:'OVER',primaryBarrier:2,primaryPct:a.o2};}
+      if(bias!=='OVER'&&a.u7>=thresh&&a.u7>bestPct){bestPct=a.u7;best={sym:i.s,a,direction:'UNDER',primaryBarrier:7,primaryPct:a.u7};}
     }catch(e){}
   });
   return best;
 }
 
-// ══ SCALPER: PICK RECOVERY BARRIER ══
-// AI looks at digit distribution to pick tightest profitable barrier
-// OVER recovery: try OVER3, OVER4 — pick one where % still > 55%
-// UNDER recovery: try UNDER6, UNDER5 — pick one where % still > 55%
-function pickRecoveryBarrier(a, direction){
-  const fr=a.fr, tot=a.tot;
+// ══ SCALPER RECOVERY BARRIER ══
+function pickRecoveryBarrier(a,direction){
+  const fr=a.fr,tot=a.tot;
   if(direction==='OVER'){
-    // over3 = digits 4-9
     const o3=[4,5,6,7,8,9].reduce((s,d)=>s+(fr[d]||0),0)/tot*100;
-    // over4 = digits 5-9
     const o4=[5,6,7,8,9].reduce((s,d)=>s+(fr[d]||0),0)/tot*100;
-    // pick best: prefer tighter if still >55%
     if(o4>=58)return{barrier:4,code:'DIGITOVER',pct:o4,label:'OVER 4'};
     if(o3>=56)return{barrier:3,code:'DIGITOVER',pct:o3,label:'OVER 3'};
-    return{barrier:2,code:'DIGITOVER',pct:a.o2,label:'OVER 2'}; // fallback
+    return{barrier:2,code:'DIGITOVER',pct:a.o2,label:'OVER 2'};
   } else {
-    // under6 = digits 0-5
     const u6=[0,1,2,3,4,5].reduce((s,d)=>s+(fr[d]||0),0)/tot*100;
-    // under5 = digits 0-4
     const u5=[0,1,2,3,4].reduce((s,d)=>s+(fr[d]||0),0)/tot*100;
     if(u5>=58)return{barrier:5,code:'DIGITUNDER',pct:u5,label:'UNDER 5'};
     if(u6>=56)return{barrier:6,code:'DIGITUNDER',pct:u6,label:'UNDER 6'};
-    return{barrier:7,code:'DIGITUNDER',pct:a.u7,label:'UNDER 7'}; // fallback
+    return{barrier:7,code:'DIGITUNDER',pct:a.u7,label:'UNDER 7'};
   }
 }
 
@@ -1167,16 +1408,14 @@ function drawEquity(){
   }
 }
 
-// ══ PIONEER AI TICK ══
+// ══ PIONEER TICK ══
 function aiTick(sym){
   if(!AI.running||AI.inTrade||AI.pendingResult)return;
-  if(AI.martStep>=5||AI.consecLoss>=5){
-    if(AI.state!=='stopped'){setAIState('stopped');aiLog('🛑 CIRCUIT BREAKER: max losses.','danger');stopAI();}return;
-  }
+  if(AI.martStep>=5||AI.consecLoss>=5){if(AI.state!=='stopped'){setAIState('stopped');aiLog('🛑 CIRCUIT BREAKER.','danger');stopAI();}return;}
   const tp=parseFloat(document.getElementById('cfgTP').value)||15;
   const sl=parseFloat(document.getElementById('cfgSL').value)||10;
-  if(AI.sessPnl>=tp){aiLog('🎯 TAKE PROFIT +$'+AI.sessPnl.toFixed(2)+'.','success');stopAI();return;}
-  if(AI.sessPnl<=-Math.abs(sl)){aiLog('🛑 STOP LOSS -$'+Math.abs(AI.sessPnl).toFixed(2)+'.','danger');stopAI();return;}
+  if(AI.sessPnl>=tp){aiLog('🎯 TP +$'+AI.sessPnl.toFixed(2)+'.','success');stopAI();return;}
+  if(AI.sessPnl<=-Math.abs(sl)){aiLog('🛑 SL -$'+Math.abs(AI.sessPnl).toFixed(2)+'.','danger');stopAI();return;}
   if(Date.now()-lastTradeTime<1800)return;
   setAIState('scanning');
   const market=findBestMarket();if(!market)return;
@@ -1184,13 +1423,8 @@ function aiTick(sym){
   const ix=IDX.find(i=>i.s===tradeSym);
   const stake=calcStake(AI.martStep);
   let contractCode,barrierDigit,typeLabel;
-  if(AI.martStep===0){
-    contractCode='DIGITDIFF';barrierDigit=a.hotD;typeLabel='DIFFER';
-    aiLog('🎯 S1 PRIMARY | '+ix.n+' | DIFFERS d.'+barrierDigit+' ('+Math.round(a.fr[barrierDigit]/a.tot*100)+'%) | $'+stake.toFixed(2)+' | Score:'+a.score,'info');
-  } else {
-    contractCode='DIGITOVER';barrierDigit=2;typeLabel='OVER2';
-    aiLog('🔄 S'+(AI.martStep+1)+' RECOVERY | '+ix.n+' | OVER2 | $'+stake.toFixed(2),'warn');
-  }
+  if(AI.martStep===0){contractCode='DIGITDIFF';barrierDigit=a.hotD;typeLabel='DIFFER';aiLog('🎯 S1 | '+ix.n+' | DIFFERS d.'+barrierDigit+' ('+Math.round(a.fr[barrierDigit]/a.tot*100)+'%) | $'+stake.toFixed(2)+' Score:'+a.score,'info');}
+  else{contractCode='DIGITOVER';barrierDigit=2;typeLabel='OVER2';aiLog('🔄 S'+(AI.martStep+1)+' | '+ix.n+' | OVER2 | $'+stake.toFixed(2),'warn');}
   lastTradeTime=Date.now();
   placeTrade(tradeSym,contractCode,stake,barrierDigit,typeLabel,'pioneer');
 }
@@ -1200,60 +1434,97 @@ function scalperTick(){
   if(!SC.running||AI.inTrade||AI.pendingResult)return;
   const tp=parseFloat(document.getElementById('cfgTP').value)||15;
   const sl=parseFloat(document.getElementById('cfgSL').value)||10;
-  if(AI.sessPnl>=tp){aiLog('🎯 TP +$'+AI.sessPnl.toFixed(2)+' — Scalper stopped.','success');scalperStop();return;}
-  if(AI.sessPnl<=-Math.abs(sl)){aiLog('🛑 SL -$'+Math.abs(AI.sessPnl).toFixed(2)+' — Scalper stopped.','danger');scalperStop();return;}
-
+  if(AI.sessPnl>=tp){aiLog('🎯 TP — Scalper stopped.','success');scalperStop();return;}
+  if(AI.sessPnl<=-Math.abs(sl)){aiLog('🛑 SL — Scalper stopped.','danger');scalperStop();return;}
   setAIState('scanning');
   const market=findScalperMarket();
-  if(!market){
-    // update type display while waiting
-    document.getElementById('scalperNextType').textContent='scanning…';
-    return;
-  }
-
+  if(!market){document.getElementById('scalperNextType').textContent='scanning…';return;}
   const{sym,a,direction,primaryBarrier,primaryPct}=market;
   const ix=IDX.find(i=>i.s===sym);
   const stake=calcScalperStake(SC.step);
-
-  let contractCode, barrier, typeLabel;
-
+  let contractCode,barrier,typeLabel;
   if(SC.step===0){
-    // Primary — OVER2 or UNDER7
-    if(direction==='OVER'){
-      contractCode='DIGITOVER';barrier=2;typeLabel='OVER 2';
-    } else {
-      contractCode='DIGITUNDER';barrier=7;typeLabel='UNDER 7';
-    }
-    SC.direction=direction; // lock direction for this sequence
-    aiLog('⚡ SCALPER S1 | '+ix.n+' | '+typeLabel+' ('+primaryPct.toFixed(0)+'%) | $'+stake.toFixed(2),'info');
+    if(direction==='OVER'){contractCode='DIGITOVER';barrier=2;typeLabel='OVER 2';}
+    else{contractCode='DIGITUNDER';barrier=7;typeLabel='UNDER 7';}
+    SC.direction=direction;
+    aiLog('⚡ SC S1 | '+ix.n+' | '+typeLabel+' ('+primaryPct.toFixed(0)+'%) | $'+stake.toFixed(2),'info');
   } else {
-    // Recovery — AI picks barrier
-    const rec=pickRecoveryBarrier(a, SC.direction);
+    const rec=pickRecoveryBarrier(a,SC.direction);
     contractCode=rec.code;barrier=rec.barrier;typeLabel=rec.label;
-    aiLog('🔄 SCALPER S'+(SC.step+1)+' RECOVERY | '+ix.n+' | '+typeLabel+' ('+rec.pct.toFixed(0)+'%) | $'+stake.toFixed(2),'warn');
+    aiLog('🔄 SC S'+(SC.step+1)+' | '+ix.n+' | '+typeLabel+' ('+rec.pct.toFixed(0)+'%) | $'+stake.toFixed(2),'warn');
   }
-
-  // update UI
   document.getElementById('scalperNextType').textContent=typeLabel;
   document.getElementById('sladt'+SC.step).textContent=typeLabel;
-
   lastTradeTime=Date.now();
   placeTrade(sym,contractCode,stake,barrier,typeLabel,'scalper');
+}
+
+// ══ TREND TICK ══
+function trendTick(){
+  if(!TR.running||AI.inTrade||AI.pendingResult)return;
+  const tp=parseFloat(document.getElementById('cfgTP').value)||15;
+  const sl=parseFloat(document.getElementById('cfgSL').value)||10;
+  if(AI.sessPnl>=tp){aiLog('🎯 TP — Trend stopped.','success');trendStop();return;}
+  if(AI.sessPnl<=-Math.abs(sl)){aiLog('🛑 SL — Trend stopped.','danger');trendStop();return;}
+  if(Date.now()-lastTradeTime<1800)return;
+  setAIState('scanning');
+
+  // In a recovery step — stay on same direction, same market if possible
+  let sym=null, direction=null, t=null;
+
+  if(TR.step===0){
+    // Fresh entry — need full 3-way signal agreement
+    const market=findTrendMarket();
+    if(!market)return;
+    sym=market.sym; t=market.t;
+    direction=t.signal; // 'CALL' or 'PUT'
+    TR.lastDirection=direction;
+  } else {
+    // Recovery — keep direction, find any connected market
+    direction=TR.lastDirection;
+    // prefer market with same signal, otherwise use best available
+    const market=findTrendMarket();
+    if(market&&market.t.signal===direction){sym=market.sym;t=market.t;}
+    else{
+      // fallback: use any connected market with enough prices
+      const fallback=IDX.find(i=>ST[i.s].conn&&ST[i.s].prices.length>=25);
+      if(!fallback)return;
+      sym=fallback.s;
+      t=trendAna(sym)||{score:0};
+    }
+  }
+
+  const ix=IDX.find(i=>i.s===sym);
+  const stake=calcTrendStake(TR.step);
+  const targetPayout=parseFloat(document.getElementById('trendPayout').value)||30;
+  const barr=calcBarrier(sym, targetPayout);
+  const isCAll=direction==='CALL';
+  const contractCode=isCAll?'CALL':'PUT';
+  const barrierStr=isCAll?barr.call:barr.put;
+  const typeLabel=direction;
+
+  // update ladder type labels
+  document.getElementById('tladt'+TR.step).textContent=direction;
+
+  aiLog((TR.step===0?'📈':'🔄')+' TR S'+(TR.step+1)+' | '+ix.n+' | '+direction
+    +' barrier:'+barrierStr+' $'+stake.toFixed(2)
+    +(t.score?(' EMA:'+t.emaSig+' RSI:'+t.rsi.toFixed(0)+' Score:'+t.score):''),'info');
+
+  lastTradeTime=Date.now();
+  placeTrade(sym, contractCode, stake, barrierStr, typeLabel, 'trend');
 }
 
 // ══ MANUAL FIRE ══
 function manualStart(){
   if(!userToken||isGuest){aiLog('⚠ Token required.','danger');return;}
   if(!ws||ws.readyState!==1){aiLog('⚠ Not connected.','warn');return;}
-  if(AI.running||SC.running){aiLog('⚠ Stop other mode first.','warn');return;}
+  if(AI.running||SC.running||TR.running){aiLog('⚠ Stop other mode first.','warn');return;}
   const tp=parseFloat(document.getElementById('cfgTP').value)||15;
   const sl=parseFloat(document.getElementById('cfgSL').value)||10;
   if(AI.sessPnl>=tp){aiLog('🎯 TP reached — reset stats.','warn');return;}
   if(AI.sessPnl<=-Math.abs(sl)){aiLog('🛑 SL reached — reset stats.','warn');return;}
   MAN.code=document.getElementById('manContract').value;
   MAN.barrier=parseInt(document.getElementById('manBarrier').value)||2;
-  // AI-driven mode: DIFFERS + AUTO index — scanner picks market + hot digit at 15ms
-  MAN.aiDriven=(MAN.code==='DIGITDIFF'&&document.getElementById('manIndex').value==='AUTO');
   MAN.origStake=parseFloat(document.getElementById('manStake').value)||5;
   MAN.currentStake=MAN.origStake;
   MAN.mult=parseFloat(document.getElementById('manMult').value)||3.6;
@@ -1263,17 +1534,17 @@ function manualStart(){
   MAN.lossStreak=0;
   MAN.typeLabel=MAN.code==='DIGITDIFF'?'DIFFER':MAN.code==='DIGITOVER'?'OVER2':MAN.code==='DIGITUNDER'?'UNDER7':MAN.code==='DIGITEVEN'?'EVEN':'ODD';
   MAN.barrier=(MAN.code==='DIGITEVEN'||MAN.code==='DIGITODD')?0:MAN.barrier;
+  MAN.aiDriven=(MAN.code==='DIGITDIFF'&&document.getElementById('manIndex').value==='AUTO');
   MAN.running=true;
   document.getElementById('manStartBtn').disabled=true;
   document.getElementById('manStopBtn').disabled=false;
-  ['manContract','manStake','manBarrier','manIndex','manOnLoss','manMult','manOnWin','manMaxLoss','modePioneer','modeManual','modeScalper']
+  ['manContract','manStake','manBarrier','manIndex','manOnLoss','manMult','manOnWin','manMaxLoss','modePioneer','modeManual','modeScalper','modeTrend']
     .forEach(id=>{const el=document.getElementById(id);if(el)el.disabled=true;});
   setAIState('trading');
   document.getElementById('manRunning').textContent=MAN.aiDriven?'▶ AI-DRIVEN':'▶ RUNNING';
   document.getElementById('manRunning').style.color='var(--green)';
   if(MAN.aiDriven){
-    aiLog('🤖 MANUAL AI-DRIVEN DIFFERS — scanner picks market+barrier at 15ms speed','success');
-    aiLog('ℹ️ Waits for consolidating market · avoids hottest digit · fires at 15ms','info');
+    aiLog('🤖 MANUAL AI-DRIVEN DIFFERS — 15ms · scanner picks market+barrier','success');
   } else {
     aiLog('▶ MANUAL: '+MAN.typeLabel+' $'+MAN.origStake.toFixed(2)+' Mult:×'+MAN.mult+' MaxLoss:'+MAN.maxLoss,'success');
   }
@@ -1284,9 +1555,9 @@ function manualStop(){
   MAN.running=false;
   document.getElementById('manStartBtn').disabled=false;
   document.getElementById('manStopBtn').disabled=true;
-  ['manContract','manStake','manBarrier','manIndex','manOnLoss','manMult','manOnWin','manMaxLoss','modePioneer','modeManual','modeScalper']
+  ['manContract','manStake','manBarrier','manIndex','manOnLoss','manMult','manOnWin','manMaxLoss','modePioneer','modeManual','modeScalper','modeTrend']
     .forEach(id=>{const el=document.getElementById(id);if(el)el.disabled=false;});
-  if(!AI.running&&!SC.running)setAIState('idle');
+  if(!AI.running&&!SC.running&&!TR.running)setAIState('idle');
   document.getElementById('manRunning').textContent='⏸ IDLE';
   document.getElementById('manRunning').style.color='var(--dim)';
   aiLog('⏹ Manual stopped.','warn');
@@ -1300,43 +1571,71 @@ function manFireNext(){
   if(MAN.lossStreak>=MAN.maxLoss){aiLog('🛑 Max losses reached.','danger');manualStop();return;}
   document.getElementById('manNextStake').textContent='$'+MAN.currentStake.toFixed(2);
   document.getElementById('manLossCount').textContent='Loss streak: '+MAN.lossStreak;
-
-  let sym, barrier=MAN.barrier;
-
+  let sym,barrier=MAN.barrier;
   if(MAN.aiDriven){
-    // ── AI-DRIVEN DIFFERS: scanner picks best market + hottest digit live ──
     const market=findBestMarket();
-    if(!market){
-      // no valid market yet — spin at 15ms until one appears, don't log spam
-      return;
-    }
-    // require consolidating market for DIFFERS
-    if(!market.a.isCon) return;
-    sym=market.sym;
-    barrier=market.a.hotD; // hottest digit = most likely to repeat = best to avoid
-    MAN.barrier=barrier;   // update for result logging
+    if(!market||!market.a.isCon) return;
+    sym=market.sym;barrier=market.a.hotD;MAN.barrier=barrier;
     const ix=IDX.find(i=>i.s===sym);
     const hotPct=Math.round(market.a.fr[barrier]/market.a.tot*100);
     aiLog('🤖 [M] AI DIFFERS d.'+barrier+' ('+hotPct+'% hot) $'+MAN.currentStake.toFixed(2)+' on '+ix.n+' Score:'+market.a.score,'info');
   } else {
-    // ── MANUAL: use user-set index and barrier ──
     const idxSel=document.getElementById('manIndex').value;
     if(idxSel==='AUTO'){const market=findBestMarket();sym=market?market.sym:IDX[3].s;}
     else sym=idxSel;
     const ix=IDX.find(i=>i.s===sym);
     aiLog('✏️ [M] '+MAN.typeLabel+' $'+MAN.currentStake.toFixed(2)+' on '+(ix?ix.n:sym)+' streak:'+MAN.lossStreak,'info');
   }
-
   MAN.sym=sym;
   lastManTradeTime=Date.now();
   placeTrade(sym,MAN.code,MAN.currentStake,barrier,MAN.typeLabel,'manual');
+}
+
+// ══ TREND START / STOP ══
+function trendStart(){
+  if(!userToken||isGuest){aiLog('⚠ Token required.','danger');return;}
+  if(!ws||ws.readyState!==1){aiLog('⚠ Not connected.','warn');return;}
+  if(AI.running||MAN.running||SC.running){aiLog('⚠ Stop other mode first.','warn');return;}
+  const tp=parseFloat(document.getElementById('cfgTP').value)||15;
+  const sl=parseFloat(document.getElementById('cfgSL').value)||10;
+  if(AI.sessPnl>=tp){aiLog('🎯 TP reached — reset stats.','warn');return;}
+  if(AI.sessPnl<=-Math.abs(sl)){aiLog('🛑 SL reached — reset stats.','warn');return;}
+  TR.baseStake=parseFloat(document.getElementById('trendStake').value)||1;
+  TR.ticks=parseInt(document.getElementById('trendTicks').value)||5;
+  TR.targetPayout=parseFloat(document.getElementById('trendPayout').value)||30;
+  TR.step=0;TR.consecLoss=0;TR.lastDirection=null;
+  TR.running=true;
+  refreshTrendLadder();updateTrendLadderUI();
+  document.getElementById('startBtn').disabled=true;
+  document.getElementById('stopBtn').disabled=false;
+  ['trendStake','trendTicks','trendPayout','trendRsiThresh','modePioneer','modeManual','modeScalper','modeTrend']
+    .forEach(id=>{const el=document.getElementById(id);if(el)el.disabled=true;});
+  setAIState('scanning');
+  document.getElementById('trendRunning').textContent='▶ RUNNING';
+  document.getElementById('trendRunning').style.color='var(--green)';
+  const maxExp=[0,1,2,3,4].reduce((s,i)=>s+calcTrendStake(i),0);
+  aiLog('📈 TREND STARTED — Base:$'+TR.baseStake+' Ticks:'+TR.ticks+' TargetPayout:'+TR.targetPayout+'% TP:$'+tp+' SL:$'+sl,'success');
+  aiLog('🔍 Waiting for EMA(5/20) + RSI(14) + Momentum to ALL agree on direction','info');
+  aiLog('⚠ Max exposure: $'+maxExp.toFixed(2),'warn');
+}
+function trendStop(){
+  if(!TR.running)return;
+  TR.running=false;
+  document.getElementById('startBtn').disabled=false;
+  document.getElementById('stopBtn').disabled=true;
+  ['trendStake','trendTicks','trendPayout','trendRsiThresh','modePioneer','modeManual','modeScalper','modeTrend']
+    .forEach(id=>{const el=document.getElementById(id);if(el)el.disabled=false;});
+  if(!AI.running&&!MAN.running&&!SC.running)setAIState('idle');
+  document.getElementById('trendRunning').textContent='⏸ IDLE';
+  document.getElementById('trendRunning').style.color='var(--dim)';
+  aiLog('⏹ Trend stopped.','warn');
 }
 
 // ══ SCALPER START / STOP ══
 function scalperStart(){
   if(!userToken||isGuest){aiLog('⚠ Token required.','danger');return;}
   if(!ws||ws.readyState!==1){aiLog('⚠ Not connected.','warn');return;}
-  if(AI.running||MAN.running){aiLog('⚠ Stop other mode first.','warn');return;}
+  if(AI.running||MAN.running||TR.running){aiLog('⚠ Stop other mode first.','warn');return;}
   SC.baseStake=parseFloat(document.getElementById('scalperStake').value)||5;
   SC.mult=parseFloat(document.getElementById('scalperMult').value)||2.1;
   SC.step=0;SC.consecLoss=0;SC.direction='OVER';
@@ -1348,24 +1647,21 @@ function scalperStart(){
   refreshScalperLadder();updateScalperLadderUI();
   document.getElementById('startBtn').disabled=true;
   document.getElementById('stopBtn').disabled=false;
-  ['scalperStake','scalperMult','scalperBias','scalperThresh','modePioneer','modeManual','modeScalper']
+  ['scalperStake','scalperMult','scalperBias','scalperThresh','modePioneer','modeManual','modeScalper','modeTrend']
     .forEach(id=>{const el=document.getElementById(id);if(el)el.disabled=true;});
   setAIState('scanning');
   document.getElementById('scalperRunning').textContent='▶ RUNNING';
   document.getElementById('scalperRunning').style.color='var(--green)';
-  const maxExp=[0,1,2,3].reduce((s,i)=>s+calcScalperStake(i),0);
-  aiLog('⚡ SCALPER STARTED — Base:$'+SC.baseStake+' Mult:×'+SC.mult+' TP:$'+tp+' SL:$'+sl,'success');
-  aiLog('🔍 Scanning for best OVER/UNDER market above '+document.getElementById('scalperThresh').value+'%','info');
-  aiLog('⚠ Max exposure: $'+maxExp.toFixed(2),'warn');
+  aiLog('⚡ SCALPER STARTED — Base:$'+SC.baseStake+' Mult:×'+SC.mult,'success');
 }
 function scalperStop(){
   if(!SC.running)return;
   SC.running=false;
   document.getElementById('startBtn').disabled=false;
   document.getElementById('stopBtn').disabled=true;
-  ['scalperStake','scalperMult','scalperBias','scalperThresh','modePioneer','modeManual','modeScalper']
+  ['scalperStake','scalperMult','scalperBias','scalperThresh','modePioneer','modeManual','modeScalper','modeTrend']
     .forEach(id=>{const el=document.getElementById(id);if(el)el.disabled=false;});
-  if(!AI.running&&!MAN.running)setAIState('idle');
+  if(!AI.running&&!MAN.running&&!TR.running)setAIState('idle');
   document.getElementById('scalperRunning').textContent='⏸ IDLE';
   document.getElementById('scalperRunning').style.color='var(--dim)';
   aiLog('⏹ Scalper stopped.','warn');
@@ -1375,21 +1671,30 @@ function scalperStop(){
 function placeTrade(sym,code,stake,barrier,typeLabel,source){
   if(!userToken||isGuest){aiLog('⚠ Token required.','danger');setAIState('idle');return;}
   if(!ws||ws.readyState!==1){aiLog('⚠ WS not connected.','warn');return;}
-  AI.inTrade=true;AI.activeSym=sym;AI.activeType=typeLabel;AI.activeDigit=barrier;
-  AI.activeSource=source; // 'pioneer','scalper','manual'
+  AI.inTrade=true;AI.activeSym=sym;AI.activeType=typeLabel;AI.activeDigit=barrier;AI.activeSource=source;
   setAIState('trading');
   const ix=IDX.find(i=>i.s===sym);
   document.getElementById('curTrade').classList.add('active');
-  document.getElementById('ctIndex').textContent=(ix?ix.n:sym)+(source==='manual'?' ✏️':source==='scalper'?' ⚡':' 🤖');
-  document.getElementById('ctContract').textContent=typeLabel+(barrier>0?' d.'+barrier:'');
+  document.getElementById('ctIndex').textContent=(ix?ix.n:sym)+(source==='manual'?' ✏️':source==='trend'?' 📈':source==='scalper'?' ⚡':' 🤖');
+  document.getElementById('ctContract').textContent=typeLabel+(typeof barrier==='number'&&barrier>0?' d.'+barrier:'');
   document.getElementById('ctStake').textContent='$'+stake.toFixed(2);
-  document.getElementById('ctDigit').textContent=typeLabel==='DIFFER'?'Avoid d.'+barrier:typeLabel.includes('OVER')?'Last > '+barrier:typeLabel.includes('UNDER')?'Last < '+barrier:typeLabel;
+  document.getElementById('ctDigit').textContent=
+    typeLabel==='DIFFER'?'Avoid d.'+barrier:
+    typeLabel==='CALL'?'Price UP '+barrier:
+    typeLabel==='PUT'?'Price DOWN '+barrier:
+    typeLabel.includes('OVER')?'Last > '+barrier:
+    typeLabel.includes('UNDER')?'Last < '+barrier:typeLabel;
   document.getElementById('ctId').textContent='Placing…';
   document.getElementById('ctPayout').textContent='—';
   document.getElementById('ctStatus').textContent='SENDING…';
   document.getElementById('ctStatus').style.color='var(--yellow)';
-  const order={buy:1,price:stake,parameters:{amount:stake,basis:'stake',contract_type:code,
-    currency:'USD',duration:1,duration_unit:'t',symbol:sym,barrier:String(barrier)}};
+  // Build order — CALL/PUT use string barrier, digit contracts use numeric
+  const isTrend=(source==='trend');
+  const params={amount:stake,basis:'stake',contract_type:code,currency:'USD',
+    duration:isTrend?TR.ticks:1,duration_unit:isTrend?'t':'t',symbol:sym};
+  if(isTrend){params.barrier=String(barrier);}
+  else{params.barrier=String(barrier);}
+  const order={buy:1,price:stake,parameters:params};
   AI.pendingResult=true;
   ws.send(JSON.stringify(order));
   AI.tradeTimer=setTimeout(()=>{
@@ -1397,7 +1702,7 @@ function placeTrade(sym,code,stake,barrier,typeLabel,source){
       aiLog('⚠ Timeout — resetting.','warn');
       AI.inTrade=false;AI.pendingResult=false;
       document.getElementById('curTrade').classList.remove('active');
-      setAIState(AI.running||SC.running||MAN.running?'scanning':'idle');
+      setAIState(AI.running||SC.running||MAN.running||TR.running?'scanning':'idle');
     }
   },15000);
 }
@@ -1409,8 +1714,8 @@ function onBuy(msg){
     clearTimeout(AI.tradeTimer);
     aiLog('❌ Buy error: '+(msg.error.message||msg.error.code),'danger');
     AI.inTrade=false;AI.pendingResult=false;
-    if(msg.error.code==='InsufficientBalance'){aiLog('🛑 Insufficient balance.','danger');stopAI();scalperStop();manualStop();}
-    setAIState(AI.running||SC.running||MAN.running?'scanning':'idle');return;
+    if(msg.error.code==='InsufficientBalance'){aiLog('🛑 Insufficient balance.','danger');stopAI();scalperStop();manualStop();trendStop();}
+    setAIState(AI.running||SC.running||MAN.running||TR.running?'scanning':'idle');return;
   }
   if(!msg.buy)return;
   AI.activeCid=msg.buy.contract_id;
@@ -1439,32 +1744,53 @@ function onContract(poc){
   document.getElementById('ctStatus').textContent=won?'WON ✅':'LOST ❌';
   document.getElementById('ctStatus').style.color=won?'var(--green)':'var(--red)';
 
-  if(source==='scalper'){
+  if(source==='trend'){
+    const stepEl=document.getElementById('tlad'+TR.step);
+    if(won){
+      AI.wins++;AI.consecLoss=0;TR.consecLoss=0;
+      if(stepEl){stepEl.classList.remove('active');stepEl.classList.add('won');}
+      aiLog('✅ TREND WIN +$'+profit.toFixed(2)+' S'+(TR.step+1)+' '+TR.lastDirection+' | Reset to S1','success');
+      TR.step=0;TR.lastDirection=null;
+      setTimeout(()=>{for(let i=0;i<5;i++){const e=document.getElementById('tlad'+i);if(e)e.classList.remove('won','lost','active');}updateTrendLadderUI();},1000);
+    } else {
+      AI.losses++;AI.consecLoss++;TR.consecLoss++;
+      if(stepEl){stepEl.classList.remove('active');stepEl.classList.add('lost');}
+      if(TR.step<4){
+        TR.step++;
+        aiLog('❌ TREND LOSS -$'+Math.abs(profit).toFixed(2)+' | S'+(TR.step+1)+' '+TR.lastDirection+' $'+calcTrendStake(TR.step).toFixed(2),'danger');
+      } else {
+        aiLog('❌ TREND LOSS S5 — circuit breaker.','danger');
+      }
+    }
+    addTradeLog(AI.activeSym,AI.activeType,AI.activeDigit,stake,profit,won,'TR'+(TR.step+(won?0:0)));
+    updateAIStats();drawEquity();
+    setTimeout(()=>{
+      document.getElementById('curTrade').classList.remove('active');AI.activeCid=null;
+      if(TR.running){
+        if(TR.consecLoss>=5){setAIState('stopped');aiLog('🛑 5 losses — Trend stopped.','danger');trendStop();}
+        else{setAIState('scanning');updateTrendLadderUI();}
+      }
+    },1200);
+
+  } else if(source==='scalper'){
     const stepEl=document.getElementById('slad'+SC.step);
     if(won){
       AI.wins++;AI.consecLoss=0;SC.consecLoss=0;
       if(stepEl){stepEl.classList.remove('active');stepEl.classList.add('won');}
-      aiLog('✅ SCALPER WIN +$'+profit.toFixed(2)+' at S'+(SC.step+1)+' | Reset to S1','success');
+      aiLog('✅ SC WIN +$'+profit.toFixed(2)+' S'+(SC.step+1)+' | Reset','success');
       SC.step=0;
       setTimeout(()=>{for(let i=0;i<4;i++){const e=document.getElementById('slad'+i);if(e)e.classList.remove('won','lost','active');}updateScalperLadderUI();},1000);
     } else {
       AI.losses++;AI.consecLoss++;SC.consecLoss++;
       if(stepEl){stepEl.classList.remove('active');stepEl.classList.add('lost');}
-      if(SC.step<3){
-        SC.step++;
-        aiLog('❌ SCALPER LOSS -$'+Math.abs(profit).toFixed(2)+' | S'+(SC.step+1)+' $'+calcScalperStake(SC.step).toFixed(2)+' AI picks barrier','danger');
-      } else {
-        aiLog('❌ SCALPER LOSS at S4 — circuit breaker.','danger');
-      }
+      if(SC.step<3){SC.step++;aiLog('❌ SC LOSS | S'+(SC.step+1)+' $'+calcScalperStake(SC.step).toFixed(2),'danger');}
+      else aiLog('❌ SC LOSS S4 — circuit breaker.','danger');
     }
-    addTradeLog(AI.activeSym,AI.activeType,AI.activeDigit,stake,profit,won,'SC'+(SC.step+(won?0:-1)+1));
+    addTradeLog(AI.activeSym,AI.activeType,AI.activeDigit,stake,profit,won,'SC'+(SC.step+1));
     updateAIStats();drawEquity();
     setTimeout(()=>{
       document.getElementById('curTrade').classList.remove('active');AI.activeCid=null;
-      if(SC.running){
-        if(SC.consecLoss>=4){setAIState('stopped');aiLog('🛑 4 losses — Scalper stopped.','danger');scalperStop();}
-        else{setAIState('scanning');updateScalperLadderUI();}
-      }
+      if(SC.running){if(SC.consecLoss>=4){setAIState('stopped');aiLog('🛑 4 losses — Scalper stopped.','danger');scalperStop();}else{setAIState('scanning');updateScalperLadderUI();}}
     },1200);
 
   } else if(source==='manual'){
@@ -1475,12 +1801,9 @@ function onContract(poc){
       else if(MAN.onWin==='stop'){addTradeLog(AI.activeSym,AI.activeType,AI.activeDigit,stake,profit,won,'M');updateAIStats();drawEquity();setTimeout(()=>{document.getElementById('curTrade').classList.remove('active');AI.activeCid=null;manualStop();},1200);return;}
     } else {
       AI.losses++;AI.consecLoss++;MAN.lossStreak++;
-      if(MAN.onLoss==='martingale'){
-        MAN.currentStake=Math.round(MAN.currentStake*MAN.mult*100)/100;
-        aiLog('❌ [M] LOSS | ×'+MAN.mult+' → $'+MAN.currentStake.toFixed(2)+' streak:'+MAN.lossStreak,'danger');
-      } else if(MAN.onLoss==='stop'){
-        addTradeLog(AI.activeSym,AI.activeType,AI.activeDigit,stake,profit,won,'M');updateAIStats();drawEquity();setTimeout(()=>{document.getElementById('curTrade').classList.remove('active');AI.activeCid=null;manualStop();},1200);return;
-      } else aiLog('❌ [M] LOSS | repeat $'+MAN.currentStake.toFixed(2)+' streak:'+MAN.lossStreak,'danger');
+      if(MAN.onLoss==='martingale'){MAN.currentStake=Math.round(MAN.currentStake*MAN.mult*100)/100;aiLog('❌ [M] LOSS | ×'+MAN.mult+' → $'+MAN.currentStake.toFixed(2)+' streak:'+MAN.lossStreak,'danger');}
+      else if(MAN.onLoss==='stop'){addTradeLog(AI.activeSym,AI.activeType,AI.activeDigit,stake,profit,won,'M');updateAIStats();drawEquity();setTimeout(()=>{document.getElementById('curTrade').classList.remove('active');AI.activeCid=null;manualStop();},1200);return;}
+      else aiLog('❌ [M] LOSS | repeat $'+MAN.currentStake.toFixed(2)+' streak:'+MAN.lossStreak,'danger');
     }
     document.getElementById('manNextStake').textContent='$'+MAN.currentStake.toFixed(2);
     document.getElementById('manLossCount').textContent='Loss streak: '+MAN.lossStreak;
@@ -1494,7 +1817,7 @@ function onContract(poc){
     if(won){
       AI.wins++;AI.consecLoss=0;
       if(stepEl){stepEl.classList.remove('active');stepEl.classList.add('won');}
-      aiLog('✅ WIN +$'+profit.toFixed(2)+' S'+(AI.martStep+1)+' | Reset to S1 DIFFERS','success');
+      aiLog('✅ WIN +$'+profit.toFixed(2)+' S'+(AI.martStep+1)+' | Reset to S1','success');
       AI.martStep=0;
       setTimeout(()=>{for(let i=0;i<5;i++){const e=document.getElementById('lad'+i);if(e)e.classList.remove('won','lost','active');}updateLadderUI();},1000);
     } else {
@@ -1503,7 +1826,7 @@ function onContract(poc){
       if(AI.martStep<4){AI.martStep++;aiLog('❌ LOSS S'+(AI.martStep+1)+' OVER2 $'+calcStake(AI.martStep).toFixed(2),'danger');}
       else aiLog('❌ LOSS S5 — circuit breaker.','danger');
     }
-    addTradeLog(AI.activeSym,AI.activeType,AI.activeDigit,stake,profit,won,AI.martStep-(won?0:0));
+    addTradeLog(AI.activeSym,AI.activeType,AI.activeDigit,stake,profit,won,AI.martStep);
     updateAIStats();drawEquity();
     setTimeout(()=>{
       document.getElementById('curTrade').classList.remove('active');AI.activeCid=null;
@@ -1533,7 +1856,8 @@ function startAI(){
   if(!userToken||isGuest){aiLog('⚠ Token required.','danger');return;}
   if(AI.mode==='manual'){aiLog('ℹ️ Use START MANUAL button.','info');return;}
   if(AI.mode==='scalper'){scalperStart();return;}
-  if(MAN.running||SC.running){aiLog('⚠ Stop other mode first.','warn');return;}
+  if(AI.mode==='trend'){trendStart();return;}
+  if(MAN.running||SC.running||TR.running){aiLog('⚠ Stop other mode first.','warn');return;}
   AI.baseStake=parseFloat(document.getElementById('cfgStake').value)||5;
   AI.mult=parseFloat(document.getElementById('cfgMult').value)||3.6;
   AI.tp=parseFloat(document.getElementById('cfgTP').value)||15;
@@ -1541,7 +1865,7 @@ function startAI(){
   refreshLadder();AI.running=true;
   document.getElementById('startBtn').disabled=true;
   document.getElementById('stopBtn').disabled=false;
-  ['cfgStake','cfgMult','cfgTP','cfgSL','cfgIndex','modePioneer','modeManual','modeScalper']
+  ['cfgStake','cfgMult','cfgTP','cfgSL','cfgIndex','modePioneer','modeManual','modeScalper','modeTrend']
     .forEach(id=>{const el=document.getElementById(id);if(el)el.disabled=true;});
   updateLadderUI();setAIState('scanning');
   aiLog('🚀 PIONEER STARTED — Base:$'+AI.baseStake+' Mult:×'+AI.mult+' TP:$'+AI.tp+' SL:$'+AI.sl,'success');
@@ -1553,17 +1877,18 @@ function stopAI(){
   clearTimeout(AI.tradeTimer);
   document.getElementById('startBtn').disabled=false;
   document.getElementById('stopBtn').disabled=true;
-  ['cfgStake','cfgMult','cfgTP','cfgSL','cfgIndex','modePioneer','modeManual','modeScalper']
+  ['cfgStake','cfgMult','cfgTP','cfgSL','cfgIndex','modePioneer','modeManual','modeScalper','modeTrend']
     .forEach(id=>{const el=document.getElementById(id);if(el)el.disabled=false;});
   if(AI.state!=='stopped')setAIState('idle');
   aiLog('⏹ Pioneer stopped.','warn');
 }
 function resetAI(){
-  stopAI();manualStop();scalperStop();
+  stopAI();manualStop();scalperStop();trendStop();
   AI.wins=0;AI.losses=0;AI.totalPnl=0;AI.sessPnl=0;
   AI.consecLoss=0;AI.martStep=0;AI.activeCid=null;AI.equityPoints=[0];
   MAN.lossStreak=0;MAN.currentStake=MAN.origStake;
   SC.step=0;SC.consecLoss=0;
+  TR.step=0;TR.consecLoss=0;TR.lastDirection=null;
   setAIState('idle');updateAIStats();drawEquity();
   document.getElementById('curTrade').classList.remove('active');
   document.getElementById('manNextStake').textContent='$'+(MAN.origStake||5).toFixed(2);
@@ -1572,7 +1897,8 @@ function resetAI(){
     '<div class="log-entry log-header"><div>TIME</div><div>INDEX</div><div>TYPE</div><div>STAKE</div><div>RESULT</div><div>P&L</div></div>';
   for(let i=0;i<5;i++){const e=document.getElementById('lad'+i);if(e)e.classList.remove('won','lost','active');}
   for(let i=0;i<4;i++){const e=document.getElementById('slad'+i);if(e)e.classList.remove('won','lost','active');}
-  refreshLadder();refreshScalperLadder();
+  for(let i=0;i<5;i++){const e=document.getElementById('tlad'+i);if(e)e.classList.remove('won','lost','active');}
+  refreshLadder();refreshScalperLadder();refreshTrendLadder();
   aiLog('↺ Stats reset. Ready.','info');
 }
 
@@ -1586,16 +1912,10 @@ function updateAIStats(){
   pe.textContent=(AI.totalPnl>=0?'+':'')+AI.totalPnl.toFixed(2);
   pe.style.color=AI.totalPnl>=0?'var(--green)':'var(--red)';
   document.getElementById('astCL').textContent=AI.consecLoss;
-  if(SC.running){
-    document.getElementById('astMS').textContent='[⚡] '+SC.direction+' S'+(SC.step+1);
-    document.getElementById('astNS').textContent='$'+calcScalperStake(SC.step).toFixed(2);
-  } else if(MAN.running){
-    document.getElementById('astMS').textContent='[M] '+MAN.typeLabel;
-    document.getElementById('astNS').textContent='$'+MAN.currentStake.toFixed(2);
-  } else {
-    document.getElementById('astMS').textContent=(AI.martStep===0?'DIFFERS':'OVER2')+' S'+(AI.martStep+1);
-    document.getElementById('astNS').textContent='$'+calcStake(AI.martStep).toFixed(2);
-  }
+  if(TR.running){document.getElementById('astMS').textContent='[📈] '+(TR.lastDirection||'SCAN')+' S'+(TR.step+1);document.getElementById('astNS').textContent='$'+calcTrendStake(TR.step).toFixed(2);}
+  else if(SC.running){document.getElementById('astMS').textContent='[⚡] '+SC.direction+' S'+(SC.step+1);document.getElementById('astNS').textContent='$'+calcScalperStake(SC.step).toFixed(2);}
+  else if(MAN.running){document.getElementById('astMS').textContent='[M] '+MAN.typeLabel;document.getElementById('astNS').textContent='$'+MAN.currentStake.toFixed(2);}
+  else{document.getElementById('astMS').textContent=(AI.martStep===0?'DIFFERS':'OVER2')+' S'+(AI.martStep+1);document.getElementById('astNS').textContent='$'+calcStake(AI.martStep).toFixed(2);}
   const sp=document.getElementById('sessPnl');
   sp.textContent=(AI.sessPnl>=0?'+':'')+AI.sessPnl.toFixed(2);
   sp.style.color=AI.sessPnl>=0?'var(--green)':'var(--red)';
