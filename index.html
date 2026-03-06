@@ -3,8 +3,10 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Deriv AI Trader v7</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<title>Deriv AI Trader</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap');
 :root{--bg:#07090f;--surface:#0e1117;--card:#131720;--border:#1e2535;--accent:#00ffc8;--accent2:#ff6b35;--blue:#4d9fff;--purple:#b06aff;--yellow:#ffd60a;--red:#ff3d5a;--green:#00e676;--dim:#4a5568;--text:#e2e8f0;--muted:#8892a4;}
@@ -255,504 +257,411 @@ td.L{text-align:left;padding-left:12px;}
 .mode-btn.active .mode-name{color:var(–accent);}
 .mode-desc{font-size:8px;color:var(–muted);font-family:‘Space Mono’,monospace;line-height:1.5;}
 .lad-sub{font-family:‘Space Mono’,monospace;font-size:6px;color:var(–dim);margin-top:2px;}
+
+/* ── PAGE SYSTEM ── */
+.page{display:none;flex-direction:column;height:100dvh;overflow:hidden;}
+.page.active{display:flex;}
+
+/* ── BOTTOM NAV ── */
+.bnav{display:flex;background:var(–surface);border-top:1px solid var(–border);flex-shrink:0;z-index:50;}
+.bntab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 4px 12px;cursor:pointer;border:none;background:none;color:var(–muted);font-family:‘Space Mono’,monospace;font-size:7px;letter-spacing:1px;gap:4px;transition:color .2s;}
+.bntab .bni{font-size:20px;line-height:1;}
+.bntab.active{color:var(–accent);}
+.bntab.active .bni{filter:drop-shadow(0 0 6px var(–accent));}
+
+/* ── PAGE SCROLL AREA ── */
+.pscroll{flex:1;overflow-y:auto;padding:14px 14px 0;}
+.pscroll::-webkit-scrollbar{width:3px;}
+.pscroll::-webkit-scrollbar-thumb{background:var(–border);}
+
+/* ── AI PAGE HEADER (stats + equity always visible) ── */
+.ai-header{flex-shrink:0;padding:10px 14px 0;background:var(–bg);}
+
+/* ── MODE SELECTOR ROW ── */
+.mode-row{display:flex;gap:6px;overflow-x:auto;padding:10px 14px 2px;flex-shrink:0;}
+.mode-row::-webkit-scrollbar{display:none;}
+.mchip{flex-shrink:0;display:flex;align-items:center;gap:6px;padding:7px 12px;border-radius:20px;border:1px solid var(–border);background:var(–surface);color:var(–muted);font-family:‘Space Mono’,monospace;font-size:8px;letter-spacing:1px;cursor:pointer;transition:all .2s;}
+.mchip .mci{font-size:14px;}
+.mchip.active{border-color:var(–accent);color:var(–accent);background:rgba(176,106,255,.1);}
+
+/* ── MODE SUBPAGE ── */
+.mpage{display:none;flex:1;overflow-y:auto;padding:10px 14px 14px;}
+.mpage.active{display:block;}
+.mpage::-webkit-scrollbar{width:3px;}
+.mpage::-webkit-scrollbar-thumb{background:var(–border);}
+
+/* ── COMPACT STAT ROW ── */
+.cstat-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;}
+.cstat{background:var(–surface);border:1px solid var(–border);border-radius:8px;padding:6px 10px;flex:1;min-width:60px;}
+.cstat-l{font-size:7px;color:var(–muted);font-family:‘Space Mono’,monospace;letter-spacing:1px;margin-bottom:2px;}
+.cstat-v{font-size:13px;font-weight:700;font-family:‘Space Mono’,monospace;color:var(–text);}
+
+/* ── CURRENT TRADE COMPACT ── */
+.ct-compact{background:var(–surface);border:1px solid var(–border);border-radius:10px;padding:10px 12px;margin-bottom:8px;display:none;}
+.ct-compact.active{display:block;}
+.ct-row{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;}
+.ct-item{display:flex;flex-direction:column;gap:2px;}
+.ct-lbl{font-size:7px;color:var(–muted);font-family:‘Space Mono’,monospace;letter-spacing:1px;}
+.ct-val{font-size:11px;font-weight:700;font-family:‘Space Mono’,monospace;}
+
+/* ── ANALYSIS PAGE ── */
+.ana-header{display:flex;justify-content:space-between;align-items:center;padding:12px 14px 8px;flex-shrink:0;}
+.ana-title{font-size:10px;color:var(–muted);font-family:‘Space Mono’,monospace;letter-spacing:2px;}
+
+/* ── ACCOUNT PAGE ── */
+.acct-section{background:var(–surface);border:1px solid var(–border);border-radius:12px;padding:14px;margin-bottom:12px;}
+.acct-section-title{font-size:8px;color:var(–muted);font-family:‘Space Mono’,monospace;letter-spacing:2px;margin-bottom:10px;}
+
+/* ── MODE SECTION LABEL ── */
+.msec-label{font-size:9px;color:var(–muted);font-family:‘Space Mono’,monospace;letter-spacing:2px;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(–border);}
 </style>
 
-</head>
 <body>
 
-<!-- ══════════ LOGIN ══════════ -->
+<!-- ════════════════════════════════
+     PAGE 0 — LOGIN
+════════════════════════════════ -->
 
-<div id="loginPage" style="display:flex;">
-  <div class="lcard">
-    <div class="llogo"><div class="ldot-big"></div><div class="ltitle">DERIV <span>AI TRADER</span></div></div>
-    <div class="lsub">Live analysis + AI trading engine<br>Connect your Deriv account to begin</div>
-    <div class="lerr" id="loginErr"></div>
-    <div class="steps">
-      <div class="st">How to get your API token</div>
-      <div class="step"><div class="snum">1</div><div class="stxt">Go to <strong>app.deriv.com</strong> → Account Settings</div></div>
-      <div class="step"><div class="snum">2</div><div class="stxt">Click <strong>API Token</strong> in the left menu</div></div>
-      <div class="step"><div class="snum">3</div><div class="stxt">Create token with <strong>Read + Trade</strong> scope for AI trading</div></div>
-      <div class="step"><div class="snum">4</div><div class="stxt">Copy and paste your token below</div></div>
+<div id="pgLogin" class="page active" style="align-items:center;justify-content:center;background:#07090f;position:fixed;inset:0;z-index:9999;">
+  <div style="width:100%;max-width:420px;padding:24px;">
+    <div style="text-align:center;margin-bottom:32px;">
+      <div style="font-size:28px;font-weight:700;font-family:'Space Mono',monospace;color:var(--text);letter-spacing:-1px;">DERIV AI<br>TRADER</div>
+      <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:3px;margin-top:6px;">LIVE ANALYSIS + AI ENGINE</div>
     </div>
-    <div class="flabel"><span>▸</span> DERIV API TOKEN</div>
-    <div class="tinwrap">
-      <input type="password" class="tin" id="tokenInput" placeholder="Paste your API token here…" autocomplete="off" spellcheck="false"/>
-      <button class="tvis" id="toggleVis">👁</button>
-    </div>
-    <div class="thint">Token is sent only to Deriv's WebSocket API. Never stored anywhere. <a href="https://app.deriv.com/account/api-token" target="_blank">Get token →</a></div>
-    <button class="lbtn" id="loginBtn" onclick="doLogin()">CONNECT TO DERIV</button>
-    <div class="div">or</div>
-    <button class="gbtn" onclick="doGuest()">Continue without token (analysis only)</button>
-    <div class="lfooter">Token never stored · AI trades only with valid token · Use demo account first</div>
-  </div>
-</div>
-
-<!-- ══════════ DASHBOARD ══════════ -->
-
-<div id="dashPage" style="display:none;visibility:hidden;">
-<div class="wrap">
-
-  <header>
-    <div class="logo">
-      <div class="dot" id="LD"></div>
-      <div>
-        <h1>DERIV <span>AI TRADER</span></h1>
-        <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;margin-top:2px;">Live Analysis + Autonomous Trading Engine</div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;">
+      <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:2px;margin-bottom:16px;">HOW TO GET YOUR API TOKEN</div>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px;">
+        <div style="display:flex;align-items:flex-start;gap:10px;"><div style="width:22px;height:22px;border-radius:50%;background:var(--accent);color:#000;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">1</div><div style="font-size:12px;color:var(--text-dim);">Go to <strong style="color:var(--accent)">app.deriv.com</strong> → Account Settings</div></div>
+        <div style="display:flex;align-items:flex-start;gap:10px;"><div style="width:22px;height:22px;border-radius:50%;background:var(--accent);color:#000;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">2</div><div style="font-size:12px;color:var(--text-dim);">Click <strong>API Token</strong> in the left menu</div></div>
+        <div style="display:flex;align-items:flex-start;gap:10px;"><div style="width:22px;height:22px;border-radius:50%;background:var(--accent);color:#000;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">3</div><div style="font-size:12px;color:var(--text-dim);">Create token with <strong>Read + Trade</strong> scope</div></div>
+        <div style="display:flex;align-items:flex-start;gap:10px;"><div style="width:22px;height:22px;border-radius:50%;background:var(--accent);color:#000;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">4</div><div style="font-size:12px;color:var(--text-dim);">Copy and paste your token below</div></div>
       </div>
-    </div>
-    <div class="sbar">
-      <div class="pill"><div class="cdot" id="CD"></div><span id="CL">CONNECTING</span></div>
-      <div class="pill">UTC <span id="CLK">--:--:--</span></div>
-      <div class="pill">TICKS <span id="TT">0</span></div>
-      <div class="abadge" id="acctBadge" style="display:none">
-        <div class="aavatar" id="acctAvatar">?</div>
-        <div><div id="acctName" style="font-weight:700">Loading…</div><div id="acctId" style="font-size:8px;color:var(--muted)"></div></div>
+      <div style="position:relative;margin-bottom:12px;">
+        <input id="tokenInput" type="password" placeholder="Paste your API token here…" style="width:100%;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 44px 14px 16px;color:var(--text);font-size:13px;font-family:'Inter',sans-serif;box-sizing:border-box;outline:none;"/>
+        <button id="toggleVis" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:16px;color:var(--muted);">👁</button>
       </div>
-      <button class="lgout" onclick="doLogout()">LOGOUT</button>
+      <div id="loginErr" style="display:none;color:var(--red);font-size:11px;font-family:'Space Mono',monospace;margin-bottom:10px;padding:8px 12px;background:rgba(255,61,90,.1);border-radius:8px;"></div>
+      <div style="font-size:9px;color:var(--dim);font-family:'Space Mono',monospace;margin-bottom:14px;text-align:center;">Token sent only to Deriv's WebSocket API · Never stored</div>
+      <button id="loginBtn" onclick="doLogin()" style="width:100%;padding:14px;background:var(--accent);color:#000;border:none;border-radius:10px;font-size:13px;font-weight:700;font-family:'Space Mono',monospace;cursor:pointer;letter-spacing:1px;margin-bottom:10px;">CONNECT TO DERIV</button>
+      <div style="text-align:center;font-size:11px;color:var(--muted);margin-bottom:10px;">or</div>
+      <button onclick="doGuest()" style="width:100%;padding:12px;background:transparent;color:var(--accent);border:1px solid var(--accent);border-radius:10px;font-size:12px;font-weight:700;font-family:'Space Mono',monospace;cursor:pointer;">Continue without token (analysis only)</button>
     </div>
-  </header>
-
-  <!-- Balance row -->
-
-  <div id="balRow" style="display:none">
-    <div class="stitle">Account Overview</div>
-    <div class="bal-row">
-      <div class="bal-card"><div class="bal-label">Balance</div><div class="bal-val" id="balVal">—</div><div class="bal-sub" id="balCur">—</div></div>
-      <div class="bal-card" style="background:rgba(255,214,10,.04);border-color:rgba(255,214,10,.14)"><div class="bal-label">Account</div><div class="bal-val" style="color:var(--yellow);font-size:14px" id="balAcct">—</div><div class="bal-sub" id="balType">—</div></div>
-      <div class="bal-card" style="background:rgba(77,159,255,.04);border-color:rgba(77,159,255,.14)"><div class="bal-label">Session P&L</div><div class="bal-val" id="sessPnl" style="color:var(--accent)">+0.00</div><div class="bal-sub" id="sessPnlSub">0 trades</div></div>
-    </div>
-  </div>
-
-  <div class="err" id="ERR"></div>
-
-  <!-- ══ AI TRADING PANEL ══ -->
-
-  <div class="stitle">AI Trading Engine</div>
-  <div class="ai-panel">
-    <div class="ai-header">
-      <div class="ai-title-row">
-        <div class="ai-icon">🤖</div>
-        <div>
-          <div class="ai-title">AI <span>AUTO TRADER</span></div>
-          <div class="ai-subtitle">Pioneer Strategy: DIFFERS + OVER2 Recovery · Manual Feed · 3.6× Martingale</div>
-        </div>
-      </div>
-      <div class="ai-status">
-        <div class="ai-state-badge idle" id="aiStateBadge">⏸ IDLE</div>
-      </div>
-    </div>
-
-```
-<!-- Configuration -->
-<!-- MODE SELECTOR -->
-<div style="margin-bottom:14px;">
-  <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:2px;margin-bottom:8px;">SELECT MODE</div>
-  <div style="display:flex;gap:8px;flex-wrap:wrap;">
-    <div class="mode-btn active" id="modePioneer" onclick="setMode('pioneer')">
-      <div class="mode-icon">🚀</div>
-      <div class="mode-name">PIONEER STRATEGY</div>
-      <div class="mode-desc">DIFFERS primary · OVER2 recovery<br>3.6× martingale · AI auto-trades</div>
-    </div>
-    <div class="mode-btn" id="modeManual" onclick="setMode('manual')">
-      <div class="mode-icon">✏️</div>
-      <div class="mode-name">MANUAL FEED</div>
-      <div class="mode-desc">You pick contract + stake<br>AI executes on your signal</div>
-    </div>
-    <div class="mode-btn" id="modeScalper" onclick="setMode('scalper')">
-      <div class="mode-icon">⚡</div>
-      <div class="mode-name">SCALPER</div>
-      <div class="mode-desc">OVER2/UNDER7 primary<br>AI picks recovery barrier · 2.1× · 4 steps</div>
-    </div>
-    <div class="mode-btn" id="modeTrend" onclick="setMode('trend')">
-      <div class="mode-icon">📈</div>
-      <div class="mode-name">TREND</div>
-      <div class="mode-desc">CALL/PUT · EMA+RSI+Momentum<br>AI barrier · 30% payout · 5 ticks · 3.6×</div>
-    </div>
+    <div style="text-align:center;margin-top:14px;font-size:9px;color:var(--dim);font-family:'Space Mono',monospace;">Token never stored · AI trades only with valid token · Use demo account first</div>
   </div>
 </div>
 
-<div class="ai-config">
-  <div class="cfg-block">
-    <div class="cfg-label"><span>💰</span> BASE STAKE ($)</div>
-    <input class="cfg-input" id="cfgStake" type="number" value="5.00" min="0.35" step="0.50" placeholder="5.00"/>
-    <div style="font-size:8px;color:var(--dim);margin-top:4px;font-family:'Space Mono',monospace">Ladder scales from this</div>
-  </div>
-  <div class="cfg-block">
-    <div class="cfg-label"><span>🔄</span> MARTINGALE MULTIPLIER</div>
-    <input class="cfg-input" id="cfgMult" type="number" value="3.6" min="1.5" max="10" step="0.1"/>
-    <div style="font-size:8px;color:var(--dim);margin-top:4px;font-family:'Space Mono',monospace">Default 3.6 · applies to ladder + manual</div>
-  </div>
-  <div class="cfg-block">
-    <div class="cfg-label"><span>📈</span> TAKE PROFIT ($)</div>
-    <input class="cfg-input" id="cfgTP" type="number" value="15.00" min="0.10" step="1.00" placeholder="15.00"/>
-    <div style="font-size:8px;color:var(--dim);margin-top:4px;font-family:'Space Mono',monospace">Session profit target</div>
-  </div>
-  <div class="cfg-block">
-    <div class="cfg-label"><span>📉</span> STOP LOSS ($)</div>
-    <input class="cfg-input" id="cfgSL" type="number" value="10.00" min="0.10" step="1.00" placeholder="10.00"/>
-    <div style="font-size:8px;color:var(--dim);margin-top:4px;font-family:'Space Mono',monospace">Session loss limit</div>
-  </div>
-  <div class="cfg-block">
-    <div class="cfg-label"><span>🎯</span> TARGET INDEX</div>
-    <select class="cfg-select" id="cfgIndex">
-      <option value="AUTO">AUTO (Best market)</option>
-      <option value="R_10">V10</option>
-      <option value="R_25">V25</option>
-      <option value="R_50">V50</option>
-      <option value="R_75" selected>V75</option>
-      <option value="R_100">V100</option>
-      <option value="1HZ10V">V10 1s</option>
-      <option value="1HZ25V">V25 1s</option>
-      <option value="1HZ50V">V50 1s</option>
-      <option value="1HZ75V">V75 1s</option>
-      <option value="1HZ100V">V100 1s</option>
-    </select>
-    <div style="font-size:8px;color:var(--dim);margin-top:4px;font-family:'Space Mono',monospace">AUTO scans all 10</div>
-  </div>
-</div>
+<!-- ════════════════════════════════
+     BOTTOM NAV (pages 1-3)
+════════════════════════════════ -->
 
-<!-- PIONEER STRATEGY DISPLAY -->
-
-<div id="ladderPanel">
-  <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:2px;margin-bottom:8px;display:flex;justify-content:space-between;"><span>STAKE LADDER</span><span id="ladExposure" style="color:var(--red)"></span></div>
-  <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;margin-bottom:14px;">
-    <div class="lad-step differ" id="lad0"><div class="lad-num">STEP 1</div><div class="lad-type">DIFFERS</div><div class="lad-stake" id="ladS0">$5.00</div><div class="lad-sub">primary</div></div>
-    <div class="lad-arrow">&#8594;</div>
-    <div class="lad-step over" id="lad1"><div class="lad-num">STEP 2</div><div class="lad-type">OVER 2</div><div class="lad-stake" id="ladS1">$18.00</div><div class="lad-sub">recovery ×3.6</div></div>
-    <div class="lad-arrow">&#8594;</div>
-    <div class="lad-step over" id="lad2"><div class="lad-num">STEP 3</div><div class="lad-type">OVER 2</div><div class="lad-stake" id="ladS2">$64.80</div><div class="lad-sub">recovery ×3.6²</div></div>
-    <div class="lad-arrow">&#8594;</div>
-    <div class="lad-step over" id="lad3"><div class="lad-num">STEP 4</div><div class="lad-type">OVER 2</div><div class="lad-stake" id="ladS3">$233.28</div><div class="lad-sub">recovery ×3.6³</div></div>
-    <div class="lad-arrow">&#8594;</div>
-    <div class="lad-step over final" id="lad4"><div class="lad-num">STEP 5</div><div class="lad-type">OVER 2</div><div class="lad-stake" id="ladS4">$839.81</div><div class="lad-sub">recovery ×3.6⁴</div></div>
-  </div>
-</div>
-
-<!-- MANUAL FEED PANEL (Mode C) -->
-<div id="manualPanel" style="display:none;margin-bottom:14px;">
-  <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:2px;margin-bottom:10px;">MANUAL TRADE FEED</div>
-  <!-- Row 1: Contract + Stake + Barrier + Index -->
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:8px;">
-    <div class="cfg-block">
-      <div class="cfg-label">CONTRACT TYPE</div>
-      <select class="cfg-select" id="manContract" onchange="onManContractChange()">
-        <option value="DIGITDIFF">DIFFERS</option>
-        <option value="DIGITOVER">OVER 2</option>
-        <option value="DIGITUNDER">UNDER 7</option>
-        <option value="DIGITEVEN">EVEN</option>
-        <option value="DIGITODD">ODD</option>
-      </select>
-    </div>
-    <div class="cfg-block">
-      <div class="cfg-label">BASE STAKE ($)</div>
-      <input class="cfg-input" id="manStake" type="number" value="5.00" min="0.35" step="0.50"/>
-    </div>
-    <div class="cfg-block" id="manBarrierBlock">
-      <div class="cfg-label">BARRIER / DIGIT</div>
-      <input class="cfg-input" id="manBarrier" type="number" value="2" min="0" max="9" step="1"/>
-      <div style="font-size:8px;color:var(--dim);margin-top:3px;font-family:'Space Mono',monospace">DIFFERS/OVER/UNDER only</div>
-      <div id="manAiDrivenHint" style="display:none;font-size:8px;color:var(--green);margin-top:3px;font-family:'Space Mono',monospace">⚡ AI picks barrier · 15ms speed</div>
-    </div>
-    <div class="cfg-block">
-      <div class="cfg-label">INDEX</div>
-      <select class="cfg-select" id="manIndex" onchange="onManContractChange()">
-        <option value="AUTO">AUTO (AI picks)</option>
-        <option value="R_10">V10</option>
-        <option value="R_25">V25</option>
-        <option value="R_50">V50</option>
-        <option value="R_75">V75</option>
-        <option value="R_100">V100</option>
-        <option value="1HZ10V">V10 1s</option>
-        <option value="1HZ25V">V25 1s</option>
-        <option value="1HZ50V">V50 1s</option>
-        <option value="1HZ75V">V75 1s</option>
-        <option value="1HZ100V">V100 1s</option>
-      </select>
-    </div>
-  </div>
-
-  <!-- Row 2: Loss behaviour + multiplier + Win behaviour -->
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:10px;">
-    <div class="cfg-block">
-      <div class="cfg-label">ON LOSS</div>
-      <select class="cfg-select" id="manOnLoss" onchange="onManLossChange()">
-        <option value="repeat">Repeat same trade</option>
-        <option value="martingale">Martingale (custom ×)</option>
-        <option value="stop">Stop after loss</option>
-      </select>
-    </div>
-    <div class="cfg-block" id="manMultBlock">
-      <div class="cfg-label">MARTINGALE MULT ×</div>
-      <input class="cfg-input" id="manMult" type="number" value="3.6" min="1.1" max="20" step="0.1"/>
-      <div style="font-size:8px;color:var(--dim);margin-top:3px;font-family:'Space Mono',monospace" id="manMultHint">e.g. 2.1 EVEN/ODD · 3.6 DIFFERS · 2.2 OVER2</div>
-    </div>
-    <div class="cfg-block">
-      <div class="cfg-label">ON WIN</div>
-      <select class="cfg-select" id="manOnWin">
-        <option value="reset">Reset to base stake</option>
-        <option value="repeat">Keep same stake</option>
-        <option value="stop">Stop after win</option>
-      </select>
-    </div>
-    <div class="cfg-block">
-      <div class="cfg-label">MAX LOSSES</div>
-      <input class="cfg-input" id="manMaxLoss" type="number" value="5" min="1" max="10" step="1"/>
-      <div style="font-size:8px;color:var(--dim);margin-top:3px;font-family:'Space Mono',monospace">Stop after N losses</div>
-    </div>
-  </div>
-
-  <!-- Next stake preview -->
-  <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 12px;margin-bottom:10px;font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);display:flex;justify-content:space-between;align-items:center;">
-    <span>NEXT STAKE</span>
-    <span id="manNextStake" style="color:var(--accent);font-size:12px;font-weight:700;">$5.00</span>
-    <span id="manLossCount" style="color:var(--yellow);">Loss streak: 0</span>
-    <span id="manRunning" style="color:var(--dim);">⏸ IDLE</span>
-  </div>
-
-  <!-- Buttons -->
-  <div style="display:flex;gap:8px;">
-    <button class="ai-btn start" style="flex:1;" id="manStartBtn" onclick="manualStart()">▶ START MANUAL</button>
-    <button class="ai-btn stop"  style="flex:1;" id="manStopBtn"  onclick="manualStop()" disabled>■ STOP</button>
-  </div>
-  <div style="font-size:9px;color:var(--dim);font-family:'Space Mono',monospace;margin-top:6px;text-align:center;">Runs continuously · respects TP / SL · circuit breaker at max losses</div>
-</div>
-    <div class="mart-step" id="ms2">3</div>
-    <div class="mart-step" id="ms3">4</div>
-    <div class="mart-step" id="ms4">5</div>
-  </div>
-  <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;" id="martStakeDisplay"></div>
-</div>
-
-
-
-<!-- SCALPER PANEL -->
-<div id="scalperPanel" style="display:none;margin-bottom:14px;">
-  <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:2px;margin-bottom:10px;">⚡ SCALPER — OVER/UNDER WITH AI RECOVERY</div>
-
-  <!-- Strategy display: 4-step ladder -->
-  <div style="margin-bottom:12px;">
-    <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:2px;margin-bottom:8px;display:flex;justify-content:space-between;">
-      <span>SCALPER LADDER</span><span id="scalperExposure" style="color:var(--red)"></span>
-    </div>
-    <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;">
-      <div class="lad-step over" id="slad0"><div class="lad-num">STEP 1</div><div class="lad-type" id="sladt0">OVER 2</div><div class="lad-stake" id="slads0">$5.00</div><div class="lad-sub">primary</div></div>
-      <div class="lad-arrow">→</div>
-      <div class="lad-step over" id="slad1"><div class="lad-num">STEP 2</div><div class="lad-type" id="sladt1">AI pick</div><div class="lad-stake" id="slads1">$10.50</div><div class="lad-sub">recovery ×2.1</div></div>
-      <div class="lad-arrow">→</div>
-      <div class="lad-step over" id="slad2"><div class="lad-num">STEP 3</div><div class="lad-type" id="sladt2">AI pick</div><div class="lad-stake" id="slads2">$22.05</div><div class="lad-sub">recovery ×2.1²</div></div>
-      <div class="lad-arrow">→</div>
-      <div class="lad-step over final" id="slad3"><div class="lad-num">STEP 4</div><div class="lad-type" id="sladt3">AI pick</div><div class="lad-stake" id="slads3">$46.30</div><div class="lad-sub">recovery ×2.1³</div></div>
-    </div>
-  </div>
-
-  <!-- Config -->
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:10px;">
-    <div class="cfg-block">
-      <div class="cfg-label">BASE STAKE ($)</div>
-      <input class="cfg-input" id="scalperStake" type="number" value="5.00" min="0.35" step="0.50" oninput="refreshScalperLadder()"/>
-      <div style="font-size:8px;color:var(--dim);margin-top:3px;font-family:'Space Mono',monospace">Ladder scales from this</div>
-    </div>
-    <div class="cfg-block">
-      <div class="cfg-label">MULTIPLIER ×</div>
-      <input class="cfg-input" id="scalperMult" type="number" value="2.1" min="1.5" max="5" step="0.1" oninput="refreshScalperLadder()"/>
-      <div style="font-size:8px;color:var(--dim);margin-top:3px;font-family:'Space Mono',monospace">Default 2.1 for ~70% base</div>
-    </div>
-    <div class="cfg-block">
-      <div class="cfg-label">DIRECTION BIAS</div>
-      <select class="cfg-select" id="scalperBias">
-        <option value="AUTO">AUTO (AI decides)</option>
-        <option value="OVER">Force OVER only</option>
-        <option value="UNDER">Force UNDER only</option>
-      </select>
-      <div style="font-size:8px;color:var(--dim);margin-top:3px;font-family:'Space Mono',monospace">AI picks best market</div>
-    </div>
-    <div class="cfg-block">
-      <div class="cfg-label">MIN OVER% THRESHOLD</div>
-      <input class="cfg-input" id="scalperThresh" type="number" value="65" min="50" max="85" step="1"/>
-      <div style="font-size:8px;color:var(--dim);margin-top:3px;font-family:'Space Mono',monospace">Min % to enter trade</div>
-    </div>
-  </div>
+<div id="appShell" style="display:none;flex-direction:column;height:100dvh;overflow:hidden;">
 
   <!-- Status bar -->
-  <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 12px;margin-bottom:10px;font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
-    <span>STEP <span id="scalperStepDisp" style="color:var(--accent);font-weight:700;">1/4</span></span>
-    <span>NEXT <span id="scalperNextStake" style="color:var(--accent);font-weight:700;">$5.00</span></span>
-    <span>CONTRACT <span id="scalperNextType" style="color:var(--yellow);font-weight:700;">—</span></span>
-    <span id="scalperRunning" style="color:var(--dim);">⏸ IDLE</span>
-  </div>
-  <div style="font-size:9px;color:var(--dim);font-family:'Space Mono',monospace;text-align:center;">Win at any step → full reset · Loss at step 4 → circuit breaker · Respects TP / SL</div>
-</div>
 
-<!-- TREND PANEL -->
-<div id="trendPanel" style="display:none;margin-bottom:14px;">
-  <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:2px;margin-bottom:10px;">📈 TREND — CALL / PUT · EMA + RSI + MOMENTUM</div>
-
-  <!-- Signal indicators -->
-  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px;" id="trendSignals">
-    <div class="cfg-block" style="text-align:center;">
-      <div style="font-size:7px;color:var(--muted);font-family:'Space Mono',monospace;margin-bottom:4px;">EMA</div>
-      <div id="trendEma" style="font-size:11px;font-weight:700;color:var(--dim);">—</div>
+  <div style="background:var(--surface);border-bottom:1px solid var(--border);padding:6px 14px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <div id="CD" class="cdot"></div>
+      <div id="CL" style="font-size:8px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:1px;">CONNECTING</div>
+      <div id="LD" style="width:6px;height:6px;border-radius:50%;background:var(--red);"></div>
     </div>
-    <div class="cfg-block" style="text-align:center;">
-      <div style="font-size:7px;color:var(--muted);font-family:'Space Mono',monospace;margin-bottom:4px;">RSI</div>
-      <div id="trendRsi" style="font-size:11px;font-weight:700;color:var(--dim);">—</div>
-    </div>
-    <div class="cfg-block" style="text-align:center;">
-      <div style="font-size:7px;color:var(--muted);font-family:'Space Mono',monospace;margin-bottom:4px;">MOMENTUM</div>
-      <div id="trendMom" style="font-size:11px;font-weight:700;color:var(--dim);">—</div>
-    </div>
-    <div class="cfg-block" style="text-align:center;">
-      <div style="font-size:7px;color:var(--muted);font-family:'Space Mono',monospace;margin-bottom:4px;">SIGNAL</div>
-      <div id="trendSig" style="font-size:11px;font-weight:700;color:var(--dim);">WAIT</div>
-    </div>
+    <div style="font-size:8px;color:var(--muted);font-family:'Space Mono',monospace;" id="CLK">00:00:00</div>
+    <div style="font-size:8px;color:var(--dim);font-family:'Space Mono',monospace;">TICKS: <span id="STK">0</span></div>
   </div>
 
-  <!-- 5-step ladder -->
-  <div style="margin-bottom:12px;">
-    <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:2px;margin-bottom:8px;display:flex;justify-content:space-between;">
-      <span>TREND LADDER (3.6×)</span><span id="trendExposure" style="color:var(--red)"></span>
-    </div>
-    <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;">
-      <div class="lad-step over" id="tlad0"><div class="lad-num">STEP 1</div><div class="lad-type" id="tladt0">CALL/PUT</div><div class="lad-stake" id="tlads0">$1.00</div><div class="lad-sub">primary</div></div>
-      <div class="lad-arrow">→</div>
-      <div class="lad-step over" id="tlad1"><div class="lad-num">STEP 2</div><div class="lad-type" id="tladt1">CALL/PUT</div><div class="lad-stake" id="tlads1">$3.60</div><div class="lad-sub">×3.6</div></div>
-      <div class="lad-arrow">→</div>
-      <div class="lad-step over" id="tlad2"><div class="lad-num">STEP 3</div><div class="lad-type" id="tladt2">CALL/PUT</div><div class="lad-stake" id="tlads2">$12.96</div><div class="lad-sub">×3.6²</div></div>
-      <div class="lad-arrow">→</div>
-      <div class="lad-step over" id="tlad3"><div class="lad-num">STEP 4</div><div class="lad-type" id="tladt3">CALL/PUT</div><div class="lad-stake" id="tlads3">$46.66</div><div class="lad-sub">×3.6³</div></div>
-      <div class="lad-arrow">→</div>
-      <div class="lad-step over final" id="tlad4"><div class="lad-num">STEP 5</div><div class="lad-type" id="tladt4">CALL/PUT</div><div class="lad-stake" id="tlads4">$167.96</div><div class="lad-sub">×3.6⁴</div></div>
-    </div>
-  </div>
+  <div id="ERR" style="display:none;background:rgba(255,61,90,.12);border-bottom:1px solid rgba(255,61,90,.3);padding:6px 14px;font-size:10px;color:var(--red);font-family:'Space Mono',monospace;flex-shrink:0;"></div>
 
-  <!-- Config -->
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:10px;">
-    <div class="cfg-block">
-      <div class="cfg-label">BASE STAKE ($)</div>
-      <input class="cfg-input" id="trendStake" type="number" value="1.00" min="0.35" step="0.50" oninput="refreshTrendLadder()"/>
-    </div>
-    <div class="cfg-block">
-      <div class="cfg-label">TICKS DURATION</div>
-      <input class="cfg-input" id="trendTicks" type="number" value="5" min="1" max="10" step="1"/>
-      <div style="font-size:8px;color:var(--dim);margin-top:3px;font-family:'Space Mono',monospace">5 recommended</div>
-    </div>
-    <div class="cfg-block">
-      <div class="cfg-label">TARGET PAYOUT %</div>
-      <input class="cfg-input" id="trendPayout" type="number" value="30" min="10" max="90" step="5"/>
-      <div style="font-size:8px;color:var(--dim);margin-top:3px;font-family:'Space Mono',monospace">AI sets barrier to hit this</div>
-    </div>
-    <div class="cfg-block">
-      <div class="cfg-label">MIN RSI SWING</div>
-      <input class="cfg-input" id="trendRsiThresh" type="number" value="60" min="50" max="80" step="5"/>
-      <div style="font-size:8px;color:var(--dim);margin-top:3px;font-family:'Space Mono',monospace">RSI must exceed this from center</div>
+  <!-- Pages container -->
+
+  <div style="flex:1;overflow:hidden;position:relative;">
+
+```
+<!-- ── PAGE 1: ANALYSIS ── -->
+<div id="pgAnalysis" class="page" style="flex-direction:column;">
+  <div class="ana-header">
+    <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:2px;">CONTRACT ANALYSIS — ALL 10 INDICES</div>
+    <div style="display:flex;gap:12px;font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;">
+      <span>LIVE <strong id="SL" style="color:var(--text)">0/10</strong></span>
+      <span>CON <strong id="SC" style="color:var(--green)">—</strong></span>
+      <span>EXP <strong id="SE" style="color:var(--red)">—</strong></span>
     </div>
   </div>
-
-  <!-- Barrier info -->
-  <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 12px;margin-bottom:10px;font-family:'Space Mono',monospace;font-size:9px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;">
-    <span style="color:var(--muted);">BARRIER</span>
-    <span>CALL <span id="trendBarrierCall" style="color:var(--green);font-weight:700;">calculating…</span></span>
-    <span>PUT <span id="trendBarrierPut" style="color:var(--red);font-weight:700;">calculating…</span></span>
-    <span style="color:var(--muted);">STEP <span id="trendStepDisp" style="color:var(--accent);font-weight:700;">1/5</span></span>
-    <span id="trendRunning" style="color:var(--dim);">⏸ IDLE</span>
+  <!-- Summary pills -->
+  <div style="padding:4px 14px 8px;display:flex;gap:8px;flex-wrap:wrap;flex-shrink:0;">
+    <div class="pill"><span class="pdot g"></span>STRONG BUY</div>
+    <div class="pill"><span class="pdot g2"></span>BUY</div>
+    <div class="pill"><span class="pdot y"></span>NEUTRAL</div>
+    <div class="pill"><span class="pdot b2"></span>WATCH</div>
+    <div class="pill"><span class="pdot r"></span>AVOID</div>
   </div>
-  <div style="font-size:9px;color:var(--dim);font-family:'Space Mono',monospace;text-align:center;margin-bottom:6px;">EMA(5/20) + RSI(14) + Momentum must ALL agree · Win → reset · Respects TP/SL</div>
-</div>
-
-<!-- AI Controls -->
-<div class="ai-controls">
-  <button class="ai-btn start" id="startBtn" onclick="startAI()">▶ START AI</button>
-  <button class="ai-btn stop" id="stopBtn" onclick="stopAI()" disabled>■ STOP AI</button>
-  <button class="ai-btn reset" id="resetBtn" onclick="resetAI()">↺ RESET</button>
-
-</div>
-
-<!-- Session P&L quick bar -->
-<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
-  <div class="ast"><div class="ast-label">Wins</div><div class="ast-val" style="color:var(--green)" id="astW">0</div></div>
-  <div class="ast"><div class="ast-label">Losses</div><div class="ast-val" style="color:var(--red)" id="astL">0</div></div>
-  <div class="ast"><div class="ast-label">Win Rate</div><div class="ast-val" id="astWR">—</div></div>
-  <div class="ast"><div class="ast-label">Total P&L</div><div class="ast-val" id="astPnl">+0.00</div></div>
-  <div class="ast"><div class="ast-label">Streak</div><div class="ast-val" id="astCL" style="color:var(--yellow)">0</div></div>
-  <div class="ast"><div class="ast-label">Current Step</div><div class="ast-val" id="astMS">DIFFERS S1</div></div>
-  <div class="ast"><div class="ast-label">Next Stake</div><div class="ast-val" id="astNS" style="color:var(--accent)">$5.00</div></div>
-  <div class="ast"><div class="ast-label">Tick Speed</div><div class="ast-val" id="astTS">—</div></div>
-</div>
-
-<!-- Current trade -->
-<div class="cur-trade" id="curTrade">
-  <div class="ct-header">
-    <div class="ct-title">⚡ ACTIVE TRADE</div>
-    <div class="ct-ticker" id="ctStatus" style="color:var(--yellow)">PENDING…</div>
-  </div>
-  <div class="ct-row">
-    <div class="ct-field"><div class="ct-field-label">INDEX</div><div class="ct-field-val" id="ctIndex">—</div></div>
-    <div class="ct-field"><div class="ct-field-label">CONTRACT</div><div class="ct-field-val" id="ctContract">—</div></div>
-    <div class="ct-field"><div class="ct-field-label">STAKE</div><div class="ct-field-val" id="ctStake">—</div></div>
-    <div class="ct-field"><div class="ct-field-label">DIGIT AVOIDED</div><div class="ct-field-val" id="ctDigit">—</div></div>
-    <div class="ct-field"><div class="ct-field-label">CONTRACT ID</div><div class="ct-field-val" id="ctId" style="font-size:9px">—</div></div>
-    <div class="ct-field"><div class="ct-field-label">PAYOUT</div><div class="ct-field-val" id="ctPayout">—</div></div>
+  <div class="pscroll" style="padding-top:0;">
+    <!-- Scanner table -->
+    <div style="overflow-x:auto;margin-bottom:14px;">
+      <table id="TB" class="tbl"></table>
+    </div>
+    <!-- Digit frequency -->
+    <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:2px;margin-bottom:8px;">DIGIT FREQUENCY (LAST 100 TICKS)</div>
+    <div id="DC" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:14px;"></div>
+    <div style="font-size:8px;color:var(--dim);font-family:'Space Mono',monospace;text-align:center;padding-bottom:14px;">Live via Deriv WebSocket API · Educational &amp; demo use recommended</div>
   </div>
 </div>
 
-<!-- Equity curve -->
-<div class="eq-wrap">
-  <div class="eq-title"><span>EQUITY CURVE</span><span id="eqStats"></span></div>
-  <canvas id="eqCanvas" height="70" style="width:100%;display:block;"></canvas>
-</div>
-<!-- Trade log -->
-<div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;margin-bottom:6px;">TRADE LOG</div>
-<div class="trade-log" id="tradeLog">
-  <div class="log-entry log-header">
-    <div>TIME</div><div>INDEX</div><div>TYPE</div><div>STAKE</div><div>RESULT</div><div>P&L</div>
-  </div>
-</div>
+<!-- ── PAGE 2: AI TRADING ── -->
+<div id="pgAI" class="page" style="flex-direction:column;">
 
-<!-- AI internal log -->
-<div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;margin-top:12px;margin-bottom:5px;">AI DECISION LOG</div>
-<div class="ai-log" id="aiLog">
-  <div class="ai-log-line info"><span class="ts">--:--:--</span>AI engine initialised. Configure settings and press START.</div>
+  <!-- Fixed header: stats + equity + current trade -->
+  <div class="ai-header">
+    <!-- Session P&L + win stats -->
+    <div class="cstat-row">
+      <div class="cstat"><div class="cstat-l">SESSION P&L</div><div class="cstat-v" id="sessPnl" style="color:var(--green);">+0.00</div><div style="font-size:8px;color:var(--dim);font-family:'Space Mono',monospace;" id="sessPnlSub">0 trades</div></div>
+      <div class="cstat"><div class="cstat-l">WINS</div><div class="cstat-v" style="color:var(--green);" id="astW">0</div></div>
+      <div class="cstat"><div class="cstat-l">LOSSES</div><div class="cstat-v" style="color:var(--red);" id="astL">0</div></div>
+      <div class="cstat"><div class="cstat-l">WIN RATE</div><div class="cstat-v" id="astWR">—</div></div>
+      <div class="cstat"><div class="cstat-l">TOTAL P&L</div><div class="cstat-v" id="astPnl">+0.00</div></div>
+    </div>
+    <!-- Equity curve -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:8px;margin-bottom:8px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+        <div style="font-size:7px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:2px;">EQUITY CURVE</div>
+        <div style="font-size:8px;font-family:'Space Mono',monospace;" id="eqStats"></div>
+      </div>
+      <canvas id="eqCanvas" style="width:100%;height:55px;display:block;"></canvas>
+    </div>
+    <!-- Current trade -->
+    <div class="ct-compact" id="curTrade">
+      <div style="font-size:7px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:2px;margin-bottom:6px;">ACTIVE TRADE</div>
+      <div class="ct-row">
+        <div class="ct-item"><div class="ct-lbl">INDEX</div><div class="ct-val" id="ctIndex">—</div></div>
+        <div class="ct-item"><div class="ct-lbl">CONTRACT</div><div class="ct-val" id="ctContract">—</div></div>
+        <div class="ct-item"><div class="ct-lbl">STAKE</div><div class="ct-val" id="ctStake">—</div></div>
+        <div class="ct-item"><div class="ct-lbl">PAYOUT</div><div class="ct-val" id="ctPayout">—</div></div>
+        <div class="ct-item"><div class="ct-lbl">STATUS</div><div class="ct-val" id="ctStatus" style="color:var(--yellow)">—</div></div>
+      </div>
+      <div style="font-size:8px;color:var(--dim);font-family:'Space Mono',monospace;margin-top:4px;" id="ctDigit"></div>
+      <div style="font-size:8px;color:var(--dim);font-family:'Space Mono',monospace;" id="ctId"></div>
+    </div>
+    <!-- AI state + global controls -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:8px;">
+      <div id="aiStateBadge" class="ai-state-badge idle">⏸ IDLE</div>
+      <div style="display:flex;gap:6px;">
+        <button class="ai-btn start" id="startBtn" onclick="startAI()" style="padding:8px 14px;font-size:10px;">▶ START</button>
+        <button class="ai-btn stop"  id="stopBtn"  onclick="stopAI()"  style="padding:8px 14px;font-size:10px;" disabled>■ STOP</button>
+        <button class="ai-btn reset" id="resetBtn" onclick="resetAI()" style="padding:8px 14px;font-size:10px;">↺</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mode chip selector -->
+  <div class="mode-row">
+    <div class="mchip active" id="chipPioneer" onclick="setMode('pioneer')"><span class="mci">🚀</span>PIONEER</div>
+    <div class="mchip" id="chipScalper"  onclick="setMode('scalper')"><span class="mci">⚡</span>SCALPER</div>
+    <div class="mchip" id="chipTrend"    onclick="setMode('trend')"><span class="mci">📈</span>TREND</div>
+    <div class="mchip" id="chipManual"   onclick="setMode('manual')"><span class="mci">✏️</span>MANUAL</div>
+  </div>
+
+  <!-- Mode subpages -->
+
+  <!-- 🚀 PIONEER -->
+  <div id="mpPioneer" class="mpage active">
+    <div class="msec-label">🚀 PIONEER — DIFFERS PRIMARY · OVER2 RECOVERY · 3.6×</div>
+    <!-- Config -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:10px;">
+      <div class="cfg-block"><div class="cfg-label"><span>💰</span> BASE STAKE ($)</div><input class="cfg-input" id="cfgStake" type="number" value="5" min="0.35" step="0.50"/></div>
+      <div class="cfg-block"><div class="cfg-label">MULT ×</div><input class="cfg-input" id="cfgMult" type="number" value="3.6" min="1.5" max="10" step="0.1"/></div>
+      <div class="cfg-block"><div class="cfg-label">TAKE PROFIT ($)</div><input class="cfg-input" id="cfgTP" type="number" value="15" min="1" step="1"/></div>
+      <div class="cfg-block"><div class="cfg-label">STOP LOSS ($)</div><input class="cfg-input" id="cfgSL" type="number" value="10" min="1" step="1"/></div>
+      <div class="cfg-block" style="grid-column:1/-1;"><div class="cfg-label">INDEX</div><select class="cfg-select" id="cfgIndex"><option value="AUTO">AUTO (AI picks best)</option><option value="R_10">V10</option><option value="R_25">V25</option><option value="R_50">V50</option><option value="R_75">V75</option><option value="R_100">V100</option><option value="1HZ10V">V10 1s</option><option value="1HZ25V">V25 1s</option><option value="1HZ50V">V50 1s</option><option value="1HZ75V">V75 1s</option><option value="1HZ100V">V100 1s</option></select></div>
+    </div>
+    <!-- Ladder -->
+    <div id="ladderPanel" style="margin-bottom:10px;">
+      <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:2px;margin-bottom:8px;display:flex;justify-content:space-between;"><span>MARTINGALE LADDER</span><span id="ladExposure" style="color:var(--red)"></span></div>
+      <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;">
+        <div class="lad-step differ" id="lad0"><div class="lad-num">STEP 1</div><div class="lad-type">DIFFERS</div><div class="lad-stake">$5.00</div><div class="lad-sub">primary</div></div>
+        <div class="lad-arrow">→</div>
+        <div class="lad-step over" id="lad1"><div class="lad-num">STEP 2</div><div class="lad-type">OVER 2</div><div class="lad-stake">$18.00</div><div class="lad-sub">recovery</div></div>
+        <div class="lad-arrow">→</div>
+        <div class="lad-step over" id="lad2"><div class="lad-num">STEP 3</div><div class="lad-type">OVER 2</div><div class="lad-stake">$64.80</div><div class="lad-sub">recovery</div></div>
+        <div class="lad-arrow">→</div>
+        <div class="lad-step over" id="lad3"><div class="lad-num">STEP 4</div><div class="lad-type">OVER 2</div><div class="lad-stake">$233.28</div><div class="lad-sub">recovery</div></div>
+        <div class="lad-arrow">→</div>
+        <div class="lad-step over final" id="lad4"><div class="lad-num">STEP 5</div><div class="lad-type">OVER 2</div><div class="lad-stake">$839.81</div><div class="lad-sub">final</div></div>
+      </div>
+    </div>
+    <!-- Extra stats -->
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">
+      <div class="cstat"><div class="cstat-l">STREAK</div><div class="cstat-v" id="astCL">0</div></div>
+      <div class="cstat"><div class="cstat-l">CURRENT STEP</div><div class="cstat-v" id="astMS">DIFFERS S1</div></div>
+      <div class="cstat"><div class="cstat-l">NEXT STAKE</div><div class="cstat-v" style="color:var(--accent);" id="astNS">$5.00</div></div>
+      <div class="cstat" style="flex:2;min-width:120px;"><div class="cstat-l">TICK SPEED</div><div class="cstat-v" style="font-size:10px;" id="astTS">—</div></div>
+    </div>
+    <!-- AI log -->
+    <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:2px;margin-bottom:6px;">AI DECISION LOG</div>
+    <div id="aiLog" class="ai-log"><div class="ai-log-line info"><span class="ts">--:--:--</span>System ready. Waiting for connection…</div></div>
+    <!-- Trade log -->
+    <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:2px;margin:10px 0 6px;">TRADE LOG</div>
+    <div id="tradeLog" class="tlog">
+      <div class="log-entry log-header"><div>TIME</div><div>INDEX</div><div>TYPE</div><div>STAKE</div><div>RESULT</div><div>P&L</div></div>
+    </div>
+  </div>
+
+  <!-- ⚡ SCALPER -->
+  <div id="mpScalper" class="mpage">
+    <div class="msec-label">⚡ SCALPER — OVER2/UNDER7 · AI RECOVERY BARRIER · 2.1×</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:10px;">
+      <div class="cfg-block"><div class="cfg-label">BASE STAKE ($)</div><input class="cfg-input" id="scalperStake" type="number" value="5.00" min="0.35" step="0.50" oninput="refreshScalperLadder()"/></div>
+      <div class="cfg-block"><div class="cfg-label">MULT ×</div><input class="cfg-input" id="scalperMult" type="number" value="2.1" min="1.5" max="5" step="0.1" oninput="refreshScalperLadder()"/></div>
+      <div class="cfg-block"><div class="cfg-label">DIRECTION</div><select class="cfg-select" id="scalperBias"><option value="AUTO">AUTO</option><option value="OVER">OVER only</option><option value="UNDER">UNDER only</option></select></div>
+      <div class="cfg-block"><div class="cfg-label">MIN % THRESHOLD</div><input class="cfg-input" id="scalperThresh" type="number" value="65" min="50" max="85" step="1"/></div>
+    </div>
+    <div style="margin-bottom:10px;">
+      <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:2px;margin-bottom:8px;display:flex;justify-content:space-between;"><span>SCALPER LADDER</span><span id="scalperExposure" style="color:var(--red)"></span></div>
+      <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;">
+        <div class="lad-step over" id="slad0"><div class="lad-num">STEP 1</div><div class="lad-type" id="sladt0">OVER 2</div><div class="lad-stake" id="slads0">$5.00</div><div class="lad-sub">primary</div></div>
+        <div class="lad-arrow">→</div>
+        <div class="lad-step over" id="slad1"><div class="lad-num">STEP 2</div><div class="lad-type" id="sladt1">AI pick</div><div class="lad-stake" id="slads1">$10.50</div><div class="lad-sub">recovery</div></div>
+        <div class="lad-arrow">→</div>
+        <div class="lad-step over" id="slad2"><div class="lad-num">STEP 3</div><div class="lad-type" id="sladt2">AI pick</div><div class="lad-stake" id="slads2">$22.05</div><div class="lad-sub">recovery</div></div>
+        <div class="lad-arrow">→</div>
+        <div class="lad-step over final" id="slad3"><div class="lad-num">STEP 4</div><div class="lad-type" id="sladt3">AI pick</div><div class="lad-stake" id="slads3">$46.30</div><div class="lad-sub">final</div></div>
+      </div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 12px;margin-bottom:10px;font-family:'Space Mono',monospace;font-size:9px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;">
+      <span style="color:var(--muted);">STEP <span id="scalperStepDisp" style="color:var(--accent);font-weight:700;">1/4</span></span>
+      <span>NEXT <span id="scalperNextStake" style="color:var(--accent);font-weight:700;">$5.00</span></span>
+      <span>CONTRACT <span id="scalperNextType" style="color:var(--yellow);font-weight:700;">—</span></span>
+      <span id="scalperRunning" style="color:var(--dim);">⏸ IDLE</span>
+    </div>
+    <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:2px;margin-bottom:6px;">AI DECISION LOG</div>
+    <div id="aiLogSC" class="ai-log"></div>
+    <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:2px;margin:10px 0 6px;">TRADE LOG</div>
+    <div id="tradeLogSC" class="tlog"><div class="log-entry log-header"><div>TIME</div><div>INDEX</div><div>TYPE</div><div>STAKE</div><div>RESULT</div><div>P&L</div></div></div>
+  </div>
+
+  <!-- 📈 TREND -->
+  <div id="mpTrend" class="mpage">
+    <div class="msec-label">📈 TREND — CALL/PUT · EMA+RSI+MOMENTUM · 3.6× · 5 TICKS</div>
+    <!-- Signal indicators -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px;">
+      <div class="cfg-block" style="text-align:center;"><div style="font-size:7px;color:var(--muted);font-family:'Space Mono',monospace;margin-bottom:4px;">EMA</div><div id="trendEma" style="font-size:12px;font-weight:700;color:var(--dim);">—</div></div>
+      <div class="cfg-block" style="text-align:center;"><div style="font-size:7px;color:var(--muted);font-family:'Space Mono',monospace;margin-bottom:4px;">RSI</div><div id="trendRsi" style="font-size:12px;font-weight:700;color:var(--dim);">—</div></div>
+      <div class="cfg-block" style="text-align:center;"><div style="font-size:7px;color:var(--muted);font-family:'Space Mono',monospace;margin-bottom:4px;">MOMENTUM</div><div id="trendMom" style="font-size:12px;font-weight:700;color:var(--dim);">—</div></div>
+      <div class="cfg-block" style="text-align:center;"><div style="font-size:7px;color:var(--muted);font-family:'Space Mono',monospace;margin-bottom:4px;">SIGNAL</div><div id="trendSig" style="font-size:12px;font-weight:700;color:var(--dim);">WAIT</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:10px;">
+      <div class="cfg-block"><div class="cfg-label">BASE STAKE ($)</div><input class="cfg-input" id="trendStake" type="number" value="1.00" min="0.35" step="0.50" oninput="refreshTrendLadder()"/></div>
+      <div class="cfg-block"><div class="cfg-label">TICKS</div><input class="cfg-input" id="trendTicks" type="number" value="5" min="1" max="10" step="1"/></div>
+      <div class="cfg-block"><div class="cfg-label">TARGET PAYOUT %</div><input class="cfg-input" id="trendPayout" type="number" value="30" min="10" max="90" step="5"/></div>
+      <div class="cfg-block"><div class="cfg-label">MIN RSI SWING</div><input class="cfg-input" id="trendRsiThresh" type="number" value="60" min="50" max="80" step="5"/></div>
+    </div>
+    <div style="margin-bottom:10px;">
+      <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:2px;margin-bottom:8px;display:flex;justify-content:space-between;"><span>TREND LADDER (3.6×)</span><span id="trendExposure" style="color:var(--red)"></span></div>
+      <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;">
+        <div class="lad-step over" id="tlad0"><div class="lad-num">S1</div><div class="lad-type" id="tladt0">CALL/PUT</div><div class="lad-stake" id="tlads0">$1.00</div></div>
+        <div class="lad-arrow">→</div>
+        <div class="lad-step over" id="tlad1"><div class="lad-num">S2</div><div class="lad-type" id="tladt1">CALL/PUT</div><div class="lad-stake" id="tlads1">$3.60</div></div>
+        <div class="lad-arrow">→</div>
+        <div class="lad-step over" id="tlad2"><div class="lad-num">S3</div><div class="lad-type" id="tladt2">CALL/PUT</div><div class="lad-stake" id="tlads2">$12.96</div></div>
+        <div class="lad-arrow">→</div>
+        <div class="lad-step over" id="tlad3"><div class="lad-num">S4</div><div class="lad-type" id="tladt3">CALL/PUT</div><div class="lad-stake" id="tlads3">$46.66</div></div>
+        <div class="lad-arrow">→</div>
+        <div class="lad-step over final" id="tlad4"><div class="lad-num">S5</div><div class="lad-type" id="tladt4">CALL/PUT</div><div class="lad-stake" id="tlads4">$167.96</div></div>
+      </div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 12px;margin-bottom:10px;font-family:'Space Mono',monospace;font-size:9px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;">
+      <span style="color:var(--muted);">BARRIER CALL <span id="trendBarrierCall" style="color:var(--green);font-weight:700;">…</span></span>
+      <span style="color:var(--muted);">PUT <span id="trendBarrierPut" style="color:var(--red);font-weight:700;">…</span></span>
+      <span style="color:var(--muted);">STEP <span id="trendStepDisp" style="color:var(--accent);font-weight:700;">1/5</span></span>
+      <span id="trendRunning" style="color:var(--dim);">⏸ IDLE</span>
+    </div>
+    <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:2px;margin-bottom:6px;">AI DECISION LOG</div>
+    <div id="aiLogTR" class="ai-log"></div>
+    <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:2px;margin:10px 0 6px;">TRADE LOG</div>
+    <div id="tradeLogTR" class="tlog"><div class="log-entry log-header"><div>TIME</div><div>INDEX</div><div>TYPE</div><div>STAKE</div><div>RESULT</div><div>P&L</div></div></div>
+  </div>
+
+  <!-- ✏️ MANUAL -->
+  <div id="mpManual" class="mpage">
+    <div class="msec-label">✏️ MANUAL FEED — AI-DRIVEN DIFFERS AT 15ms WHEN AUTO</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:8px;">
+      <div class="cfg-block"><div class="cfg-label">CONTRACT TYPE</div><select class="cfg-select" id="manContract" onchange="onManContractChange()"><option value="DIGITDIFF">DIFFERS</option><option value="DIGITOVER">OVER 2</option><option value="DIGITUNDER">UNDER 7</option><option value="DIGITEVEN">EVEN</option><option value="DIGITODD">ODD</option></select></div>
+      <div class="cfg-block"><div class="cfg-label">BASE STAKE ($)</div><input class="cfg-input" id="manStake" type="number" value="5.00" min="0.35" step="0.50"/></div>
+      <div class="cfg-block" id="manBarrierBlock"><div class="cfg-label">BARRIER / DIGIT</div><input class="cfg-input" id="manBarrier" type="number" value="2" min="0" max="9" step="1"/><div style="font-size:8px;color:var(--dim);margin-top:3px;font-family:'Space Mono',monospace">DIFFERS/OVER/UNDER only</div><div id="manAiDrivenHint" style="display:none;font-size:8px;color:var(--green);margin-top:3px;font-family:'Space Mono',monospace">⚡ AI picks barrier · 15ms</div></div>
+      <div class="cfg-block"><div class="cfg-label">INDEX</div><select class="cfg-select" id="manIndex" onchange="onManContractChange()"><option value="AUTO">AUTO (AI picks)</option><option value="R_10">V10</option><option value="R_25">V25</option><option value="R_50">V50</option><option value="R_75">V75</option><option value="R_100">V100</option><option value="1HZ10V">V10 1s</option><option value="1HZ25V">V25 1s</option><option value="1HZ50V">V50 1s</option><option value="1HZ75V">V75 1s</option><option value="1HZ100V">V100 1s</option></select></div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:10px;">
+      <div class="cfg-block"><div class="cfg-label">ON LOSS</div><select class="cfg-select" id="manOnLoss" onchange="onManLossChange()"><option value="repeat">Repeat same trade</option><option value="martingale">Martingale (custom ×)</option><option value="stop">Stop after loss</option></select></div>
+      <div class="cfg-block" id="manMultBlock"><div class="cfg-label">MARTINGALE MULT ×</div><input class="cfg-input" id="manMult" type="number" value="3.6" min="1.1" max="20" step="0.1"/><div style="font-size:8px;color:var(--dim);margin-top:3px;font-family:'Space Mono',monospace" id="manMultHint">e.g. 2.1 EVEN/ODD · 3.6 DIFFERS</div></div>
+      <div class="cfg-block"><div class="cfg-label">ON WIN</div><select class="cfg-select" id="manOnWin"><option value="reset">Reset to base stake</option><option value="repeat">Keep same stake</option><option value="stop">Stop after win</option></select></div>
+      <div class="cfg-block"><div class="cfg-label">MAX LOSSES</div><input class="cfg-input" id="manMaxLoss" type="number" value="5" min="1" max="10" step="1"/></div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 12px;margin-bottom:10px;font-family:'Space Mono',monospace;font-size:9px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;">
+      <span style="color:var(--muted);">NEXT STAKE</span>
+      <span id="manNextStake" style="color:var(--accent);font-size:12px;font-weight:700;">$5.00</span>
+      <span id="manLossCount" style="color:var(--yellow);">Loss streak: 0</span>
+      <span id="manRunning" style="color:var(--dim);">⏸ IDLE</span>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:10px;">
+      <button class="ai-btn start" style="flex:1;" id="manStartBtn" onclick="manualStart()">▶ START MANUAL</button>
+      <button class="ai-btn stop"  style="flex:1;" id="manStopBtn"  onclick="manualStop()" disabled>■ STOP</button>
+    </div>
+    <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:2px;margin-bottom:6px;">AI DECISION LOG</div>
+    <div id="aiLogMAN" class="ai-log"></div>
+    <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:2px;margin:10px 0 6px;">TRADE LOG</div>
+    <div id="tradeLogMAN" class="tlog"><div class="log-entry log-header"><div>TIME</div><div>INDEX</div><div>TYPE</div><div>STAKE</div><div>RESULT</div><div>P&L</div></div></div>
+  </div>
+
+</div><!-- end pgAI -->
+
+<!-- ── PAGE 3: ACCOUNT ── -->
+<div id="pgAccount" class="page" style="flex-direction:column;">
+  <div class="pscroll">
+    <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:2px;margin-bottom:12px;padding-top:4px;">ACCOUNT</div>
+    <div class="acct-section" id="acctBadge" style="display:none;">
+      <div class="acct-section-title">PROFILE</div>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
+        <div id="acctAvatar" style="width:42px;height:42px;border-radius:50%;background:var(--accent);color:#000;font-size:18px;font-weight:700;display:flex;align-items:center;justify-content:center;font-family:'Space Mono',monospace;"></div>
+        <div><div id="acctName" style="font-size:14px;font-weight:700;color:var(--text);"></div><div id="acctId" style="font-size:10px;color:var(--muted);font-family:'Space Mono',monospace;"></div></div>
+      </div>
+    </div>
+    <div class="acct-section" id="balRow" style="display:none;">
+      <div class="acct-section-title">BALANCE</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div><div style="font-size:24px;font-weight:700;color:var(--text);font-family:'Space Mono',monospace;"><span id="balVal">—</span></div><div style="font-size:10px;color:var(--muted);font-family:'Space Mono',monospace;margin-top:2px;"><span id="balCur"></span> · <span id="balAcct"></span></div></div>
+        <div id="balType" style="font-size:9px;color:var(--green);font-family:'Space Mono',monospace;background:rgba(0,230,118,.1);padding:6px 10px;border-radius:20px;border:1px solid rgba(0,230,118,.3);"></div>
+      </div>
+    </div>
+    <div class="acct-section">
+      <div class="acct-section-title">SESSION STATS</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div><div style="font-size:8px;color:var(--muted);font-family:'Space Mono',monospace;">TOTAL P&L</div><div style="font-size:16px;font-weight:700;font-family:'Space Mono',monospace;" id="acctPnl">$0.00</div></div>
+        <div><div style="font-size:8px;color:var(--muted);font-family:'Space Mono',monospace;">WIN RATE</div><div style="font-size:16px;font-weight:700;font-family:'Space Mono',monospace;" id="acctWR">—</div></div>
+        <div><div style="font-size:8px;color:var(--muted);font-family:'Space Mono',monospace;">WINS</div><div style="font-size:16px;font-weight:700;color:var(--green);font-family:'Space Mono',monospace;" id="acctW">0</div></div>
+        <div><div style="font-size:8px;color:var(--muted);font-family:'Space Mono',monospace;">LOSSES</div><div style="font-size:16px;font-weight:700;color:var(--red);font-family:'Space Mono',monospace;" id="acctL">0</div></div>
+      </div>
+    </div>
+    <div class="acct-section">
+      <div class="acct-section-title">INFO</div>
+      <div style="font-size:11px;color:var(--dim);font-family:'Space Mono',monospace;line-height:1.8;">Token never stored · Sent only to Deriv WebSocket API<br>AI trades only with valid token · Use demo account first<br>Educational &amp; demo use recommended · Trade at your own risk</div>
+    </div>
+    <button onclick="doLogout()" style="width:100%;padding:14px;background:rgba(255,61,90,.15);color:var(--red);border:1px solid rgba(255,61,90,.3);border-radius:10px;font-size:12px;font-weight:700;font-family:'Space Mono',monospace;cursor:pointer;margin-bottom:24px;">LOGOUT</button>
+  </div>
 </div>
 ```
 
-  </div>
+  </div><!-- end pages container -->
 
-  <!-- Live Summary -->
+  <!-- Bottom Nav -->
 
-  <div class="stitle">Live Market Summary</div>
-  <div class="sumrow">
-    <div class="scard"><div class="slabel">Indices Live</div><div class="sval a" id="SL">0/10</div></div>
-    <div class="scard"><div class="slabel">Consolidating</div><div class="sval g" id="SC">—</div></div>
-    <div class="scard"><div class="slabel">Expanding</div><div class="sval r" id="SE">—</div></div>
-    <div class="scard"><div class="slabel">Best Now</div><div class="sval y" id="SB">—</div></div>
-    <div class="scard"><div class="slabel">Avg Even %</div><div class="sval a" id="SEV">—</div></div>
-    <div class="scard"><div class="slabel">Total Ticks</div><div class="sval a" id="STK">0</div></div>
-  </div>
+  <nav class="bnav">
+    <button class="bntab" id="bnAnalysis" onclick="navTo('analysis')"><span class="bni">📊</span>ANALYSIS</button>
+    <button class="bntab active" id="bnAI"       onclick="navTo('ai')"><span class="bni">🤖</span>AI</button>
+    <button class="bntab" id="bnAccount"  onclick="navTo('account')"><span class="bni">👤</span>ACCOUNT</button>
+  </nav>
 
-  <div class="stitle">Contract Analysis — All 10 Indices</div>
-  <div class="twrap">
-    <table><thead><tr>
-      <th class="L">Index</th><th>Price</th><th>Vol%</th><th>Market State</th>
-      <th>Last 10 Digits</th><th>Freq 0-9</th>
-      <th>Even/Odd</th><th>Over4/Under5</th><th>Over2/Under7</th>
-      <th>Differs</th><th>Matches</th><th>Ticks</th>
-    </tr></thead><tbody id="TB"></tbody></table>
-  </div>
+</div><!-- end appShell -->
 
-  <div class="stitle">Digit Frequency (Last 100 Ticks)</div>
-  <div class="dcards" id="DC"></div>
-
-  <div class="leg">
-    <div class="li"><div class="ldot2" style="background:var(--green)"></div>STRONG BUY</div>
-    <div class="li"><div class="ldot2" style="background:#7fffc0"></div>BUY</div>
-    <div class="li"><div class="ldot2" style="background:var(--yellow)"></div>NEUTRAL</div>
-    <div class="li"><div class="ldot2" style="background:var(--blue)"></div>WATCH</div>
-    <div class="li"><div class="ldot2" style="background:var(--red)"></div>AVOID</div>
-    <div class="li"><div class="ldot2" style="background:var(--accent)"></div>🟢 Consolidating = digits window</div>
-  </div>
-  <div class="foot">Live via Deriv WebSocket API · Educational & demo use recommended · AI trades at your own risk</div>
-</div>
-</div>
+<div id="TT" style="display:none;">0</div>
+<div id="SEV" style="display:none;">—</div>
+<div id="SB"  style="display:none;">—</div>
 
 <script>
 // ══ INDICES ══
@@ -1033,19 +942,30 @@ function updateScalperLadderUI(){
   if(ns) ns.textContent='$'+calcScalperStake(SC.step).toFixed(2);
 }
 
+// ══ NAVIGATION ══
+function navTo(page){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.bntab').forEach(b=>b.classList.remove('active'));
+  const pageMap={analysis:'pgAnalysis',ai:'pgAI',account:'pgAccount'};
+  const tabMap={analysis:'bnAnalysis',ai:'bnAI',account:'bnAccount'};
+  const pg=document.getElementById(pageMap[page]);if(pg)pg.classList.add('active');
+  const tb=document.getElementById(tabMap[page]);if(tb)tb.classList.add('active');
+}
+
 // ══ MODE ══
 function setMode(m){
   if(AI.running||MAN.running||SC.running||TR.running)return;
   AI.mode=m;
-  ['pioneer','manual','scalper','trend'].forEach(x=>{
-    const id='mode'+x.charAt(0).toUpperCase()+x.slice(1);
-    const el=document.getElementById(id);
+  // chip selector
+  ['pioneer','scalper','trend','manual'].forEach(x=>{
+    const el=document.getElementById('chip'+x.charAt(0).toUpperCase()+x.slice(1));
     if(el) el.classList.toggle('active',x===m);
   });
-  document.getElementById('ladderPanel').style.display  =m==='pioneer'?'block':'none';
-  document.getElementById('manualPanel').style.display  =m==='manual' ?'block':'none';
-  document.getElementById('scalperPanel').style.display =m==='scalper'?'block':'none';
-  document.getElementById('trendPanel').style.display   =m==='trend'  ?'block':'none';
+  // mode subpages
+  const mpMap={pioneer:'mpPioneer',scalper:'mpScalper',trend:'mpTrend',manual:'mpManual'};
+  Object.values(mpMap).forEach(id=>{const el=document.getElementById(id);if(el)el.classList.remove('active');});
+  const active=document.getElementById(mpMap[m]);
+  if(active)active.classList.add('active');
   if(m==='pioneer') refreshLadder();
   if(m==='scalper') refreshScalperLadder();
   if(m==='trend')   refreshTrendLadder();
@@ -1154,12 +1074,9 @@ function doLogout(){
   IDX.forEach(i=>{ST[i.s]={prices:[],digits:[],freq:new Array(10).fill(0),last:null,conn:false,ticks:0,tickTimes:[]};});
   total=0;
   document.getElementById('tokenInput').value='';
-  document.getElementById('dashPage').style.display='none';
-  document.getElementById('dashPage').style.visibility='hidden';
-  document.getElementById('loginPage').style.display='flex';
-  document.getElementById('loginBtn').classList.remove('ld');
-  document.getElementById('loginBtn').textContent='CONNECT TO DERIV';
-  hideLE();
+  document.getElementById('appShell').style.display='none';
+  document.getElementById('pgLogin').style.display='flex';
+  const lb=document.getElementById('loginBtn');if(lb){lb.classList.remove('ld');lb.textContent='CONNECT TO DERIV';}hideLE();
 }
 function verifyToken(token){
   let vws;
@@ -1186,9 +1103,9 @@ function loginFail(m){
   document.getElementById('loginBtn').textContent='CONNECT TO DERIV';
 }
 function launchDash(auth){
-  document.getElementById('loginPage').style.display='none';
-  document.getElementById('dashPage').style.display='block';
-  document.getElementById('dashPage').style.visibility='visible';
+  document.getElementById('pgLogin').style.display='none';
+  document.getElementById('appShell').style.display='flex';
+  navTo('ai');
   if(auth){
     const name=auth.fullname||auth.email||'Trader';
     const lid=auth.loginid||'—';
@@ -1307,7 +1224,21 @@ function ana(sym){
 }
 
 // ══ AI LOG ══
+function aiLogTo(id,msg,cls){
+  const el=document.getElementById(id);if(!el)return;
+  const now=new Date().toUTCString().slice(17,25);
+  const div=document.createElement('div');
+  div.className='ai-log-line '+(cls||'info');
+  div.innerHTML='<span class="ts">'+now+'</span>'+msg;
+  el.appendChild(div);el.scrollTop=el.scrollHeight;
+  while(el.children.length>80)el.removeChild(el.children[1]);
+}
 function aiLog(msg,cls){
+  // Route to active mode log + always to pioneer log as master
+  const modeLogMap={pioneer:'aiLog',scalper:'aiLogSC',trend:'aiLogTR',manual:'aiLogMAN'};
+  const targetId=modeLogMap[AI.mode]||'aiLog';
+  aiLogTo(targetId,msg,cls);
+  if(targetId!=='aiLog') aiLogTo('aiLog',msg,cls); // mirror to pioneer log
   const el=document.getElementById('aiLog');
   const now=new Date().toUTCString().slice(17,25);
   const div=document.createElement('div');
@@ -1847,8 +1778,12 @@ function addTradeLog(sym,type,digit,stake,profit,won,label){
     '<div>$'+stake.toFixed(2)+'</div>'+
     '<div style="color:'+(won?'var(--green)':'var(--red)')+';">'+(won?'WIN':'LOSS')+'</div>'+
     '<div class="'+pnlCls+'">'+(profit>=0?'+':'')+'$'+profit.toFixed(2)+'</div>';
-  const log=document.getElementById('tradeLog');
-  log.appendChild(entry);log.scrollTop=log.scrollHeight;
+  const logMap={pioneer:'tradeLog',scalper:'tradeLogSC',trend:'tradeLogTR',manual:'tradeLogMAN'};
+  const logId=logMap[AI.activeSource||'pioneer']||'tradeLog';
+  const log=document.getElementById(logId);
+  if(log){log.appendChild(entry);log.scrollTop=log.scrollHeight;}
+  // mirror to pioneer log too if not pioneer
+  if(logId!=='tradeLog'){const ml=document.getElementById('tradeLog');if(ml){const e2=entry.cloneNode(true);ml.appendChild(e2);ml.scrollTop=ml.scrollHeight;}}
 }
 
 // ══ AI CONTROLS ══
@@ -1920,6 +1855,11 @@ function updateAIStats(){
   sp.textContent=(AI.sessPnl>=0?'+':'')+AI.sessPnl.toFixed(2);
   sp.style.color=AI.sessPnl>=0?'var(--green)':'var(--red)';
   document.getElementById('sessPnlSub').textContent=tot+' trades';
+  // account page mirror
+  const apEl=document.getElementById('acctPnl');if(apEl){apEl.textContent=(AI.totalPnl>=0?'+':'')+AI.totalPnl.toFixed(2);apEl.style.color=AI.totalPnl>=0?'var(--green)':'var(--red)';}
+  const awEl=document.getElementById('acctWR');if(awEl)awEl.textContent=tot>0?Math.round(w/tot*100)+'%':'—';
+  const awwEl=document.getElementById('acctW');if(awwEl)awwEl.textContent=w;
+  const alEl=document.getElementById('acctL');if(alEl)alEl.textContent=l;
   let bestSym=null,bestScore=0;
   IDX.forEach(i=>{const s=ST[i.s];if(s.conn&&s.digits.length>10){try{const a=ana(i.s);if(a.score>bestScore){bestScore=a.score;bestSym=i.s;}}catch(e){}}});
   if(bestSym&&ST[bestSym].tickSpeed){
