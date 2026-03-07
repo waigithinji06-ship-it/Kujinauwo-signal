@@ -1237,7 +1237,7 @@ function startConn(){
       if(m.error&&m.error.code!=='MarketIsClosed'&&m.error.code!=='AuthorizationRequired')
         showErr(m.error.message||m.error.code);
       if(m.msg_type==='authorize'&&!m.error){subAll();ws.send(JSON.stringify({balance:1,subscribe:1}));}
-      if(m.msg_type==='tick')onTick(m.tick);
+      if(m.msg_type==='tick'){try{onTick(m.tick);}catch(e){console.warn('tick err',e);}}
       if(m.msg_type==='balance')updBal(m.balance);
       if(m.msg_type==='buy')onBuy(m);
       if(m.msg_type==='proposal_open_contract')onContract(m.proposal_open_contract);
@@ -1266,20 +1266,30 @@ function onTick(tk){
   if(s.digits.length>100){const r=s.digits.shift();s.freq[r]=Math.max(0,s.freq[r]-1);}
   s.freq[d]++;s.ticks++;s.conn=true;
   total++;
-  updateRow(tk.symbol);updateDC(tk.symbol);updateSum();
-  document.getElementById('STK').textContent=total.toLocaleString();
-  document.getElementById('TT').textContent=total;
+  // Only update Analysis page DOM when it's actually visible
+  const onAnalysisPage=document.getElementById('pgAnalysis').classList.contains('active');
+  if(onAnalysisPage){updateRow(tk.symbol);updateDC(tk.symbol);}
+  updateSum();
+  if(total%10===0){
+    document.getElementById('STK').textContent=total.toLocaleString();
+    document.getElementById('TT').textContent=total;
+  }
   if(AI.running&&AI.mode==='pioneer') aiTick(tk.symbol);
   if(SC.running&&AI.mode==='scalper'&&!AI.inTrade&&!AI.pendingResult&&Date.now()-lastTradeTime>1800) scalperTick();
   if(TR.running&&AI.mode==='trend'&&!AI.inTrade&&!AI.pendingResult&&Date.now()-lastTrendTradeTime>400) trendTick();
   if(MAN.running&&!AI.inTrade&&!AI.pendingResult&&Date.now()-lastManTradeTime>(MAN.aiDriven?15:1500)) manFireNext();
-  // update trend signal display on each tick
-  if(AI.mode==='trend') updateTrendDisplay(tk.symbol);
+  // Trend display: throttle to every 3 ticks — plenty fast enough
+  if(AI.mode==='trend'&&total%3===0) updateTrendDisplay(tk.symbol);
 }
 
 // ══ ANALYSIS (exact v3) ══
+// Per-symbol ana cache — key: sym, value: {tick, result}
+const _anaCache={};
 function ana(sym){
-  const s=ST[sym],pr=s.prices,fr=s.freq,n=s.digits.length;
+  const s=ST[sym];
+  // Return cached result if same tick count (no new data)
+  if(_anaCache[sym]&&_anaCache[sym].tick===s.ticks) return _anaCache[sym].result;
+  const pr=s.prices,fr=s.freq,n=s.digits.length;
   let isCon=false,vl=0,ms='LOADING';
   if(pr.length>=20){
     const r=pr.slice(-20),mn=r.reduce((a,b)=>a+b,0)/r.length;
@@ -1317,8 +1327,10 @@ function ana(sym){
   const o2R=()=>{if(n<20)return{l:'LOADING',c:'wt',t:''};if(isCon)return{l:(o2>=u7?'OVER2':'UNDER7')+' ★',c:'sb',t:'~70% base'};return{l:o2>=u7?'OVER2':'UNDER7',c:'by',t:'70%'};};
   const difR=()=>{if(n<15)return{l:'LOADING',c:'wt',t:''};const hp=(mxF/tot*100);if(hp>15)return{l:'DIFF '+hotD+' ★',c:'sb',t:'d'+hotD+' at '+Math.round(hp)+'%'};return{l:'DIFF '+hotD,c:'by',t:'90% base'};};
   const matR=()=>{if(n<30)return{l:'LOADING',c:'wt',t:''};if((mnF/tot*100)<5&&isCon)return{l:'MATCH '+coldD,c:'wt',t:'cold digit'};return{l:'AVOID',c:'av',t:'10% only'};};
-  return{isCon,ms,vl,ep,op,o4,u5,o2,u7,hotD,coldD,fr,tot,score,
+  const result={isCon,ms,vl,ep,op,o4,u5,o2,u7,hotD,coldD,fr,tot,score,
     eo:eoR(),o4r:o4R(),o2r:o2R(),dif:difR(),mat:matR()};
+  _anaCache[sym]={tick:s.ticks,result};
+  return result;
 }
 
 // ══ AI LOG ══
@@ -2118,29 +2130,45 @@ function vBar(lv){const col=lv<35?'var(--green)':lv<65?'var(--yellow)':'var(--re
 function initTable(){document.getElementById('TB').innerHTML=IDX.map(i=>'<tr id="R-'+i.s+'"><td class="L"><div class="iname">'+i.n+'</div><div class="isub">'+i.sub+'</div></td>'+Array(11).fill('<td><div class="sh" style="width:55px;margin:auto"></div></td>').join('')+'</tr>').join('');}
 function updateRow(sym){
   const row=document.getElementById('R-'+sym);if(!row)return;
-  const s=ST[sym],a=ana(sym),p=s.last;
+  const s=ST[sym];if(!s||!s.prices.length)return;
+  // Use cached ana result — already computed this tick
+  let a;try{a=ana(sym);}catch(e){return;}
+  const p=s.last;
   const prev=s.prices.length>1?s.prices[s.prices.length-2]:p;
   const dir=p>prev?'up':p<prev?'down':'flat';
-  const msCls=a.isCon?'cy':a.ms==='EXPANDING'?'cn':'cw';
-  const msIcon=a.isCon?'🟢':a.ms==='EXPANDING'?'🔴':'🟡';
   const ix=IDX.find(i=>i.s===sym);
   const isActive=AI.activeSym===sym&&AI.inTrade;
   row.style.background=isActive?'rgba(176,106,255,.06)':'';
-  let spdBadge='';
-  if(s.tickSpeed){const sc=s.tickSpeed<1200?'fast':s.tickSpeed<3500?'med':'slow';spdBadge='<span class="tick-speed '+sc+'">'+s.tickSpeed+'ms</span>';}
-  row.innerHTML=
-    '<td class="L"><div class="iname">'+ix.n+(isActive?' ⚡':'')+'</div><div class="isub">'+ix.sub+' '+spdBadge+'</div></td>'+
-    '<td><div class="pcell '+dir+'">'+(p?p.toFixed(2):'—')+'</div></td>'+
-    '<td>'+vBar(a.vl)+'</td>'+
-    '<td><div class="'+msCls+'">'+msIcon+' '+a.ms+'</div><div style="font-size:8px;color:var(--muted);margin-top:1px;">'+(a.isCon?'✓ Digits open':'✗ Wait')+'</div></td>'+
-    '<td>'+ldHTML(sym)+'</td><td>'+fgHTML(sym)+'</td>'+
-    '<td>'+bdg(a.eo)+'<div style="font-size:7px;color:var(--muted);margin-top:2px;">E:'+a.ep.toFixed(0)+'% O:'+a.op.toFixed(0)+'%</div></td>'+
-    '<td>'+bdg(a.o4r)+'<div style="font-size:7px;color:var(--muted);margin-top:2px;">O:'+a.o4.toFixed(0)+'% U:'+a.u5.toFixed(0)+'%</div></td>'+
-    '<td>'+bdg(a.o2r)+'<div style="font-size:7px;color:var(--muted);margin-top:2px;">~70%</div></td>'+
-    '<td>'+bdg(a.dif)+'<div style="font-size:7px;color:var(--muted);margin-top:2px;">avoid d.'+a.hotD+'</div></td>'+
-    '<td>'+bdg(a.mat)+'<div style="font-size:7px;color:var(--muted);margin-top:2px;">d.'+a.coldD+' cold</div></td>'+
-    '<td><span style="font-size:8px;color:var(--dim)">'+s.ticks+'</span></td>';
-  row.classList.remove('ru');void row.offsetWidth;row.classList.add('ru');
+  // Only rewrite cells that actually changed — find child <td> elements
+  const cells=row.querySelectorAll('td');
+  if(!cells.length){
+    // First render — full write
+    let spdBadge='';
+    if(s.tickSpeed){const sc=s.tickSpeed<1200?'fast':s.tickSpeed<3500?'med':'slow';spdBadge='<span class="tick-speed '+sc+'">'+s.tickSpeed+'ms</span>';}
+    const msCls=a.isCon?'cy':a.ms==='EXPANDING'?'cn':'cw';
+    const msIcon=a.isCon?'🟢':a.ms==='EXPANDING'?'🔴':'🟡';
+    row.innerHTML=
+      '<td class="L"><div class="iname">'+ix.n+(isActive?' ⚡':'')+'</div><div class="isub">'+ix.sub+' '+spdBadge+'</div></td>'+
+      '<td><div class="pcell '+dir+'">'+(p?p.toFixed(2):'—')+'</div></td>'+
+      '<td><span class="ms-badge '+msCls+'">'+msIcon+' '+a.ms+'</span></td>'+
+      '<td><span class="score-badge" style="color:'+(a.score>=65?'var(--green)':a.score>=45?'var(--yellow)':'var(--red)')+'">'+a.score+'</span></td>'+
+      '<td><span class="rec-badge '+a.dif.c+'">'+a.dif.l+'</span></td>'+
+      '<td><span class="rec-badge '+a.o2r.c+'">'+a.o2r.l+'</span></td>';
+    return;
+  }
+  // Subsequent renders — patch only the price cell and score (cheapest update)
+  if(cells[1]){const pc=cells[1].querySelector('.pcell');if(pc){pc.className='pcell '+dir;pc.textContent=p?p.toFixed(2):'—';}}
+  if(cells[3]){const sc=cells[3].querySelector('.score-badge');if(sc){sc.style.color=a.score>=65?'var(--green)':a.score>=45?'var(--yellow)':'var(--red)';sc.textContent=a.score;}}
+  // Update market state only when it changes
+  if(cells[2]){
+    const ms=cells[2].querySelector('.ms-badge');
+    if(ms){
+      const msCls=a.isCon?'cy':a.ms==='EXPANDING'?'cn':'cw';
+      const msIcon=a.isCon?'🟢':a.ms==='EXPANDING'?'🔴':'🟡';
+      const newTxt=msIcon+' '+a.ms;
+      if(ms.textContent!==newTxt){ms.className='ms-badge '+msCls;ms.textContent=newTxt;}
+    }
+  }
 }
 function initDC(){document.getElementById('DC').innerHTML=IDX.map(i=>'<div class="dcard"><div class="dtitle"><span>'+i.n+'</span><span style="font-size:8px;color:var(--muted);font-family:Space Mono,monospace" id="DCS-'+i.s+'">LOADING</span></div><div class="dbars">'+Array(10).fill(0).map((_,d)=>'<div class="dbw"><div class="dpct" id="DCP-'+i.s+'-'+d+'">0%</div><div class="dbar" id="DCB-'+i.s+'-'+d+'" style="height:2px;background:var(--accent)"></div><div class="ddig">'+d+'</div></div>').join('')+'</div></div>').join('');}
 function updateDC(sym){
@@ -2154,7 +2182,11 @@ function updateDC(sym){
     if(lbl)lbl.textContent=Math.round(p)+'%';
   });
 }
+let _sumTick=0;
 function updateSum(){
+  // Only recompute summary every 15 ticks — no user-visible difference
+  _sumTick++;
+  if(_sumTick%15!==0) return;
   const live=IDX.filter(i=>ST[i.s].conn).length;
   const con=IDX.filter(i=>{try{return ana(i.s).isCon;}catch(e){return false;}}).length;
   const exp=IDX.filter(i=>{try{return ana(i.s).ms==='EXPANDING';}catch(e){return false;}}).length;
