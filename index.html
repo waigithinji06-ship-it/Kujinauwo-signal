@@ -259,8 +259,8 @@ td.L{text-align:left;padding-left:12px;}
 .lad-sub{font-family:‘Space Mono’,monospace;font-size:6px;color:var(–dim);margin-top:2px;}
 
 /* ── PAGE SYSTEM ── */
-.page{display:none;flex-direction:column;height:100dvh;overflow:hidden;}
-.page.active{display:flex;}
+.page{display:none;flex-direction:column;height:100%;overflow:hidden;}
+.page.active{display:flex;min-height:0;}
 
 /* ── BOTTOM NAV ── */
 .bnav{display:flex;background:var(–surface);border-top:1px solid var(–border);flex-shrink:0;z-index:50;}
@@ -270,7 +270,7 @@ td.L{text-align:left;padding-left:12px;}
 .bntab.active .bni{filter:drop-shadow(0 0 6px var(–accent));}
 
 /* ── PAGE SCROLL AREA ── */
-.pscroll{flex:1;overflow-y:auto;padding:14px 14px 0;}
+.pscroll{flex:1;overflow-y:auto;padding:14px 14px 80px;min-height:0;}
 .pscroll::-webkit-scrollbar{width:3px;}
 .pscroll::-webkit-scrollbar-thumb{background:var(–border);}
 
@@ -285,8 +285,8 @@ td.L{text-align:left;padding-left:12px;}
 .mchip.active{border-color:var(–accent);color:var(–accent);background:rgba(176,106,255,.1);}
 
 /* ── MODE SUBPAGE ── */
-.mpage{display:none;flex:1;overflow-y:auto;padding:10px 14px 14px;}
-.mpage.active{display:block;}
+.mpage{display:none;flex:1;overflow-y:auto;padding:10px 14px 80px;min-height:0;}
+.mpage.active{display:flex;flex-direction:column;}
 .mpage::-webkit-scrollbar{width:3px;}
 .mpage::-webkit-scrollbar-thumb{background:var(–border);}
 
@@ -354,7 +354,7 @@ td.L{text-align:left;padding-left:12px;}
      BOTTOM NAV (pages 1-3)
 ════════════════════════════════ -->
 
-<div id="appShell" style="display:none;flex-direction:column;height:100dvh;overflow:hidden;">
+<div id="appShell" style="display:none;flex-direction:column;height:100dvh;overflow:hidden;position:fixed;inset:0;">
 
   <!-- Status bar -->
 
@@ -372,7 +372,7 @@ td.L{text-align:left;padding-left:12px;}
 
   <!-- Pages container -->
 
-  <div style="flex:1;overflow:hidden;position:relative;">
+  <div style="flex:1;overflow:hidden;position:relative;height:100%;">
 
 ```
 <!-- ── PAGE 1: ANALYSIS ── -->
@@ -459,6 +459,7 @@ td.L{text-align:left;padding-left:12px;}
   </div>
 
   <!-- Mode subpages -->
+  <div style="flex:1;overflow:hidden;min-height:0;display:flex;flex-direction:column;">
 
   <!-- 🚀 PIONEER -->
   <div id="mpPioneer" class="mpage active">
@@ -544,7 +545,8 @@ td.L{text-align:left;padding-left:12px;}
       <div class="cfg-block" style="text-align:center;"><div style="font-size:7px;color:var(--muted);font-family:'Space Mono',monospace;margin-bottom:4px;">EMA</div><div id="trendEma" style="font-size:12px;font-weight:700;color:var(--dim);">—</div></div>
       <div class="cfg-block" style="text-align:center;"><div style="font-size:7px;color:var(--muted);font-family:'Space Mono',monospace;margin-bottom:4px;">RSI</div><div id="trendRsi" style="font-size:12px;font-weight:700;color:var(--dim);">—</div></div>
       <div class="cfg-block" style="text-align:center;"><div style="font-size:7px;color:var(--muted);font-family:'Space Mono',monospace;margin-bottom:4px;">MOMENTUM</div><div id="trendMom" style="font-size:12px;font-weight:700;color:var(--dim);">—</div></div>
-      <div class="cfg-block" style="text-align:center;"><div style="font-size:7px;color:var(--muted);font-family:'Space Mono',monospace;margin-bottom:4px;">SIGNAL</div><div id="trendSig" style="font-size:12px;font-weight:700;color:var(--dim);">WAIT</div></div>
+      <div class="cfg-block" style="text-align:center;"><div style="font-size:7px;color:var(--muted);font-family:'Space Mono',monospace;margin-bottom:4px;">VELOCITY</div><div id="trendVel" style="font-size:12px;font-weight:700;color:var(--dim);">—</div></div>
+    <div class="cfg-block" style="text-align:center;"><div style="font-size:7px;color:var(--muted);font-family:'Space Mono',monospace;margin-bottom:4px;">SIGNAL</div><div id="trendSig" style="font-size:12px;font-weight:700;color:var(--dim);">WAIT</div></div>
     </div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:10px;">
       <div class="cfg-block"><div class="cfg-label">BASE STAKE ($)</div><input class="cfg-input" id="trendStake" type="number" value="1.00" min="0.35" step="0.50" oninput="refreshTrendLadder()"/></div>
@@ -609,6 +611,7 @@ td.L{text-align:left;padding-left:12px;}
     <div id="tradeLogMAN" class="tlog"><div class="log-entry log-header"><div>TIME</div><div>INDEX</div><div>TYPE</div><div>STAKE</div><div>RESULT</div><div>P&L</div></div></div>
   </div>
 
+  </div><!-- end mode subpages wrapper -->
 </div><!-- end pgAI -->
 
 <!-- ── PAGE 3: ACCOUNT ── -->
@@ -681,7 +684,7 @@ const IDX=[
 // ══ MARKET STATE ══
 const ST={};
 IDX.forEach(i=>{ST[i.s]={prices:[],digits:[],freq:new Array(10).fill(0),last:null,conn:false,ticks:0,tickTimes:[]};});
-let total=0,ws=null,rtimer=null,userToken=null,isGuest=false,lastTradeTime=0,lastManTradeTime=0;
+let total=0,ws=null,rtimer=null,userToken=null,isGuest=false,lastTradeTime=0,lastManTradeTime=0,lastTrendTradeTime=0;
 
 // ══ AI STATE ══
 const AI={
@@ -742,6 +745,13 @@ function calcRSI(prices, period=14){
   return 100-(100/(1+rs));
 }
 
+// Momentum5 — compare avg of last 5 vs avg of previous 5 (smoother)
+function calcMomentum5(prices){
+  if(prices.length<10) return null;
+  const recent=prices.slice(-5).reduce((a,b)=>a+b,0)/5;
+  const prev=prices.slice(-10,-5).reduce((a,b)=>a+b,0)/5;
+  return recent-prev;
+}
 // Momentum — compare avg of last 3 vs avg of previous 3
 function calcMomentum(prices){
   if(prices.length<6) return null;
@@ -782,39 +792,68 @@ function calcBarrier(sym, targetPayoutPct){
 // ══ TREND ANALYSIS — all three indicators ══
 function trendAna(sym){
   const s=ST[sym];
-  if(!s||s.prices.length<25) return null;
+  if(!s||s.prices.length<15) return null;
   const pr=s.prices;
 
-  const ema5=calcEMA(pr,5);
-  const ema20=calcEMA(pr,20);
-  const rsi=calcRSI(pr,14);
-  const mom=calcMomentum(pr);
-  const rsiThresh=parseFloat(document.getElementById('trendRsiThresh').value)||60;
+  // Faster EMA periods: 3 vs 10 — reacts quicker to tick momentum
+  const ema3 =calcEMA(pr,3);
+  const ema10=calcEMA(pr,10);
+  // Also track EMA crossover direction (current vs 2 ticks ago)
+  const ema3prev =calcEMA(pr.slice(0,-2),3);
+  const ema10prev=calcEMA(pr.slice(0,-2),10);
 
-  if(ema5===null||ema20===null||rsi===null||mom===null) return null;
+  const rsi=calcRSI(pr,7); // faster on tick data
+  // Momentum: last 5 vs previous 5 — smoother than 3 vs 3
+  const mom5=calcMomentum5(pr);
+  // Price velocity: net slope across last 6 ticks
+  const prSlice6=pr.length>=6?pr.slice(-6):pr;
+  const velocity=prSlice6.length>=6?(prSlice6[5]-prSlice6[0])+(prSlice6[4]-prSlice6[1])+(prSlice6[3]-prSlice6[2]):0;
+  const velSig=velocity>0?'CALL':velocity<0?'PUT':null;
 
-  // EMA signal
-  const emaDiff=ema5-ema20;
+  const rsiThresh=parseFloat(document.getElementById('trendRsiThresh').value)||55;
+
+  if(ema3===null||ema10===null||rsi===null||mom5===null) return null;
+
+  // ── EMA signal ──
+  const emaDiff=ema3-ema10;
+  const emaDiffPrev=ema3prev-ema10prev;
   const emaSig=emaDiff>0?'CALL':emaDiff<0?'PUT':null;
+  // Crossover bonus: just crossed = stronger signal
+  const crossed=(emaDiff>0&&emaDiffPrev<=0)||(emaDiff<0&&emaDiffPrev>=0);
 
-  // RSI signal — must be pushed away from 50
-  const rsiSig=rsi>(50+rsiThresh/2)?'PUT':rsi<(50-rsiThresh/2)?'CALL':null;
-  // (overbought RSI → expect reversal down → PUT; oversold → CALL)
+  // ── RSI signal — fires when RSI passes threshold from centre ──
+  // Lower threshold = more trades. Default 55 means RSI>55→PUT, RSI<45→CALL
+  const rsiSig=rsi>55?'PUT':rsi<45?'CALL':null; // RSI(7): simple 55/45 bands
 
-  // Momentum signal
-  const momSig=mom>0?'CALL':mom<0?'PUT':null;
+  // ── Momentum signal ──
+  const momSig=mom5>0?'CALL':mom5<0?'PUT':null;
 
-  // All three must agree
-  let signal=null;
-  if(emaSig&&rsiSig&&momSig&&emaSig===rsiSig&&rsiSig===momSig) signal=emaSig;
+  // ── Signal logic: 3-of-3 OR strong 2-of-3 ──
+  const votes=[emaSig,rsiSig,momSig].filter(Boolean);
+  const callVotes=votes.filter(v=>v==='CALL').length;
+  const putVotes =votes.filter(v=>v==='PUT').length;
 
   // Strength score
-  const emaStrength=Math.abs(emaDiff/ema20*1000);
+  const emaStrength=Math.abs(emaDiff/ema10*1000);
   const rsiStrength=Math.abs(rsi-50);
-  const momStrength=Math.abs(mom/pr[pr.length-1]*10000);
-  const score=Math.min(100, Math.round(emaStrength*10+rsiStrength+momStrength));
+  const momStrength=Math.abs(mom5/pr[pr.length-1]*10000);
+  const crossBonus=crossed?30:0;
+  const velBonus=(velSig&&velSig===emaSig)?15:0;
+  const score=Math.min(100, Math.round(emaStrength*8+rsiStrength*0.8+momStrength+crossBonus+velBonus));
 
-  return{ema5,ema20,emaDiff,emaSig,rsi,rsiSig,mom,momSig,signal,score,
+  // 3-of-3 → always fire
+  // 2-of-3 + velocity → fire at score>=20
+  // 2-of-3 alone → fire at score>=35
+  let signal=null;
+  if(callVotes===3) signal='CALL';
+  else if(putVotes===3) signal='PUT';
+  else if(callVotes===2&&putVotes===0&&velSig==='CALL'&&score>=20) signal='CALL';
+  else if(putVotes===2&&callVotes===0&&velSig==='PUT' &&score>=20) signal='PUT';
+  else if(callVotes===2&&putVotes===0&&score>=35) signal='CALL';
+  else if(putVotes===2&&callVotes===0&&score>=35) signal='PUT';
+
+  return{ema3,ema10,emaDiff,emaSig,crossed,rsi,rsiSig,mom5,momSig,velSig,signal,score,
+    callVotes,putVotes,
     emaStr:emaStrength.toFixed(2),rsiStr:rsiStrength.toFixed(1),momStr:momStrength.toFixed(2)};
 }
 
@@ -831,7 +870,7 @@ function findTrendMarket(){
       if(t.score>bestScore){bestScore=t.score;best={sym:i.s,t};}
     }catch(e){}
   });
-  return best&&best.t.score>=20?best:null;
+  return best&&best.t.score>=10?best:null;
 }
 
 // ══ TREND LADDER ══
@@ -880,20 +919,27 @@ function updateTrendDisplay(sym){
     const mEl=document.getElementById('trendMom');
     const sEl=document.getElementById('trendSig');
     // EMA
-    eEl.textContent=t.emaSig||'—';
+    // EMA crossover
+    eEl.textContent=(t.emaSig||'—')+(t.crossed?' ⚡':'');
     eEl.style.color=t.emaSig==='CALL'?'var(--green)':t.emaSig==='PUT'?'var(--red)':'var(--muted)';
-    // RSI
-    rEl.textContent=t.rsiSig?t.rsiSig+' '+t.rsi.toFixed(0):'—';
-    rEl.style.color=t.rsiSig==='CALL'?'var(--green)':t.rsiSig==='PUT'?'var(--red)':'var(--muted)';
+    // RSI(7) — always show live value
+    rEl.textContent=(t.rsiSig?t.rsiSig+' ':'')+t.rsi.toFixed(0);
+    rEl.style.color=t.rsiSig==='CALL'?'var(--green)':t.rsiSig==='PUT'?'var(--red)':'var(--yellow)';
     // Momentum
     mEl.textContent=t.momSig||'—';
     mEl.style.color=t.momSig==='CALL'?'var(--green)':t.momSig==='PUT'?'var(--red)':'var(--muted)';
+    // Velocity
+    const vEl=document.getElementById('trendVel');
+    if(vEl){vEl.textContent=t.velSig||'—';vEl.style.color=t.velSig==='CALL'?'var(--green)':t.velSig==='PUT'?'var(--red)':'var(--muted)';}
     // Composite signal
     if(t.signal){
-      sEl.textContent=t.signal+' ★';
+      const votes=t.signal==='CALL'?t.callVotes:t.putVotes;
+      sEl.textContent=t.signal+(votes===3?' ★★★':' ★★')+(t.crossed?' ⚡':'');
       sEl.style.color=t.signal==='CALL'?'var(--green)':'var(--red)';
     } else {
-      sEl.textContent='WAIT';sEl.style.color='var(--muted)';
+      const topV=Math.max(t.callVotes||0,t.putVotes||0);
+      sEl.textContent=topV>0?'WEAK('+topV+'/3)':'WAIT';
+      sEl.style.color='var(--muted)';
     }
     // Update barriers
     const barr=calcBarrier(sym, parseFloat(document.getElementById('trendPayout').value)||30);
@@ -1173,7 +1219,7 @@ function onTick(tk){
   document.getElementById('TT').textContent=total;
   if(AI.running&&AI.mode==='pioneer') aiTick(tk.symbol);
   if(SC.running&&AI.mode==='scalper'&&!AI.inTrade&&!AI.pendingResult&&Date.now()-lastTradeTime>1800) scalperTick();
-  if(TR.running&&AI.mode==='trend'&&!AI.inTrade&&!AI.pendingResult&&Date.now()-lastTradeTime>1800) trendTick();
+  if(TR.running&&AI.mode==='trend'&&!AI.inTrade&&!AI.pendingResult&&Date.now()-lastTrendTradeTime>400) trendTick();
   if(MAN.running&&!AI.inTrade&&!AI.pendingResult&&Date.now()-lastManTradeTime>(MAN.aiDriven?15:1500)) manFireNext();
   // update trend signal display on each tick
   if(AI.mode==='trend') updateTrendDisplay(tk.symbol);
@@ -1397,7 +1443,6 @@ function trendTick(){
   const sl=parseFloat(document.getElementById('cfgSL').value)||10;
   if(AI.sessPnl>=tp){aiLog('🎯 TP — Trend stopped.','success');trendStop();return;}
   if(AI.sessPnl<=-Math.abs(sl)){aiLog('🛑 SL — Trend stopped.','danger');trendStop();return;}
-  if(Date.now()-lastTradeTime<1800)return;
   setAIState('scanning');
 
   // In a recovery step — stay on same direction, same market if possible
@@ -1441,7 +1486,7 @@ function trendTick(){
     +' barrier:'+barrierStr+' $'+stake.toFixed(2)
     +(t.score?(' EMA:'+t.emaSig+' RSI:'+t.rsi.toFixed(0)+' Score:'+t.score):''),'info');
 
-  lastTradeTime=Date.now();
+  lastTradeTime=Date.now();lastTrendTradeTime=Date.now();
   placeTrade(sym, contractCode, stake, barrierStr, typeLabel, 'trend');
 }
 
