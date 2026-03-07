@@ -466,10 +466,10 @@ td.L{text-align:left;padding-left:12px;}
     <div class="msec-label">🚀 PIONEER — DIFFERS PRIMARY · OVER2 RECOVERY · 3.6×</div>
     <!-- Config -->
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:10px;">
-      <div class="cfg-block"><div class="cfg-label"><span>💰</span> BASE STAKE ($)</div><input class="cfg-input" id="cfgStake" type="number" value="5" min="0.35" step="0.50"/></div>
+      <div class="cfg-block"><div class="cfg-label"><span>💰</span> BASE STAKE ($)</div><input class="cfg-input" id="cfgStake" type="number" value="5" min="0.35" step="0.50"/><div style="font-size:8px;color:var(--dim);margin-top:3px;font-family:'Space Mono',monospace;">Score 45=1x · 85+=1.5x</div></div>
       <div class="cfg-block"><div class="cfg-label">MULT ×</div><input class="cfg-input" id="cfgMult" type="number" value="3.6" min="1.5" max="10" step="0.1"/></div>
-      <div class="cfg-block"><div class="cfg-label">TAKE PROFIT ($)</div><input class="cfg-input" id="cfgTP" type="number" value="15" min="1" step="1"/></div>
-      <div class="cfg-block"><div class="cfg-label">STOP LOSS ($)</div><input class="cfg-input" id="cfgSL" type="number" value="10" min="1" step="1"/></div>
+      <div class="cfg-block"><div class="cfg-label">TAKE PROFIT ($)</div><input class="cfg-input" id="cfgTP" type="number" value="30" min="1" step="1"/></div>
+      <div class="cfg-block"><div class="cfg-label">STOP LOSS ($)</div><input class="cfg-input" id="cfgSL" type="number" value="50" min="1" step="1"/></div>
       <div class="cfg-block" style="grid-column:1/-1;"><div class="cfg-label">INDEX</div><select class="cfg-select" id="cfgIndex"><option value="AUTO">AUTO (AI picks best)</option><option value="R_10">V10</option><option value="R_25">V25</option><option value="R_50">V50</option><option value="R_75">V75</option><option value="R_100">V100</option><option value="1HZ10V">V10 1s</option><option value="1HZ25V">V25 1s</option><option value="1HZ50V">V50 1s</option><option value="1HZ75V">V75 1s</option><option value="1HZ100V">V100 1s</option></select></div>
     </div>
     <!-- Ladder -->
@@ -718,13 +718,13 @@ const AI={
 // ══ MANUAL STATE ══
 const MAN={
   running:false, origStake:5, currentStake:5,
-  lossStreak:0, maxLoss:5,
+  lossStreak:0, maxLoss:5, sessPnl:0, wins:0, losses:0,
   code:'DIGITDIFF', barrier:2, typeLabel:'DIFFER',
   sym:null, mult:3.6, onLoss:'repeat', onWin:'reset', aiDriven:false,
 };
 
 // ══ SCALPER STATE ══
-const SC={running:false, step:0, baseStake:5, mult:2.1, direction:'OVER', consecLoss:0};
+const SC={running:false, step:0, baseStake:5, mult:2.1, direction:'OVER', consecLoss:0, sessPnl:0, wins:0, losses:0};
 
 // ══ TREND STATE ══
 const TR={
@@ -734,6 +734,7 @@ const TR={
   mult:3.6,
   forcedDir:'AUTO', // 'AUTO','CALL','PUT'
   forcedIndex:'AUTO',
+  sessPnl:0, wins:0, losses:0,
   ticks:5,
   targetPayout:30,  // % e.g. 30 = $1 → $1.30
   consecLoss:0,
@@ -971,8 +972,13 @@ function updateTrendDisplay(sym){
 }
 
 // ══ PIONEER STAKE CALC ══
-function calcStake(step){
+function calcStake(step, score){
   let s=AI.baseStake;
+  // Step 1 only: scale stake by confidence (score 45=1.0x, 85+=1.5x)
+  if(step===0 && score>=45){
+    const conf=Math.min(1.5, 1.0+((score-45)/40)*0.5);
+    s=Math.round(s*conf*100)/100;
+  }
   for(let i=0;i<step;i++) s=Math.round(s*AI.mult*100)/100;
   return s;
 }
@@ -1325,6 +1331,20 @@ function setAIState(state){
 }
 
 // ══ MARKET FINDER ══
+// Find best market for OVER2 recovery — requires o2>=65%
+function findBestRecoveryMarket(){
+  let best=null, bestO2=0;
+  IDX.forEach(i=>{
+    const s=ST[i.s];
+    if(!s||!s.conn||s.digits.length<20) return;
+    try{
+      const a=ana(i.s);
+      if(a.o2>=65&&a.o2>bestO2){bestO2=a.o2;best={sym:i.s,a};}
+    }catch(e){}
+  });
+  return best;
+}
+
 function findBestMarket(){
   const tgt=document.getElementById('cfgIndex').value;
   if(tgt!=='AUTO'){
@@ -1416,13 +1436,39 @@ function aiTick(sym){
   if(AI.sessPnl<=-Math.abs(sl)){aiLog('🛑 SL -$'+Math.abs(AI.sessPnl).toFixed(2)+'.','danger');stopAI();return;}
   if(Date.now()-lastTradeTime<1800)return;
   setAIState('scanning');
-  const market=findBestMarket();if(!market)return;
-  const{sym:tradeSym,a}=market;
-  const ix=IDX.find(i=>i.s===tradeSym);
-  const stake=calcStake(AI.martStep);
-  let contractCode,barrierDigit,typeLabel;
-  if(AI.martStep===0){contractCode='DIGITDIFF';barrierDigit=a.hotD;typeLabel='DIFFER';aiLog('🎯 S1 | '+ix.n+' | DIFFERS d.'+barrierDigit+' ('+Math.round(a.fr[barrierDigit]/a.tot*100)+'%) | $'+stake.toFixed(2)+' Score:'+a.score,'info');}
-  else{contractCode='DIGITOVER';barrierDigit=2;typeLabel='OVER2';aiLog('🔄 S'+(AI.martStep+1)+' | '+ix.n+' | OVER2 | $'+stake.toFixed(2),'warn');}
+
+  let tradeSym,a,ix,stake,contractCode,barrierDigit,typeLabel;
+
+  if(AI.martStep===0){
+    // STEP 1 — DIFFERS on best scoring market, confidence-scaled stake
+    const market=findBestMarket();
+    if(!market) return;
+    tradeSym=market.sym; a=market.a;
+    ix=IDX.find(i=>i.s===tradeSym);
+    stake=calcStake(0, a.score);
+    contractCode='DIGITDIFF'; barrierDigit=a.hotD; typeLabel='DIFFER';
+    const conf=Math.min(1.5,1.0+((a.score-45)/40)*0.5);
+    const hotPct=Math.round(a.fr[barrierDigit]/a.tot*100);
+    aiLog('🎯 S1 | '+ix.n+' | DIFFERS d.'+barrierDigit
+      +' ('+hotPct+'%) | $'+stake.toFixed(2)
+      +' Score:'+a.score+' Conf:'+conf.toFixed(2)+'x','info');
+
+  } else {
+    // STEPS 2-5 — OVER2 recovery: scan ALL markets, wait for best o2>=65%
+    const recovery=findBestRecoveryMarket();
+    if(!recovery){
+      setAIState('waiting');
+      aiLog('⏳ S'+(AI.martStep+1)+' — waiting for market with OVER2>=65%…','warn');
+      return;
+    }
+    tradeSym=recovery.sym; a=recovery.a;
+    ix=IDX.find(i=>i.s===tradeSym);
+    stake=calcStake(AI.martStep);
+    contractCode='DIGITOVER'; barrierDigit=2; typeLabel='OVER2';
+    aiLog('🔄 S'+(AI.martStep+1)+' | '+ix.n
+      +' | OVER2 ('+a.o2.toFixed(0)+'%) | $'+stake.toFixed(2),'warn');
+  }
+
   lastTradeTime=Date.now();
   placeTrade(tradeSym,contractCode,stake,barrierDigit,typeLabel,'pioneer');
 }
@@ -1432,8 +1478,8 @@ function scalperTick(){
   if(!SC.running||AI.inTrade||AI.pendingResult)return;
   const tp=parseFloat(document.getElementById('cfgTP').value)||15;
   const sl=parseFloat(document.getElementById('cfgSL').value)||10;
-  if(AI.sessPnl>=tp){aiLog('🎯 TP — Scalper stopped.','success');scalperStop();return;}
-  if(AI.sessPnl<=-Math.abs(sl)){aiLog('🛑 SL — Scalper stopped.','danger');scalperStop();return;}
+  if(SC.sessPnl>=tp){aiLog('🎯 TP +$'+SC.sessPnl.toFixed(2)+' — Scalper stopped.','success');scalperStop();return;}
+  if(SC.sessPnl<=-Math.abs(sl)){aiLog('🛑 SL -$'+Math.abs(SC.sessPnl).toFixed(2)+' — Scalper stopped.','danger');scalperStop();return;}
   setAIState('scanning');
   const market=findScalperMarket();
   if(!market){document.getElementById('scalperNextType').textContent='scanning…';return;}
@@ -1462,8 +1508,8 @@ function trendTick(){
   if(!TR.running||AI.inTrade||AI.pendingResult)return;
   const tp=parseFloat(document.getElementById('cfgTP').value)||15;
   const sl=parseFloat(document.getElementById('cfgSL').value)||10;
-  if(AI.sessPnl>=tp){aiLog('🎯 TP — Trend stopped.','success');trendStop();return;}
-  if(AI.sessPnl<=-Math.abs(sl)){aiLog('🛑 SL — Trend stopped.','danger');trendStop();return;}
+  if(TR.sessPnl>=tp){aiLog('🎯 TP +$'+TR.sessPnl.toFixed(2)+' — Trend stopped.','success');trendStop();return;}
+  if(TR.sessPnl<=-Math.abs(sl)){aiLog('🛑 SL -$'+Math.abs(TR.sessPnl).toFixed(2)+' — Trend stopped.','danger');trendStop();return;}
   setAIState('scanning');
 
   // In a recovery step — stay on same direction, same market if possible
@@ -1544,8 +1590,6 @@ function manualStart(){
   if(AI.running||SC.running||TR.running){aiLog('⚠ Stop other mode first.','warn');return;}
   const tp=parseFloat(document.getElementById('cfgTP').value)||15;
   const sl=parseFloat(document.getElementById('cfgSL').value)||10;
-  if(AI.sessPnl>=tp){aiLog('🎯 TP reached — reset stats.','warn');return;}
-  if(AI.sessPnl<=-Math.abs(sl)){aiLog('🛑 SL reached — reset stats.','warn');return;}
   MAN.code=document.getElementById('manContract').value;
   MAN.barrier=parseInt(document.getElementById('manBarrier').value)||2;
   MAN.origStake=parseFloat(document.getElementById('manStake').value)||5;
@@ -1554,7 +1598,7 @@ function manualStart(){
   MAN.onLoss=document.getElementById('manOnLoss').value;
   MAN.onWin=document.getElementById('manOnWin').value;
   MAN.maxLoss=parseInt(document.getElementById('manMaxLoss').value)||5;
-  MAN.lossStreak=0;
+  MAN.lossStreak=0;MAN.sessPnl=0;MAN.wins=0;MAN.losses=0;
   MAN.typeLabel=MAN.code==='DIGITDIFF'?'DIFFER':MAN.code==='DIGITOVER'?'OVER2':MAN.code==='DIGITUNDER'?'UNDER7':MAN.code==='DIGITEVEN'?'EVEN':'ODD';
   MAN.barrier=(MAN.code==='DIGITEVEN'||MAN.code==='DIGITODD')?0:MAN.barrier;
   MAN.aiDriven=(MAN.code==='DIGITDIFF'&&document.getElementById('manIndex').value==='AUTO');
@@ -1589,8 +1633,8 @@ function manFireNext(){
   if(!MAN.running||AI.inTrade||AI.pendingResult)return;
   const tp=parseFloat(document.getElementById('cfgTP').value)||15;
   const sl=parseFloat(document.getElementById('cfgSL').value)||10;
-  if(AI.sessPnl>=tp){aiLog('🎯 TP reached.','success');manualStop();return;}
-  if(AI.sessPnl<=-Math.abs(sl)){aiLog('🛑 SL reached.','danger');manualStop();return;}
+  if(MAN.sessPnl>=tp){aiLog('🎯 TP +$'+MAN.sessPnl.toFixed(2)+' — Manual stopped.','success');manualStop();return;}
+  if(MAN.sessPnl<=-Math.abs(sl)){aiLog('🛑 SL -$'+Math.abs(MAN.sessPnl).toFixed(2)+' — Manual stopped.','danger');manualStop();return;}
   if(MAN.lossStreak>=MAN.maxLoss){aiLog('🛑 Max losses reached.','danger');manualStop();return;}
   document.getElementById('manNextStake').textContent='$'+MAN.currentStake.toFixed(2);
   document.getElementById('manLossCount').textContent='Loss streak: '+MAN.lossStreak;
@@ -1621,15 +1665,13 @@ function trendStart(){
   if(AI.running||MAN.running||SC.running){aiLog('⚠ Stop other mode first.','warn');return;}
   const tp=parseFloat(document.getElementById('cfgTP').value)||15;
   const sl=parseFloat(document.getElementById('cfgSL').value)||10;
-  if(AI.sessPnl>=tp){aiLog('🎯 TP reached — reset stats.','warn');return;}
-  if(AI.sessPnl<=-Math.abs(sl)){aiLog('🛑 SL reached — reset stats.','warn');return;}
   TR.baseStake=parseFloat(document.getElementById('trendStake').value)||1;
   TR.mult=parseFloat(document.getElementById('trendMult')?document.getElementById('trendMult').value:3.6)||3.6;
   TR.ticks=parseInt(document.getElementById('trendTicks').value)||5;
   TR.targetPayout=parseFloat(document.getElementById('trendPayout').value)||30;
   TR.forcedDir=document.getElementById('trendDir')?document.getElementById('trendDir').value:'AUTO';
   TR.forcedIndex=document.getElementById('trendIndex')?document.getElementById('trendIndex').value:'AUTO';
-  TR.step=0;TR.consecLoss=0;TR.lastDirection=null;
+  TR.step=0;TR.consecLoss=0;TR.lastDirection=null;TR.sessPnl=0;TR.wins=0;TR.losses=0;
   TR.running=true;
   refreshTrendLadder();updateTrendLadderUI();
   document.getElementById('startBtn').disabled=true;
@@ -1664,11 +1706,9 @@ function scalperStart(){
   if(AI.running||MAN.running||TR.running){aiLog('⚠ Stop other mode first.','warn');return;}
   SC.baseStake=parseFloat(document.getElementById('scalperStake').value)||5;
   SC.mult=parseFloat(document.getElementById('scalperMult').value)||2.1;
-  SC.step=0;SC.consecLoss=0;SC.direction='OVER';
+  SC.step=0;SC.consecLoss=0;SC.direction='OVER';SC.sessPnl=0;SC.wins=0;SC.losses=0;
   const tp=parseFloat(document.getElementById('cfgTP').value)||15;
   const sl=parseFloat(document.getElementById('cfgSL').value)||10;
-  if(AI.sessPnl>=tp){aiLog('🎯 TP reached — reset stats.','warn');return;}
-  if(AI.sessPnl<=-Math.abs(sl)){aiLog('🛑 SL reached — reset stats.','warn');return;}
   SC.running=true;
   refreshScalperLadder();updateScalperLadderUI();
   document.getElementById('startBtn').disabled=true;
@@ -1725,10 +1765,17 @@ function placeTrade(sym,code,stake,barrier,typeLabel,source){
   document.getElementById('ctStatus').style.color='var(--yellow)';
   // Build order — CALL/PUT use string barrier, digit contracts use numeric
   const isTrend=(source==='trend');
+  const isDigit=['DIGITDIFF','DIGITOVER','DIGITUNDER','DIGITEVEN','DIGITODD'].includes(code);
   const params={amount:stake,basis:'stake',contract_type:code,currency:'USD',
-    duration:isTrend?TR.ticks:1,duration_unit:isTrend?'t':'t',symbol:sym};
-  if(isTrend){params.barrier=String(barrier);}
-  else{params.barrier=String(barrier);}
+    duration:isTrend?TR.ticks:1,duration_unit:'t',symbol:sym};
+  if(isTrend){
+    // CALL/PUT: barrier must be signed string e.g. '-0.001'
+    params.barrier=String(barrier);
+  } else if(isDigit&&code!=='DIGITEVEN'&&code!=='DIGITODD'){
+    // DIGITDIFF/OVER/UNDER: barrier is integer digit value
+    params.barrier=parseInt(barrier);
+  }
+  // DIGITEVEN/DIGITODD: no barrier field needed
   const order={buy:1,price:stake,parameters:params};
   AI.pendingResult=true;
   ws.send(JSON.stringify(order));
@@ -1786,10 +1833,8 @@ function onBuy(msg){
 function onContract(poc){
   if(!poc)return;
   // Accept late results if contract matches (even after timeout reset)
-  if(poc.contract_id!==AI.activeCid){
-    // Check if it's a recently timed-out contract we should still record
-    if(!AI.pendingResult||poc.status==='open')return;
-  }
+  // Only process result for the contract we are tracking
+  if(poc.contract_id!==AI.activeCid) return;
   if(poc.status==='open')return;
   clearTimeout(AI.tradeTimer);
   clearTimeout(AI.lateTimer);
@@ -1808,13 +1853,15 @@ function onContract(poc){
   if(source==='trend'){
     const stepEl=document.getElementById('tlad'+TR.step);
     if(won){
-      AI.wins++;AI.consecLoss=0;TR.consecLoss=0;
+      AI.wins++;TR.wins++;AI.consecLoss=0;TR.consecLoss=0;
+      TR.sessPnl=Math.round((TR.sessPnl+profit)*100)/100;
       if(stepEl){stepEl.classList.remove('active');stepEl.classList.add('won');}
-      aiLog('✅ TREND WIN +$'+profit.toFixed(2)+' S'+(TR.step+1)+' '+TR.lastDirection+' | Reset to S1','success');
+      aiLog('✅ TREND WIN +$'+profit.toFixed(2)+' S'+(TR.step+1)+' '+TR.lastDirection+' | Session: $'+TR.sessPnl.toFixed(2),'success');
       TR.step=0;TR.lastDirection=null;
       setTimeout(()=>{for(let i=0;i<5;i++){const e=document.getElementById('tlad'+i);if(e)e.classList.remove('won','lost','active');}updateTrendLadderUI();},1000);
     } else {
-      AI.losses++;AI.consecLoss++;TR.consecLoss++;
+      AI.losses++;TR.losses++;AI.consecLoss++;TR.consecLoss++;
+      TR.sessPnl=Math.round((TR.sessPnl+profit)*100)/100;
       if(stepEl){stepEl.classList.remove('active');stepEl.classList.add('lost');}
       if(TR.step<4){
         TR.step++;
@@ -1836,13 +1883,15 @@ function onContract(poc){
   } else if(source==='scalper'){
     const stepEl=document.getElementById('slad'+SC.step);
     if(won){
-      AI.wins++;AI.consecLoss=0;SC.consecLoss=0;
+      AI.wins++;SC.wins++;AI.consecLoss=0;SC.consecLoss=0;
+      SC.sessPnl=Math.round((SC.sessPnl+profit)*100)/100;
       if(stepEl){stepEl.classList.remove('active');stepEl.classList.add('won');}
-      aiLog('✅ SC WIN +$'+profit.toFixed(2)+' S'+(SC.step+1)+' | Reset','success');
+      aiLog('✅ SC WIN +$'+profit.toFixed(2)+' S'+(SC.step+1)+' | Session: $'+SC.sessPnl.toFixed(2),'success');
       SC.step=0;
       setTimeout(()=>{for(let i=0;i<4;i++){const e=document.getElementById('slad'+i);if(e)e.classList.remove('won','lost','active');}updateScalperLadderUI();},1000);
     } else {
-      AI.losses++;AI.consecLoss++;SC.consecLoss++;
+      AI.losses++;SC.losses++;AI.consecLoss++;SC.consecLoss++;
+      SC.sessPnl=Math.round((SC.sessPnl+profit)*100)/100;
       if(stepEl){stepEl.classList.remove('active');stepEl.classList.add('lost');}
       if(SC.step<3){SC.step++;aiLog('❌ SC LOSS | S'+(SC.step+1)+' $'+calcScalperStake(SC.step).toFixed(2),'danger');}
       else aiLog('❌ SC LOSS S4 — circuit breaker.','danger');
@@ -1856,12 +1905,14 @@ function onContract(poc){
 
   } else if(source==='manual'){
     if(won){
-      AI.wins++;AI.consecLoss=0;MAN.lossStreak=0;
-      aiLog('✅ [M] WIN +$'+profit.toFixed(2),'success');
+      AI.wins++;MAN.wins++;AI.consecLoss=0;MAN.lossStreak=0;
+      MAN.sessPnl=Math.round((MAN.sessPnl+profit)*100)/100;
+      aiLog('✅ [M] WIN +$'+profit.toFixed(2)+' | Session: $'+MAN.sessPnl.toFixed(2),'success');
       if(MAN.onWin==='reset') MAN.currentStake=MAN.origStake;
       else if(MAN.onWin==='stop'){addTradeLog(AI.activeSym,AI.activeType,AI.activeDigit,stake,profit,won,'M');updateAIStats();drawEquity();setTimeout(()=>{document.getElementById('curTrade').classList.remove('active');AI.activeCid=null;manualStop();},1200);return;}
     } else {
-      AI.losses++;AI.consecLoss++;MAN.lossStreak++;
+      AI.losses++;MAN.losses++;AI.consecLoss++;MAN.lossStreak++;
+      MAN.sessPnl=Math.round((MAN.sessPnl+profit)*100)/100;
       if(MAN.onLoss==='martingale'){MAN.currentStake=Math.round(MAN.currentStake*MAN.mult*100)/100;aiLog('❌ [M] LOSS | ×'+MAN.mult+' → $'+MAN.currentStake.toFixed(2)+' streak:'+MAN.lossStreak,'danger');}
       else if(MAN.onLoss==='stop'){addTradeLog(AI.activeSym,AI.activeType,AI.activeDigit,stake,profit,won,'M');updateAIStats();drawEquity();setTimeout(()=>{document.getElementById('curTrade').classList.remove('active');AI.activeCid=null;manualStop();},1200);return;}
       else aiLog('❌ [M] LOSS | repeat $'+MAN.currentStake.toFixed(2)+' streak:'+MAN.lossStreak,'danger');
@@ -1951,9 +2002,9 @@ function resetAI(){
   stopAI();manualStop();scalperStop();trendStop();
   AI.wins=0;AI.losses=0;AI.totalPnl=0;AI.sessPnl=0;
   AI.consecLoss=0;AI.martStep=0;AI.activeCid=null;AI.equityPoints=[0];
-  MAN.lossStreak=0;MAN.currentStake=MAN.origStake;
-  SC.step=0;SC.consecLoss=0;
-  TR.step=0;TR.consecLoss=0;TR.lastDirection=null;
+  MAN.lossStreak=0;MAN.currentStake=MAN.origStake;MAN.sessPnl=0;MAN.wins=0;MAN.losses=0;
+  SC.step=0;SC.consecLoss=0;SC.sessPnl=0;SC.wins=0;SC.losses=0;
+  TR.step=0;TR.consecLoss=0;TR.lastDirection=null;TR.sessPnl=0;TR.wins=0;TR.losses=0;
   setAIState('idle');updateAIStats();drawEquity();
   document.getElementById('curTrade').classList.remove('active');
   document.getElementById('manNextStake').textContent='$'+(MAN.origStake||5).toFixed(2);
