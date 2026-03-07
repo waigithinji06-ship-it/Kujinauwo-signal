@@ -193,7 +193,7 @@ td.L{text-align:left;padding-left:12px;}
 
 /* Trade log */
 .trade-log{max-height:220px;overflow-y:auto;background:var(–surface);border:1px solid var(–border);border-radius:10px;padding:2px;}
-.log-entry{display:grid;grid-template-columns:80px 80px 70px 80px 70px 1fr;gap:8px;padding:7px 12px;border-bottom:1px solid var(–border);font-family:‘Space Mono’,monospace;font-size:9px;align-items:center;transition:background .15s;}
+.log-entry{display:grid;grid-template-columns:72px 72px 72px 70px 55px 72px;gap:8px;padding:7px 12px;border-bottom:1px solid var(–border);font-family:‘Space Mono’,monospace;font-size:9px;align-items:center;transition:background .15s;}
 .log-entry:last-child{border-bottom:none;}
 .log-entry:hover{background:rgba(255,255,255,.02);}
 .log-entry.win{border-left:3px solid var(–green);}
@@ -468,7 +468,15 @@ td.L{text-align:left;padding-left:12px;}
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:10px;">
       <div class="cfg-block"><div class="cfg-label"><span>💰</span> BASE STAKE ($)</div><input class="cfg-input" id="cfgStake" type="number" value="5" min="0.35" step="0.50"/><div style="font-size:8px;color:var(--dim);margin-top:3px;font-family:'Space Mono',monospace;">Score 45=1x · 85+=1.5x</div></div>
       <div class="cfg-block"><div class="cfg-label">MULT ×</div><input class="cfg-input" id="cfgMult" type="number" value="3.6" min="1.5" max="10" step="0.1"/></div>
-      <div class="cfg-block"><div class="cfg-label">TAKE PROFIT ($)</div><input class="cfg-input" id="cfgTP" type="number" value="30" min="1" step="1"/></div>
+      <div class="cfg-block">
+        <div class="cfg-label">TOTAL TAKE PROFIT ($)</div>
+        <input class="cfg-input" id="cfgTP" type="number" value="30" min="1" step="1" oninput="calcTpLevels()"/>
+        <div style="font-size:8px;color:var(--dim);margin-top:4px;font-family:'Space Mono',monospace;line-height:1.7;">
+          TP1 <span id="tp1val" style="color:var(--yellow);">$10</span> → stake ×0.75<br>
+          TP2 <span id="tp2val" style="color:var(--accent);">$20</span> → stake ×0.50<br>
+          TP3 <span id="tp3val" style="color:var(--green);">$30</span> → stop
+        </div>
+      </div>
       <div class="cfg-block"><div class="cfg-label">STOP LOSS ($)</div><input class="cfg-input" id="cfgSL" type="number" value="50" min="1" step="1"/></div>
       <div class="cfg-block" style="grid-column:1/-1;"><div class="cfg-label">INDEX</div><select class="cfg-select" id="cfgIndex"><option value="AUTO">AUTO (AI picks best)</option><option value="R_10">V10</option><option value="R_25">V25</option><option value="R_50">V50</option><option value="R_75">V75</option><option value="R_100">V100</option><option value="1HZ10V">V10 1s</option><option value="1HZ25V">V25 1s</option><option value="1HZ50V">V50 1s</option><option value="1HZ75V">V75 1s</option><option value="1HZ100V">V100 1s</option></select></div>
     </div>
@@ -707,6 +715,7 @@ let total=0,ws=null,rtimer=null,userToken=null,isGuest=false,lastTradeTime=0,las
 // ══ AI STATE ══
 const AI={
   running:false, state:'idle', mode:'pioneer',
+  tp1Hit:false, tp2Hit:false, // tiered TP flags
   baseStake:5, mult:3.6, tp:15, sl:10,
   martStep:0, consecLoss:0,
   wins:0, losses:0, totalPnl:0, sessPnl:0,
@@ -1014,6 +1023,21 @@ function updateScalperLadderUI(){
   if(sd) sd.textContent=(SC.step+1)+'/4';
   const ns=document.getElementById('scalperNextStake');
   if(ns) ns.textContent='$'+calcScalperStake(SC.step).toFixed(2);
+}
+
+// ══ TIERED TP CALCULATOR ══
+function calcTpLevels(){
+  const tp=parseFloat(document.getElementById('cfgTP').value)||30;
+  const t1=Math.round(tp*0.333*100)/100;
+  const t2=Math.round(tp*0.666*100)/100;
+  const t3=tp;
+  const e1=document.getElementById('tp1val');
+  const e2=document.getElementById('tp2val');
+  const e3=document.getElementById('tp3val');
+  if(e1) e1.textContent='$'+t1.toFixed(2);
+  if(e2) e2.textContent='$'+t2.toFixed(2);
+  if(e3) e3.textContent='$'+t3.toFixed(2);
+  return{t1,t2,t3};
 }
 
 // ══ NAVIGATION ══
@@ -1432,8 +1456,26 @@ function aiTick(sym){
   if(AI.martStep>=5||AI.consecLoss>=5){if(AI.state!=='stopped'){setAIState('stopped');aiLog('🛑 CIRCUIT BREAKER.','danger');stopAI();}return;}
   const tp=parseFloat(document.getElementById('cfgTP').value)||15;
   const sl=parseFloat(document.getElementById('cfgSL').value)||10;
-  if(AI.sessPnl>=tp){aiLog('🎯 TP +$'+AI.sessPnl.toFixed(2)+'.','success');stopAI();return;}
   if(AI.sessPnl<=-Math.abs(sl)){aiLog('🛑 SL -$'+Math.abs(AI.sessPnl).toFixed(2)+'.','danger');stopAI();return;}
+  // Tiered TP — auto-calculated from total TP
+  const tpLevels=calcTpLevels();
+  if(AI.sessPnl>=tp){aiLog('🎯 TP3 +$'+AI.sessPnl.toFixed(2)+' — Full target hit. Stopping.','success');stopAI();return;}
+  if(!AI.tp2Hit&&AI.sessPnl>=tpLevels.t2){
+    AI.tp2Hit=true;
+    // Reduce base stake to 50% — protect profits
+    const origStake=parseFloat(document.getElementById('cfgStake').value)||5;
+    AI.baseStake=Math.max(0.35, Math.round(origStake*0.5*100)/100);
+    aiLog('🎯 TP2 +$'+AI.sessPnl.toFixed(2)+' — Stake reduced to $'+AI.baseStake.toFixed(2)+' (50%). Coasting to TP3.','success');
+    refreshLadder();
+  }
+  if(!AI.tp1Hit&&AI.sessPnl>=tpLevels.t1){
+    AI.tp1Hit=true;
+    // Reduce base stake to 75% — slow down
+    const origStake=parseFloat(document.getElementById('cfgStake').value)||5;
+    AI.baseStake=Math.max(0.35, Math.round(origStake*0.75*100)/100);
+    aiLog('🎯 TP1 +$'+AI.sessPnl.toFixed(2)+' — Stake reduced to $'+AI.baseStake.toFixed(2)+' (75%). Protecting gains.','success');
+    refreshLadder();
+  }
   if(Date.now()-lastTradeTime<1800)return;
   setAIState('scanning');
 
@@ -1780,23 +1822,37 @@ function placeTrade(sym,code,stake,barrier,typeLabel,source){
   AI.pendingResult=true;
   ws.send(JSON.stringify(order));
   AI.tradeTimer=setTimeout(()=>{
-    if(AI.pendingResult){
-      // Trade timed out — keep contract ID live for 30 more seconds
-      // in case Deriv settles late, so onContract can still catch it
-      aiLog('⚠ Trade taking long — waiting 30s for Deriv result…','warn');
-      // Extended wait: if still pending after 30 more seconds, record as loss
+    if(AI.pendingResult&&AI.activeCid){
+      // Step 1: try to resubscribe and get the real result from Deriv
+      aiLog('⚠ No result in 15s — resubscribing to contract #'+AI.activeCid+'…','warn');
+      document.getElementById('ctStatus').textContent='RECHECK…';
+      document.getElementById('ctStatus').style.color='var(--yellow)';
+      if(ws&&ws.readyState===1){
+        ws.send(JSON.stringify({proposal_open_contract:1,contract_id:AI.activeCid,subscribe:1}));
+      }
+      // Step 2: if still no result after 30 more seconds, record as loss
       AI.lateTimer=setTimeout(()=>{
         if(AI.pendingResult&&AI.activeCid){
           const lostStake=parseFloat(document.getElementById('ctStake').textContent.replace('$',''))||0;
-          aiLog('❌ Trade timeout — recording as loss ($'+lostStake.toFixed(2)+')','danger');
+          aiLog('❌ Timeout — no result after 45s. Recording as loss ($'+lostStake.toFixed(2)+')','danger');
           AI.pendingResult=false;AI.inTrade=false;
           AI.losses++;AI.consecLoss++;
           const lostAmt=-lostStake;
+          // Route loss to correct mode P&L
+          const src=AI.activeSource||'pioneer';
           AI.totalPnl=Math.round((AI.totalPnl+lostAmt)*100)/100;
           AI.sessPnl=Math.round((AI.sessPnl+lostAmt)*100)/100;
+          if(src==='scalper'){SC.sessPnl=Math.round((SC.sessPnl+lostAmt)*100)/100;SC.losses++;}
+          else if(src==='trend'){TR.sessPnl=Math.round((TR.sessPnl+lostAmt)*100)/100;TR.losses++;}
+          else if(src==='manual'){MAN.sessPnl=Math.round((MAN.sessPnl+lostAmt)*100)/100;MAN.losses++;}
           AI.equityPoints.push(AI.sessPnl);
-          addTradeLog(AI.activeSym,AI.activeType,'timeout',lostStake,lostAmt,false,'TIMEOUT');
+          const stepLabel=src==='pioneer'?'S'+(AI.martStep+1)+' T/O':src==='scalper'?'SC T/O':src==='trend'?'TR T/O':'MAN T/O';
+          addTradeLog(AI.activeSym,AI.activeType,'timeout',lostStake,lostAmt,false,stepLabel);
           AI.activeCid=null;
+          // Advance martingale step so next trade escalates correctly
+          if(src==='pioneer'&&AI.martStep<4) AI.martStep++;
+          else if(src==='scalper'&&SC.step<3) SC.step++;
+          else if(src==='trend'&&TR.step<4) TR.step++;
           updateAIStats();drawEquity();
           document.getElementById('curTrade').classList.remove('active');
           setAIState(AI.running||SC.running||MAN.running||TR.running?'scanning':'idle');
@@ -1938,7 +1994,7 @@ function onContract(poc){
       if(AI.martStep<4){AI.martStep++;aiLog('❌ LOSS S'+(AI.martStep+1)+' OVER2 $'+calcStake(AI.martStep).toFixed(2),'danger');}
       else aiLog('❌ LOSS S5 — circuit breaker.','danger');
     }
-    addTradeLog(AI.activeSym,AI.activeType,AI.activeDigit,stake,profit,won,AI.martStep);
+    addTradeLog(AI.activeSym,AI.activeType,AI.activeDigit,stake,profit,won,'S'+(AI.martStep+1)+(AI.martStep===0?' DIFF':' OV2'));
     updateAIStats();drawEquity();
     setTimeout(()=>{
       document.getElementById('curTrade').classList.remove('active');AI.activeCid=null;
@@ -1978,6 +2034,7 @@ function startAI(){
   AI.mult=parseFloat(document.getElementById('cfgMult').value)||3.6;
   AI.tp=parseFloat(document.getElementById('cfgTP').value)||15;
   AI.sl=parseFloat(document.getElementById('cfgSL').value)||10;
+  AI.tp1Hit=false;AI.tp2Hit=false;
   refreshLadder();AI.running=true;
   document.getElementById('startBtn').disabled=true;
   document.getElementById('stopBtn').disabled=false;
@@ -2002,6 +2059,7 @@ function resetAI(){
   stopAI();manualStop();scalperStop();trendStop();
   AI.wins=0;AI.losses=0;AI.totalPnl=0;AI.sessPnl=0;
   AI.consecLoss=0;AI.martStep=0;AI.activeCid=null;AI.equityPoints=[0];
+  AI.tp1Hit=false;AI.tp2Hit=false;
   MAN.lossStreak=0;MAN.currentStake=MAN.origStake;MAN.sessPnl=0;MAN.wins=0;MAN.losses=0;
   SC.step=0;SC.consecLoss=0;SC.sessPnl=0;SC.wins=0;SC.losses=0;
   TR.step=0;TR.consecLoss=0;TR.lastDirection=null;TR.sessPnl=0;TR.wins=0;TR.losses=0;
@@ -2117,6 +2175,7 @@ function showErr(m){const b=document.getElementById('ERR');b.textContent='⚠ '+
 function hideErr(){document.getElementById('ERR').style.display='none';}
 
 setInterval(()=>{document.getElementById('CLK').textContent=new Date().toUTCString().slice(17,25);},1000);
+setTimeout(calcTpLevels,500);
 setInterval(()=>{if(AI.equityPoints.length>1)drawEquity();},4000);
 updateAIStats();
 </script>
