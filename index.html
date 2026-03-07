@@ -767,7 +767,7 @@ function calcMomentum(prices){
 // Formula: barrier = -(avgRange × payoutFactor) where payoutFactor tunes payout
 function calcBarrier(sym, targetPayoutPct){
   const s=ST[sym];
-  if(!s||s.prices.length<20) return{call:'-0.0010',put:'+0.0010'};
+  if(!s||s.prices.length<20) return{call:'-0.001',put:'+0.001'};
   const pr=s.prices.slice(-20);
   // average tick-to-tick range
   let totalRange=0;
@@ -780,11 +780,11 @@ function calcBarrier(sym, targetPayoutPct){
   // → offset = avgRange × ticks × (1 - targetPct/1) × 0.6
   const ticks=parseInt(document.getElementById('trendTicks').value)||5;
   const offset=Math.max(avgRange*0.5, avgRange*ticks*(1-targetPct)*0.15);
-  // round to 4 decimal places, minimum 0.0001
-  const rounded=Math.max(0.0001, parseFloat(offset.toFixed(4)));
+  // Deriv API max 3 decimal places on barrier
+  const rounded=Math.max(0.001, parseFloat(offset.toFixed(3)));
   return{
-    call:'-'+rounded.toFixed(4),
-    put:'+'+rounded.toFixed(4),
+    call:'-'+rounded.toFixed(3),
+    put:'+'+rounded.toFixed(3),
     raw:rounded
   };
 }
