@@ -550,8 +550,26 @@ td.L{text-align:left;padding-left:12px;}
     </div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:10px;">
       <div class="cfg-block"><div class="cfg-label">BASE STAKE ($)</div><input class="cfg-input" id="trendStake" type="number" value="1.00" min="0.35" step="0.50" oninput="refreshTrendLadder()"/></div>
+      <div class="cfg-block"><div class="cfg-label">MARTINGALE MULT ×</div><input class="cfg-input" id="trendMult" type="number" value="3.6" min="1.1" max="10" step="0.1" oninput="refreshTrendLadder()"/></div>
       <div class="cfg-block"><div class="cfg-label">TICKS</div><input class="cfg-input" id="trendTicks" type="number" value="5" min="1" max="10" step="1"/></div>
       <div class="cfg-block"><div class="cfg-label">TARGET PAYOUT %</div><input class="cfg-input" id="trendPayout" type="number" value="30" min="10" max="90" step="5"/></div>
+      <div class="cfg-block" style="grid-column:1/-1;"><div class="cfg-label">INDEX</div>
+        <select class="cfg-select" id="trendIndex">
+          <option value="AUTO">AUTO (AI picks best signal)</option>
+          <option value="R_10">V10</option><option value="R_25">V25</option>
+          <option value="R_50">V50</option><option value="R_75">V75</option>
+          <option value="R_100">V100</option><option value="1HZ10V">V10 1s</option>
+          <option value="1HZ25V">V25 1s</option><option value="1HZ50V">V50 1s</option>
+          <option value="1HZ75V">V75 1s</option><option value="1HZ100V">V100 1s</option>
+        </select>
+      </div>
+      <div class="cfg-block"><div class="cfg-label">DIRECTION</div>
+        <select class="cfg-select" id="trendDir">
+          <option value="AUTO">AUTO (AI decides)</option>
+          <option value="CALL">CALL only (Rise)</option>
+          <option value="PUT">PUT only (Fall)</option>
+        </select>
+      </div>
       <div class="cfg-block"><div class="cfg-label">MIN RSI SWING</div><input class="cfg-input" id="trendRsiThresh" type="number" value="60" min="50" max="80" step="5"/></div>
     </div>
     <div style="margin-bottom:10px;">
@@ -714,6 +732,8 @@ const TR={
   step:0,           // 0-4 martingale step
   baseStake:1,
   mult:3.6,
+  forcedDir:'AUTO', // 'AUTO','CALL','PUT'
+  forcedIndex:'AUTO',
   ticks:5,
   targetPayout:30,  // % e.g. 30 = $1 → $1.30
   consecLoss:0,
@@ -882,6 +902,7 @@ function calcTrendStake(step){
 }
 function refreshTrendLadder(){
   TR.baseStake=parseFloat(document.getElementById('trendStake').value)||1;
+  TR.mult=parseFloat(document.getElementById('trendMult')?document.getElementById('trendMult').value:3.6)||3.6;
   let totalExp=0;
   for(let i=0;i<5;i++){
     const stake=calcTrendStake(i); totalExp+=stake;
@@ -1336,17 +1357,16 @@ function findScalperMarket(){
 
 // ══ SCALPER RECOVERY BARRIER ══
 function pickRecoveryBarrier(a,direction){
+  // Recovery max: OVER3 or UNDER6 — never goes tighter than primary
   const fr=a.fr,tot=a.tot;
   if(direction==='OVER'){
     const o3=[4,5,6,7,8,9].reduce((s,d)=>s+(fr[d]||0),0)/tot*100;
-    const o4=[5,6,7,8,9].reduce((s,d)=>s+(fr[d]||0),0)/tot*100;
-    if(o4>=58)return{barrier:4,code:'DIGITOVER',pct:o4,label:'OVER 4'};
+    // OVER3 only if strongly favoured, else stay at OVER2
     if(o3>=56)return{barrier:3,code:'DIGITOVER',pct:o3,label:'OVER 3'};
     return{barrier:2,code:'DIGITOVER',pct:a.o2,label:'OVER 2'};
   } else {
     const u6=[0,1,2,3,4,5].reduce((s,d)=>s+(fr[d]||0),0)/tot*100;
-    const u5=[0,1,2,3,4].reduce((s,d)=>s+(fr[d]||0),0)/tot*100;
-    if(u5>=58)return{barrier:5,code:'DIGITUNDER',pct:u5,label:'UNDER 5'};
+    // UNDER6 only if strongly favoured, else stay at UNDER7
     if(u6>=56)return{barrier:6,code:'DIGITUNDER',pct:u6,label:'UNDER 6'};
     return{barrier:7,code:'DIGITUNDER',pct:a.u7,label:'UNDER 7'};
   }
@@ -1450,24 +1470,50 @@ function trendTick(){
   let sym=null, direction=null, t=null;
 
   if(TR.step===0){
-    // Fresh entry — need full 3-way signal agreement
-    const market=findTrendMarket();
-    if(!market)return;
-    sym=market.sym; t=market.t;
-    direction=t.signal; // 'CALL' or 'PUT'
+    // Fresh entry
+    if(TR.forcedIndex&&TR.forcedIndex!=='AUTO'){
+      // Manual index — use it, check signal if AUTO dir
+      sym=TR.forcedIndex;
+      t=trendAna(sym);
+      if(!t) return;
+      if(TR.forcedDir&&TR.forcedDir!=='AUTO'){
+        direction=TR.forcedDir;
+      } else {
+        if(!t.signal) return; // wait for signal on this index
+        direction=t.signal;
+      }
+    } else {
+      // AUTO index — scan for best signal
+      if(TR.forcedDir&&TR.forcedDir!=='AUTO'){
+        // Forced direction: find best market matching that direction
+        let best=null,bestScore=0;
+        IDX.forEach(i=>{
+          const s=ST[i.s];if(!s||!s.conn||s.prices.length<15)return;
+          try{const ta=trendAna(i.s);if(ta&&ta.signal===TR.forcedDir&&ta.score>bestScore){bestScore=ta.score;best={sym:i.s,t:ta};}}catch(e){}
+        });
+        if(!best)return;
+        sym=best.sym;t=best.t;direction=TR.forcedDir;
+      } else {
+        const market=findTrendMarket();
+        if(!market)return;
+        sym=market.sym;t=market.t;direction=t.signal;
+      }
+    }
     TR.lastDirection=direction;
   } else {
-    // Recovery — keep direction, find any connected market
+    // Recovery — keep locked direction
     direction=TR.lastDirection;
-    // prefer market with same signal, otherwise use best available
-    const market=findTrendMarket();
-    if(market&&market.t.signal===direction){sym=market.sym;t=market.t;}
-    else{
-      // fallback: use any connected market with enough prices
-      const fallback=IDX.find(i=>ST[i.s].conn&&ST[i.s].prices.length>=25);
-      if(!fallback)return;
-      sym=fallback.s;
+    if(TR.forcedIndex&&TR.forcedIndex!=='AUTO'){
+      sym=TR.forcedIndex;
       t=trendAna(sym)||{score:0};
+    } else {
+      const market=findTrendMarket();
+      if(market&&market.t.signal===direction){sym=market.sym;t=market.t;}
+      else{
+        const fallback=IDX.find(i=>ST[i.s].conn&&ST[i.s].prices.length>=15);
+        if(!fallback)return;
+        sym=fallback.s;t=trendAna(sym)||{score:0};
+      }
     }
   }
 
@@ -1578,14 +1624,17 @@ function trendStart(){
   if(AI.sessPnl>=tp){aiLog('🎯 TP reached — reset stats.','warn');return;}
   if(AI.sessPnl<=-Math.abs(sl)){aiLog('🛑 SL reached — reset stats.','warn');return;}
   TR.baseStake=parseFloat(document.getElementById('trendStake').value)||1;
+  TR.mult=parseFloat(document.getElementById('trendMult')?document.getElementById('trendMult').value:3.6)||3.6;
   TR.ticks=parseInt(document.getElementById('trendTicks').value)||5;
   TR.targetPayout=parseFloat(document.getElementById('trendPayout').value)||30;
+  TR.forcedDir=document.getElementById('trendDir')?document.getElementById('trendDir').value:'AUTO';
+  TR.forcedIndex=document.getElementById('trendIndex')?document.getElementById('trendIndex').value:'AUTO';
   TR.step=0;TR.consecLoss=0;TR.lastDirection=null;
   TR.running=true;
   refreshTrendLadder();updateTrendLadderUI();
   document.getElementById('startBtn').disabled=true;
   document.getElementById('stopBtn').disabled=false;
-  ['trendStake','trendTicks','trendPayout','trendRsiThresh','modePioneer','modeManual','modeScalper','modeTrend']
+  ['trendStake','trendMult','trendTicks','trendPayout','trendRsiThresh','trendIndex','trendDir','modePioneer','modeManual','modeScalper','modeTrend']
     .forEach(id=>{const el=document.getElementById(id);if(el)el.disabled=true;});
   setAIState('scanning');
   document.getElementById('trendRunning').textContent='▶ RUNNING';
@@ -1600,7 +1649,7 @@ function trendStop(){
   TR.running=false;
   document.getElementById('startBtn').disabled=false;
   document.getElementById('stopBtn').disabled=true;
-  ['trendStake','trendTicks','trendPayout','trendRsiThresh','modePioneer','modeManual','modeScalper','modeTrend']
+  ['trendStake','trendMult','trendTicks','trendPayout','trendRsiThresh','trendIndex','trendDir','modePioneer','modeManual','modeScalper','modeTrend']
     .forEach(id=>{const el=document.getElementById(id);if(el)el.disabled=false;});
   if(!AI.running&&!MAN.running&&!SC.running)setAIState('idle');
   document.getElementById('trendRunning').textContent='⏸ IDLE';
