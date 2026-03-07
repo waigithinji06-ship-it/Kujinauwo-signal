@@ -669,16 +669,16 @@ td.L{text-align:left;padding-left:12px;}
 <script>
 // ══ INDICES ══
 const IDX=[
-  {s:'R_10',   n:'V10',      sub:'Volatility 10',    v:10},
-  {s:'R_25',   n:'V25',      sub:'Volatility 25',    v:25},
-  {s:'R_50',   n:'V50',      sub:'Volatility 50',    v:50},
-  {s:'R_75',   n:'V75',      sub:'Volatility 75',    v:75},
-  {s:'R_100',  n:'V100',     sub:'Volatility 100',   v:100},
-  {s:'1HZ10V', n:'V10 (1s)', sub:'Volatility 10 1s', v:10},
-  {s:'1HZ25V', n:'V25 (1s)', sub:'Volatility 25 1s', v:25},
-  {s:'1HZ50V', n:'V50 (1s)', sub:'Volatility 50 1s', v:50},
-  {s:'1HZ75V', n:'V75 (1s)', sub:'Volatility 75 1s', v:75},
-  {s:'1HZ100V',n:'V100 (1s)',sub:'Volatility 100 1s',v:100},
+  {s:'R_10',   n:'V10',      sub:'Volatility 10',    v:10,  dp:3},
+  {s:'R_25',   n:'V25',      sub:'Volatility 25',    v:25,  dp:3},
+  {s:'R_50',   n:'V50',      sub:'Volatility 50',    v:50,  dp:4},
+  {s:'R_75',   n:'V75',      sub:'Volatility 75',    v:75,  dp:4},
+  {s:'R_100',  n:'V100',     sub:'Volatility 100',   v:100, dp:2},
+  {s:'1HZ10V', n:'V10 (1s)', sub:'Volatility 10 1s', v:10,  dp:3},
+  {s:'1HZ25V', n:'V25 (1s)', sub:'Volatility 25 1s', v:25,  dp:3},
+  {s:'1HZ50V', n:'V50 (1s)', sub:'Volatility 50 1s', v:50,  dp:4},
+  {s:'1HZ75V', n:'V75 (1s)', sub:'Volatility 75 1s', v:75,  dp:4},
+  {s:'1HZ100V',n:'V100 (1s)',sub:'Volatility 100 1s',v:100, dp:2},
 ];
 
 // ══ MARKET STATE ══
@@ -767,25 +767,26 @@ function calcMomentum(prices){
 // Formula: barrier = -(avgRange × payoutFactor) where payoutFactor tunes payout
 function calcBarrier(sym, targetPayoutPct){
   const s=ST[sym];
-  if(!s||s.prices.length<20) return{call:'-0.001',put:'+0.001'};
+  const ix=IDX.find(i=>i.s===sym);
+  const dp=ix?ix.dp:3; // per-index decimal precision
+  const minStep=parseFloat(Math.pow(0.1,dp).toFixed(dp)); // 0.01 dp2, 0.001 dp3, 0.0001 dp4
+  const fallback=minStep.toFixed(dp);
+  if(!s||s.prices.length<20) return{call:'-'+fallback,put:'+'+fallback};
   const pr=s.prices.slice(-20);
-  // average tick-to-tick range
   let totalRange=0;
   for(let i=1;i<pr.length;i++) totalRange+=Math.abs(pr[i]-pr[i-1]);
   const avgRange=totalRange/(pr.length-1);
-  // payout factor: higher offset = harder to win = lower payout
-  // target 30% payout needs offset ~= 1.5× avg range per tick × duration
-  const targetPct=targetPayoutPct/100; // 0.30
-  // empirical: payout ≈ 100% × (1 - offset/(avgRange×ticks))
-  // → offset = avgRange × ticks × (1 - targetPct/1) × 0.6
+  const targetPct=targetPayoutPct/100;
   const ticks=parseInt(document.getElementById('trendTicks').value)||5;
-  const offset=Math.max(avgRange*0.5, avgRange*ticks*(1-targetPct)*0.15);
-  // Deriv API max 3 decimal places on barrier
-  const rounded=Math.max(0.001, parseFloat(offset.toFixed(3)));
+  const offset=Math.max(minStep, avgRange*ticks*(1-targetPct)*0.15);
+  // Round to this index's decimal precision
+  const rounded=parseFloat(offset.toFixed(dp));
+  const fmt=rounded.toFixed(dp);
   return{
-    call:'-'+rounded.toFixed(3),
-    put:'+'+rounded.toFixed(3),
-    raw:rounded
+    call:'-'+fmt,
+    put:'+'+fmt,
+    raw:rounded,
+    dp
   };
 }
 
