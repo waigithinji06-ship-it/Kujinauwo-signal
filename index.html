@@ -9,9 +9,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap');
-:root{--bg:#07090f;--surface:#0e1117;--card:#131720;--border:#1e2535;--accent:#00ffc8;--accent2:#ff6b35;--blue:#4d9fff;--purple:#b06aff;--yellow:#ffd60a;--red:#ff3d5a;--green:#00e676;--dim:#4a5568;--text:#e2e8f0;--muted:#8892a4;}
+:root{color-scheme:dark;--bg:#07090f;--surface:#0e1117;--card:#131720;--border:#1e2535;--accent:#00ffc8;--accent2:#ff6b35;--blue:#4d9fff;--purple:#b06aff;--yellow:#ffd60a;--red:#ff3d5a;--green:#00e676;--dim:#4a5568;--text:#e2e8f0;--muted:#8892a4;}
 *{box-sizing:border-box;margin:0;padding:0;}
-body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-height:100vh;}
+body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-height:100vh;color-scheme:dark;}
 body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,255,200,.02) 1px,transparent 1px),linear-gradient(90deg,rgba(0,255,200,.02) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
 
 /* ══ LOGIN ══ */
@@ -157,9 +157,9 @@ td.L{text-align:left;padding-left:12px;}
 .cfg-block{background:var(–surface);border:1px solid var(–border);border-radius:10px;padding:12px;}
 .cfg-label{font-size:8px;color:var(–muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;display:flex;align-items:center;gap:5px;}
 .cfg-label .tip{cursor:help;color:var(–dim);}
-.cfg-input{width:100%;background:var(–card);border:1px solid var(–border);border-radius:7px;padding:8px 10px;font-family:‘Space Mono’,monospace;font-size:12px;color:var(–text);outline:none;transition:border-color .2s;}
+.cfg-input{-webkit-appearance:none;appearance:none;width:100%;background:var(–card);border:1px solid var(–border);border-radius:7px;padding:8px 10px;font-family:‘Space Mono’,monospace;font-size:12px;color:var(–text);outline:none;transition:border-color .2s;}
 .cfg-input:focus{border-color:var(–purple);}
-.cfg-select{width:100%;background:var(–card);border:1px solid var(–border);border-radius:7px;padding:8px 10px;font-family:‘Space Mono’,monospace;font-size:11px;color:var(–text);outline:none;cursor:pointer;}
+.cfg-select{-webkit-appearance:none;appearance:none;width:100%;background:var(–card);border:1px solid var(–border);border-radius:7px;padding:8px 10px;font-family:‘Space Mono’,monospace;font-size:11px;color:var(–text);outline:none;cursor:pointer;}
 .cfg-select:focus{border-color:var(–purple);}
 
 /* Controls */
@@ -186,7 +186,7 @@ td.L{text-align:left;padding-left:12px;}
 .ct-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
 .ct-title{font-size:11px;font-weight:700;color:var(–purple);letter-spacing:1px;text-transform:uppercase;}
 .ct-ticker{font-family:‘Space Mono’,monospace;font-size:10px;}
-.ct-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;}
+.ct-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;}
 .ct-field{font-family:‘Space Mono’,monospace;font-size:10px;}
 .ct-field-label{font-size:8px;color:var(–muted);margin-bottom:2px;}
 .ct-field-val{font-weight:700;color:var(–text);}
@@ -422,9 +422,9 @@ td.L{text-align:left;padding-left:12px;}
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:8px;margin-bottom:8px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
         <div style="font-size:7px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:2px;">EQUITY CURVE</div>
-        <div style="font-size:8px;font-family:'Space Mono',monospace;" id="eqStats"></div>
+        <div style="font-size:8px;font-family:'Space Mono',monospace;" id="eqStats" style="color:var(--muted);">Now +0.00  Peak +0.00  Low +0.00</div>
       </div>
-      <canvas id="eqCanvas" style="width:100%;height:55px;display:block;"></canvas>
+      <canvas id="eqCanvas" style="width:100%;height:60px;display:block;min-height:60px;"></canvas>
     </div>
     <!-- Current trade -->
     <div class="ct-compact" id="curTrade">
@@ -465,7 +465,7 @@ td.L{text-align:left;padding-left:12px;}
   <div id="mpPioneer" class="mpage active">
     <div class="msec-label">🚀 PIONEER — DIFFERS PRIMARY · OVER2 RECOVERY · 3.6×</div>
     <!-- Config -->
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:10px;">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-bottom:10px;">
       <div class="cfg-block"><div class="cfg-label"><span>💰</span> BASE STAKE ($)</div><input class="cfg-input" id="cfgStake" type="number" value="5" min="0.35" step="0.50"/><div style="font-size:8px;color:var(--dim);margin-top:3px;font-family:'Space Mono',monospace;">Score 45=1x · 85+=1.5x</div></div>
       <div class="cfg-block"><div class="cfg-label">MULT ×</div><input class="cfg-input" id="cfgMult" type="number" value="3.6" min="1.5" max="10" step="0.1"/></div>
       <div class="cfg-block">
@@ -515,7 +515,7 @@ td.L{text-align:left;padding-left:12px;}
   <!-- ⚡ SCALPER -->
   <div id="mpScalper" class="mpage">
     <div class="msec-label">⚡ SCALPER — OVER2/UNDER7 · AI RECOVERY BARRIER · 2.1×</div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:10px;">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-bottom:10px;">
       <div class="cfg-block"><div class="cfg-label">BASE STAKE ($)</div><input class="cfg-input" id="scalperStake" type="number" value="5.00" min="0.35" step="0.50" oninput="refreshScalperLadder()"/></div>
       <div class="cfg-block"><div class="cfg-label">MULT ×</div><input class="cfg-input" id="scalperMult" type="number" value="2.1" min="1.5" max="5" step="0.1" oninput="refreshScalperLadder()"/></div>
       <div class="cfg-block"><div class="cfg-label">DIRECTION</div><select class="cfg-select" id="scalperBias"><option value="AUTO">AUTO</option><option value="OVER">OVER only</option><option value="UNDER">UNDER only</option></select></div>
@@ -556,7 +556,7 @@ td.L{text-align:left;padding-left:12px;}
       <div class="cfg-block" style="text-align:center;"><div style="font-size:7px;color:var(--muted);font-family:'Space Mono',monospace;margin-bottom:4px;">VELOCITY</div><div id="trendVel" style="font-size:12px;font-weight:700;color:var(--dim);">—</div></div>
     <div class="cfg-block" style="text-align:center;"><div style="font-size:7px;color:var(--muted);font-family:'Space Mono',monospace;margin-bottom:4px;">SIGNAL</div><div id="trendSig" style="font-size:12px;font-weight:700;color:var(--dim);">WAIT</div></div>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:10px;">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-bottom:10px;">
       <div class="cfg-block"><div class="cfg-label">BASE STAKE ($)</div><input class="cfg-input" id="trendStake" type="number" value="1.00" min="0.35" step="0.50" oninput="refreshTrendLadder()"/></div>
       <div class="cfg-block"><div class="cfg-label">MARTINGALE MULT ×</div><input class="cfg-input" id="trendMult" type="number" value="3.6" min="1.1" max="10" step="0.1" oninput="refreshTrendLadder()"/></div>
       <div class="cfg-block"><div class="cfg-label">TICKS</div><input class="cfg-input" id="trendTicks" type="number" value="5" min="1" max="10" step="1"/></div>
@@ -1224,6 +1224,23 @@ function launchDash(auth){
 }
 
 // ══ WEBSOCKET ══
+function updConn(live){
+  const cl=document.getElementById('CL');
+  const ld=document.getElementById('LD');
+  const cd=document.getElementById('CD');
+  if(cl) cl.textContent=live?'LIVE':'CONNECTING';
+  if(ld) ld.style.background=live?'var(--green)':'var(--red)';
+  if(cd) cd.style.background=live?'var(--green)':'var(--red)';
+}
+function showErr(msg){
+  const e=document.getElementById('ERR');
+  if(e){e.textContent='⚠ '+msg;e.style.display='block';}
+}
+function hideErr(){
+  const e=document.getElementById('ERR');
+  if(e) e.style.display='none';
+}
+
 function startConn(){
   try{ws=new WebSocket('wss://ws.binaryws.com/websockets/v3?app_id=1089');}
   catch(e){showErr(e.message);sched();return;}
@@ -1476,17 +1493,19 @@ function aiTick(sym){
   // Tiered TP — only check when not already hit
   if(!AI.tp2Hit||!AI.tp1Hit){
     const tpLevels=calcTpLevels();
+    // Check TP1 first (lower threshold), then TP2
+    if(!AI.tp1Hit&&AI.sessPnl>=tpLevels.t1){
+      AI.tp1Hit=true;
+      const origStake=parseFloat(document.getElementById('cfgStake').value)||5;
+      AI.baseStake=Math.max(0.35,Math.round(origStake*0.75*100)/100);
+      aiLog('🎯 TP1 +$'+AI.sessPnl.toFixed(2)+' — Stake ×0.75. Protecting gains.','success');
+      refreshLadder();
+    }
     if(!AI.tp2Hit&&AI.sessPnl>=tpLevels.t2){
       AI.tp2Hit=true;
       const origStake=parseFloat(document.getElementById('cfgStake').value)||5;
       AI.baseStake=Math.max(0.35,Math.round(origStake*0.5*100)/100);
       aiLog('🎯 TP2 +$'+AI.sessPnl.toFixed(2)+' — Stake ×0.50. Coasting to TP3.','success');
-      refreshLadder();
-    } else if(!AI.tp1Hit&&AI.sessPnl>=tpLevels.t1){
-      AI.tp1Hit=true;
-      const origStake=parseFloat(document.getElementById('cfgStake').value)||5;
-      AI.baseStake=Math.max(0.35,Math.round(origStake*0.75*100)/100);
-      aiLog('🎯 TP1 +$'+AI.sessPnl.toFixed(2)+' — Stake ×0.75. Protecting gains.','success');
       refreshLadder();
     }
   }
@@ -2228,6 +2247,7 @@ function updateTrendDisplay(sym){
 
 setInterval(()=>{document.getElementById('CLK').textContent=new Date().toUTCString().slice(17,25);},1000);
 setTimeout(calcTpLevels,500);
+updConn(false); // start in CONNECTING state visually
 setInterval(()=>{if(AI.equityPoints.length>1)drawEquity();},4000);
 updateAIStats();
 </script>
