@@ -1048,6 +1048,7 @@ function navTo(page){
   const tabMap={analysis:'bnAnalysis',ai:'bnAI',account:'bnAccount'};
   const pg=document.getElementById(pageMap[page]);if(pg)pg.classList.add('active');
   const tb=document.getElementById(tabMap[page]);if(tb)tb.classList.add('active');
+  if(page==='analysis'){IDX.forEach(i=>{if(ST[i.s]&&ST[i.s].prices.length>0){try{updateRow(i.s);updateDC(i.s);}catch(e){}}});}
 }
 
 // ══ MODE ══
@@ -2077,6 +2078,7 @@ function resetAI(){
   SC.step=0;SC.consecLoss=0;SC.sessPnl=0;SC.wins=0;SC.losses=0;
   TR.step=0;TR.consecLoss=0;TR.lastDirection=null;TR.sessPnl=0;TR.wins=0;TR.losses=0;
   setAIState('idle');updateAIStats();drawEquity();
+  const eqS=document.getElementById('eqStats');if(eqS){eqS.textContent='Now +0.00  Peak +0.00  Low +0.00';eqS.style.color='var(--muted)';}
   document.getElementById('curTrade').classList.remove('active');
   document.getElementById('manNextStake').textContent='$'+(MAN.origStake||5).toFixed(2);
   document.getElementById('manLossCount').textContent='Loss streak: 0';
@@ -2091,7 +2093,13 @@ function resetAI(){
 
 // ══ STATS ══
 function updateAIStats(){
-  const w=AI.wins,l=AI.losses,tot=w+l;
+  // Use per-mode stats for the header display
+  let w,l,sessPnl;
+  if(TR.running){w=TR.wins;l=TR.losses;sessPnl=TR.sessPnl;}
+  else if(SC.running){w=SC.wins;l=SC.losses;sessPnl=SC.sessPnl;}
+  else if(MAN.running){w=MAN.wins;l=MAN.losses;sessPnl=MAN.sessPnl;}
+  else{w=AI.wins;l=AI.losses;sessPnl=AI.sessPnl;}
+  const tot=w+l;
   document.getElementById('astW').textContent=w;
   document.getElementById('astL').textContent=l;
   document.getElementById('astWR').textContent=tot>0?Math.round(w/tot*100)+'%':'—';
@@ -2104,8 +2112,8 @@ function updateAIStats(){
   else if(MAN.running){document.getElementById('astMS').textContent='[M] '+MAN.typeLabel;document.getElementById('astNS').textContent='$'+MAN.currentStake.toFixed(2);}
   else{document.getElementById('astMS').textContent=(AI.martStep===0?'DIFFERS':'OVER2')+' S'+(AI.martStep+1);document.getElementById('astNS').textContent='$'+calcStake(AI.martStep).toFixed(2);}
   const sp=document.getElementById('sessPnl');
-  sp.textContent=(AI.sessPnl>=0?'+':'')+AI.sessPnl.toFixed(2);
-  sp.style.color=AI.sessPnl>=0?'var(--green)':'var(--red)';
+  sp.textContent=(sessPnl>=0?'+':'')+sessPnl.toFixed(2);
+  sp.style.color=sessPnl>=0?'var(--green)':'var(--red)';
   document.getElementById('sessPnlSub').textContent=tot+' trades';
   // account page mirror
   const apEl=document.getElementById('acctPnl');if(apEl){apEl.textContent=(AI.totalPnl>=0?'+':'')+AI.totalPnl.toFixed(2);apEl.style.color=AI.totalPnl>=0?'var(--green)':'var(--red)';}
@@ -2128,11 +2136,11 @@ function bdg(r){return '<span class="b '+r.c+'" title="'+r.t+'">'+r.l+'</span>';
 function ldHTML(sym){const d=ST[sym].digits.slice(-10);return '<div class="lds">'+d.map((v,i)=>{const c=i===d.length-1?'n':(v%2===0?'e':'o');return '<div class="ld2 '+c+'">'+v+'</div>';}).join('')+'</div>';}
 function fgHTML(sym){const s=ST[sym],tot=s.freq.reduce((a,b)=>a+b,0)||1;return '<div class="fg">'+s.freq.map((f,d)=>{const p=f/tot*100,c=p>13?'hot':p<7&&f>0?'cold':p>11?'warm':'';return '<div class="fc '+c+'" title="d'+d+': '+f+' ('+p.toFixed(1)+'%)">'+d+'<br><span style="font-size:6px">'+Math.round(p)+'%</span></div>';}).join('')+'</div>';}
 function vBar(lv){const col=lv<35?'var(--green)':lv<65?'var(--yellow)':'var(--red)';return '<div class="vm"><div class="vf" style="width:'+lv+'%;background:'+col+'"></div></div><div style="font-size:8px;color:var(--muted);margin-top:1px;">'+lv+'%</div>';}
-function initTable(){document.getElementById('TB').innerHTML=IDX.map(i=>'<tr id="R-'+i.s+'"><td class="L"><div class="iname">'+i.n+'</div><div class="isub">'+i.sub+'</div></td>'+Array(11).fill('<td><div class="sh" style="width:55px;margin:auto"></div></td>').join('')+'</tr>').join('');}
+function initTable(){document.getElementById('TB').innerHTML=IDX.map(i=>'<tr id="R-'+i.s+'"></tr>').join('');}
+
 function updateRow(sym){
   const row=document.getElementById('R-'+sym);if(!row)return;
   const s=ST[sym];if(!s||!s.prices.length)return;
-  // Use cached ana result — already computed this tick
   let a;try{a=ana(sym);}catch(e){return;}
   const p=s.last;
   const prev=s.prices.length>1?s.prices[s.prices.length-2]:p;
@@ -2140,10 +2148,9 @@ function updateRow(sym){
   const ix=IDX.find(i=>i.s===sym);
   const isActive=AI.activeSym===sym&&AI.inTrade;
   row.style.background=isActive?'rgba(176,106,255,.06)':'';
-  // Only rewrite cells that actually changed — find child <td> elements
   const cells=row.querySelectorAll('td');
-  if(!cells.length){
-    // First render — full write
+  if(!cells.length||!row.dataset.rendered){
+    row.dataset.rendered='1';
     let spdBadge='';
     if(s.tickSpeed){const sc=s.tickSpeed<1200?'fast':s.tickSpeed<3500?'med':'slow';spdBadge='<span class="tick-speed '+sc+'">'+s.tickSpeed+'ms</span>';}
     const msCls=a.isCon?'cy':a.ms==='EXPANDING'?'cn':'cw';
@@ -2157,12 +2164,11 @@ function updateRow(sym){
       '<td><span class="rec-badge '+a.o2r.c+'">'+a.o2r.l+'</span></td>';
     return;
   }
-  // Subsequent renders — patch only the price cell and score (cheapest update)
-  if(cells[1]){const pc=cells[1].querySelector('.pcell');if(pc){pc.className='pcell '+dir;pc.textContent=p?p.toFixed(2):'—';}}
-  if(cells[3]){const sc=cells[3].querySelector('.score-badge');if(sc){sc.style.color=a.score>=65?'var(--green)':a.score>=45?'var(--yellow)':'var(--red)';sc.textContent=a.score;}}
-  // Update market state only when it changes
-  if(cells[2]){
-    const ms=cells[2].querySelector('.ms-badge');
+  // Incremental update — patch only changed cells
+  const c1=cells[1];if(c1){const pc=c1.querySelector('.pcell');if(pc){pc.className='pcell '+dir;pc.textContent=p?p.toFixed(2):'—';}}
+  const c3=cells[3];if(c3){const sc=c3.querySelector('.score-badge');if(sc){sc.style.color=a.score>=65?'var(--green)':a.score>=45?'var(--yellow)':'var(--red)';sc.textContent=a.score;}}
+  const c2=cells[2];if(c2){
+    const ms=c2.querySelector('.ms-badge');
     if(ms){
       const msCls=a.isCon?'cy':a.ms==='EXPANDING'?'cn':'cw';
       const msIcon=a.isCon?'🟢':a.ms==='EXPANDING'?'🔴':'🟡';
@@ -2171,23 +2177,10 @@ function updateRow(sym){
     }
   }
 }
-function initDC(){document.getElementById('DC').innerHTML=IDX.map(i=>'<div class="dcard"><div class="dtitle"><span>'+i.n+'</span><span style="font-size:8px;color:var(--muted);font-family:Space Mono,monospace" id="DCS-'+i.s+'">LOADING</span></div><div class="dbars">'+Array(10).fill(0).map((_,d)=>'<div class="dbw"><div class="dpct" id="DCP-'+i.s+'-'+d+'">0%</div><div class="dbar" id="DCB-'+i.s+'-'+d+'" style="height:2px;background:var(--accent)"></div><div class="ddig">'+d+'</div></div>').join('')+'</div></div>').join('');}
-function updateDC(sym){
-  const s=ST[sym],tot=s.freq.reduce((a,b)=>a+b,0)||1,mxF=Math.max(...s.freq)||1;
-  const a=ana(sym);const st=document.getElementById('DCS-'+sym);
-  if(st){st.textContent=a.ms;st.style.color=a.isCon?'var(--green)':a.ms==='EXPANDING'?'var(--red)':'var(--yellow)';}
-  s.freq.forEach((f,d)=>{
-    const p=f/tot*100,hp=f/mxF*100;
-    const bar=document.getElementById('DCB-'+sym+'-'+d);const lbl=document.getElementById('DCP-'+sym+'-'+d);
-    if(bar){bar.style.height=Math.max(2,hp*0.42)+'px';bar.style.background=p>13?'var(--green)':p<7&&f>0?'var(--red)':'var(--accent)';}
-    if(lbl)lbl.textContent=Math.round(p)+'%';
-  });
-}
+
 let _sumTick=0;
 function updateSum(){
-  // Only recompute summary every 15 ticks — no user-visible difference
-  _sumTick++;
-  if(_sumTick%15!==0) return;
+  _sumTick++;if(_sumTick%15!==0)return;
   const live=IDX.filter(i=>ST[i.s].conn).length;
   const con=IDX.filter(i=>{try{return ana(i.s).isCon;}catch(e){return false;}}).length;
   const exp=IDX.filter(i=>{try{return ana(i.s).ms==='EXPANDING';}catch(e){return false;}}).length;
@@ -2199,13 +2192,39 @@ function updateSum(){
   document.getElementById('SEV').textContent=avg?avg.toFixed(1)+'%':'—';
   document.getElementById('SB').textContent=con>0?'DIFF/OVER2':'WAIT';
 }
-function updConn(ok){
-  const d=document.getElementById('CD'),l=document.getElementById('CL'),ld=document.getElementById('LD');
-  d.className='cdot'+(ok?' on':'');l.textContent=ok?'LIVE':'RECONNECTING';
-  ld.style.background=ok?'var(--accent)':'var(--red)';
+
+function updateDC(sym){
+  const s=ST[sym],tot=s.freq.reduce((a,b)=>a+b,0)||1,mxF=Math.max(...s.freq)||1;
+  const a=ana(sym);
+  const st=document.getElementById('DCS-'+sym);
+  if(st){st.textContent=a.ms;st.style.color=a.isCon?'var(--green)':a.ms==='EXPANDING'?'var(--red)':'var(--yellow)';}
+  s.freq.forEach((f,d)=>{
+    const p=f/tot*100,hp=f/mxF*100;
+    const bar=document.getElementById('DCB-'+sym+'-'+d);
+    const lbl=document.getElementById('DCP-'+sym+'-'+d);
+    if(bar){bar.style.height=Math.max(2,hp*0.42)+'px';bar.style.background=p>13?'var(--green)':p<7&&f>0?'var(--red)':'var(--accent)';}
+    if(lbl)lbl.textContent=Math.round(p)+'%';
+  });
 }
-function showErr(m){const b=document.getElementById('ERR');b.textContent='⚠ '+m;b.style.display='block';}
-function hideErr(){document.getElementById('ERR').style.display='none';}
+
+function initDC(){document.getElementById('DC').innerHTML=IDX.map(i=>'<div class="dcard"><div class="dtitle"><span>'+i.n+'</span><span style="font-size:8px;color:var(--muted);font-family:Space Mono,monospace" id="DCS-'+i.s+'">LOADING</span></div><div class="dbars">'+Array(10).fill(0).map((_,d)=>'<div class="dbw"><div class="dpct" id="DCP-'+i.s+'-'+d+'">0%</div><div class="dbar" id="DCB-'+i.s+'-'+d+'" style="height:2px;background:var(--accent)"></div><div class="ddig">'+d+'</div></div>').join('')+'</div></div>').join('');}
+
+function updateTrendDisplay(sym){
+  if(AI.mode!=='trend') return;
+  if(!sym||!ST[sym]||ST[sym].prices.length<25){
+    ['trendEma','trendRsi','trendMom','trendVel'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent='—';});
+    const ts=document.getElementById('trendSig');if(ts)ts.textContent='WAIT';
+    return;
+  }
+  try{
+    const t=trendAna(sym);if(!t)return;
+    const ema=document.getElementById('trendEma');if(ema){ema.textContent=t.emaSig||'—';ema.style.color=t.emaSig==='UP'?'var(--green)':t.emaSig==='DOWN'?'var(--red)':'var(--dim)';}
+    const rsi=document.getElementById('trendRsi');if(rsi){rsi.textContent=t.rsi?t.rsi.toFixed(0):'—';rsi.style.color=t.rsiSig==='UP'?'var(--green)':t.rsiSig==='DOWN'?'var(--red)':'var(--dim)';}
+    const mom=document.getElementById('trendMom');if(mom){mom.textContent=t.momSig||'—';mom.style.color=t.momSig==='UP'?'var(--green)':t.momSig==='DOWN'?'var(--red)':'var(--dim)';}
+    const vel=document.getElementById('trendVel');if(vel){vel.textContent=t.velSig||'—';vel.style.color=t.velSig==='UP'?'var(--green)':t.velSig==='DOWN'?'var(--red)':'var(--dim)';}
+    const sig=document.getElementById('trendSig');if(sig){sig.textContent=t.signal||'WAIT';sig.style.color=t.signal==='CALL'?'var(--green)':t.signal==='PUT'?'var(--red)':'var(--dim)';}
+  }catch(e){}
+}
 
 setInterval(()=>{document.getElementById('CLK').textContent=new Date().toUTCString().slice(17,25);},1000);
 setTimeout(calcTpLevels,500);
