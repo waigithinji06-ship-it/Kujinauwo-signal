@@ -1465,30 +1465,30 @@ function drawEquity(){
 // ══ PIONEER TICK ══
 function aiTick(sym){
   if(!AI.running||AI.inTrade||AI.pendingResult)return;
-  if(AI.martStep>=5||AI.consecLoss>=5){if(AI.state!=='stopped'){setAIState('stopped');aiLog('🛑 CIRCUIT BREAKER.','danger');stopAI();}return;}
-  const tp=parseFloat(document.getElementById('cfgTP').value)||15;
-  const sl=parseFloat(document.getElementById('cfgSL').value)||10;
-  if(AI.sessPnl<=-Math.abs(sl)){aiLog('🛑 SL -$'+Math.abs(AI.sessPnl).toFixed(2)+'.','danger');stopAI();return;}
-  // Tiered TP — auto-calculated from total TP
-  const tpLevels=calcTpLevels();
-  if(AI.sessPnl>=tp){aiLog('🎯 TP3 +$'+AI.sessPnl.toFixed(2)+' — Full target hit. Stopping.','success');stopAI();return;}
-  if(!AI.tp2Hit&&AI.sessPnl>=tpLevels.t2){
-    AI.tp2Hit=true;
-    // Reduce base stake to 50% — protect profits
-    const origStake=parseFloat(document.getElementById('cfgStake').value)||5;
-    AI.baseStake=Math.max(0.35, Math.round(origStake*0.5*100)/100);
-    aiLog('🎯 TP2 +$'+AI.sessPnl.toFixed(2)+' — Stake reduced to $'+AI.baseStake.toFixed(2)+' (50%). Coasting to TP3.','success');
-    refreshLadder();
-  }
-  if(!AI.tp1Hit&&AI.sessPnl>=tpLevels.t1){
-    AI.tp1Hit=true;
-    // Reduce base stake to 75% — slow down
-    const origStake=parseFloat(document.getElementById('cfgStake').value)||5;
-    AI.baseStake=Math.max(0.35, Math.round(origStake*0.75*100)/100);
-    aiLog('🎯 TP1 +$'+AI.sessPnl.toFixed(2)+' — Stake reduced to $'+AI.baseStake.toFixed(2)+' (75%). Protecting gains.','success');
-    refreshLadder();
-  }
+  // Cooldown gate — return immediately, zero extra work
   if(Date.now()-lastTradeTime<1800)return;
+  if(AI.martStep>=5||AI.consecLoss>=5){if(AI.state!=='stopped'){setAIState('stopped');aiLog('🛑 CIRCUIT BREAKER.','danger');stopAI();}return;}
+  const tp=parseFloat(document.getElementById('cfgTP').value)||30;
+  const sl=parseFloat(document.getElementById('cfgSL').value)||50;
+  if(AI.sessPnl<=-Math.abs(sl)){aiLog('🛑 SL -$'+Math.abs(AI.sessPnl).toFixed(2)+'.','danger');stopAI();return;}
+  if(AI.sessPnl>=tp){aiLog('🎯 TP3 +$'+AI.sessPnl.toFixed(2)+' — Full target hit. Stopping.','success');stopAI();return;}
+  // Tiered TP — only check when not already hit
+  if(!AI.tp2Hit||!AI.tp1Hit){
+    const tpLevels=calcTpLevels();
+    if(!AI.tp2Hit&&AI.sessPnl>=tpLevels.t2){
+      AI.tp2Hit=true;
+      const origStake=parseFloat(document.getElementById('cfgStake').value)||5;
+      AI.baseStake=Math.max(0.35,Math.round(origStake*0.5*100)/100);
+      aiLog('🎯 TP2 +$'+AI.sessPnl.toFixed(2)+' — Stake ×0.50. Coasting to TP3.','success');
+      refreshLadder();
+    } else if(!AI.tp1Hit&&AI.sessPnl>=tpLevels.t1){
+      AI.tp1Hit=true;
+      const origStake=parseFloat(document.getElementById('cfgStake').value)||5;
+      AI.baseStake=Math.max(0.35,Math.round(origStake*0.75*100)/100);
+      aiLog('🎯 TP1 +$'+AI.sessPnl.toFixed(2)+' — Stake ×0.75. Protecting gains.','success');
+      refreshLadder();
+    }
+  }
   setAIState('scanning');
 
   let tradeSym,a,ix,stake,contractCode,barrierDigit,typeLabel;
@@ -1530,8 +1530,8 @@ function aiTick(sym){
 // ══ SCALPER TICK ══
 function scalperTick(){
   if(!SC.running||AI.inTrade||AI.pendingResult)return;
-  const tp=parseFloat(document.getElementById('cfgTP').value)||15;
-  const sl=parseFloat(document.getElementById('cfgSL').value)||10;
+  const tp=parseFloat(document.getElementById('cfgTP').value)||30;
+  const sl=parseFloat(document.getElementById('cfgSL').value)||50;
   if(SC.sessPnl>=tp){aiLog('🎯 TP +$'+SC.sessPnl.toFixed(2)+' — Scalper stopped.','success');scalperStop();return;}
   if(SC.sessPnl<=-Math.abs(sl)){aiLog('🛑 SL -$'+Math.abs(SC.sessPnl).toFixed(2)+' — Scalper stopped.','danger');scalperStop();return;}
   setAIState('scanning');
@@ -1560,8 +1560,8 @@ function scalperTick(){
 // ══ TREND TICK ══
 function trendTick(){
   if(!TR.running||AI.inTrade||AI.pendingResult)return;
-  const tp=parseFloat(document.getElementById('cfgTP').value)||15;
-  const sl=parseFloat(document.getElementById('cfgSL').value)||10;
+  const tp=parseFloat(document.getElementById('cfgTP').value)||30;
+  const sl=parseFloat(document.getElementById('cfgSL').value)||50;
   if(TR.sessPnl>=tp){aiLog('🎯 TP +$'+TR.sessPnl.toFixed(2)+' — Trend stopped.','success');trendStop();return;}
   if(TR.sessPnl<=-Math.abs(sl)){aiLog('🛑 SL -$'+Math.abs(TR.sessPnl).toFixed(2)+' — Trend stopped.','danger');trendStop();return;}
   setAIState('scanning');
@@ -1685,8 +1685,8 @@ function manualStop(){
 }
 function manFireNext(){
   if(!MAN.running||AI.inTrade||AI.pendingResult)return;
-  const tp=parseFloat(document.getElementById('cfgTP').value)||15;
-  const sl=parseFloat(document.getElementById('cfgSL').value)||10;
+  const tp=parseFloat(document.getElementById('cfgTP').value)||30;
+  const sl=parseFloat(document.getElementById('cfgSL').value)||50;
   if(MAN.sessPnl>=tp){aiLog('🎯 TP +$'+MAN.sessPnl.toFixed(2)+' — Manual stopped.','success');manualStop();return;}
   if(MAN.sessPnl<=-Math.abs(sl)){aiLog('🛑 SL -$'+Math.abs(MAN.sessPnl).toFixed(2)+' — Manual stopped.','danger');manualStop();return;}
   if(MAN.lossStreak>=MAN.maxLoss){aiLog('🛑 Max losses reached.','danger');manualStop();return;}
@@ -1906,6 +1906,7 @@ function onContract(poc){
   if(poc.status==='open')return;
   clearTimeout(AI.tradeTimer);
   clearTimeout(AI.lateTimer);
+  AI.activeCid=null; // clear immediately — prevents duplicate processing
   const won=poc.is_sold&&poc.profit>0;
   const profit=parseFloat(poc.profit||0);
   const stake=parseFloat(poc.buy_price||0);
@@ -1941,12 +1942,12 @@ function onContract(poc){
     addTradeLog(AI.activeSym,AI.activeType,AI.activeDigit,stake,profit,won,'TR'+(TR.step+(won?0:0)));
     updateAIStats();drawEquity();
     setTimeout(()=>{
-      document.getElementById('curTrade').classList.remove('active');AI.activeCid=null;
+      document.getElementById('curTrade').classList.remove('active');
       if(TR.running){
         if(TR.consecLoss>=5){setAIState('stopped');aiLog('🛑 5 losses — Trend stopped.','danger');trendStop();}
         else{setAIState('scanning');updateTrendLadderUI();}
       }
-    },1200);
+    },600);
 
   } else if(source==='scalper'){
     const stepEl=document.getElementById('slad'+SC.step);
@@ -1967,9 +1968,9 @@ function onContract(poc){
     addTradeLog(AI.activeSym,AI.activeType,AI.activeDigit,stake,profit,won,'SC'+(SC.step+1));
     updateAIStats();drawEquity();
     setTimeout(()=>{
-      document.getElementById('curTrade').classList.remove('active');AI.activeCid=null;
+      document.getElementById('curTrade').classList.remove('active');
       if(SC.running){if(SC.consecLoss>=4){setAIState('stopped');aiLog('🛑 4 losses — Scalper stopped.','danger');scalperStop();}else{setAIState('scanning');updateScalperLadderUI();}}
-    },1200);
+    },600);
 
   } else if(source==='manual'){
     if(won){
@@ -2009,9 +2010,9 @@ function onContract(poc){
     addTradeLog(AI.activeSym,AI.activeType,AI.activeDigit,stake,profit,won,'S'+(AI.martStep+1)+(AI.martStep===0?' DIFF':' OV2'));
     updateAIStats();drawEquity();
     setTimeout(()=>{
-      document.getElementById('curTrade').classList.remove('active');AI.activeCid=null;
+      document.getElementById('curTrade').classList.remove('active');
       if(AI.running){if(AI.consecLoss>=5){setAIState('stopped');aiLog('🛑 5 losses.','danger');stopAI();}else{setAIState('scanning');updateLadderUI();}}
-    },1200);
+    },600);
   }
 }
 
