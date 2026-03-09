@@ -1156,6 +1156,19 @@ function updateManPreview(){
 document.getElementById('toggleVis').addEventListener('click',()=>{
   const i=document.getElementById('tokenInput');i.type=i.type==='password'?'text':'password';
 });
+// Auto-restore token if saved and within 24h
+(function(){
+  try{
+    const saved=sessionStorage.getItem('ds_token');
+    const expiry=parseInt(sessionStorage.getItem('ds_expiry')||'0');
+    if(saved&&Date.now()<expiry){
+      document.getElementById('tokenInput').value=saved;
+      // Auto-login silently
+      userToken=saved;
+      verifyToken(saved);
+    }
+  }catch(e){}
+})();
 document.getElementById('tokenInput').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
 function showLE(m){const e=document.getElementById('loginErr');e.textContent='⚠ '+m;e.style.display='block';}
 function hideLE(){document.getElementById('loginErr').style.display='none';}
@@ -1176,6 +1189,7 @@ function doLogout(){
   IDX.forEach(i=>{ST[i.s]={prices:[],digits:[],freq:new Array(10).fill(0),last:null,conn:false,ticks:0,tickTimes:[]};});
   total=0;
   document.getElementById('tokenInput').value='';
+  try{sessionStorage.removeItem('ds_token');sessionStorage.removeItem('ds_expiry');}catch(e){}
   document.getElementById('appShell').style.display='none';
   document.getElementById('pgLogin').style.display='flex';
   const lb=document.getElementById('loginBtn');if(lb){lb.classList.remove('ld');lb.textContent='CONNECT TO DERIV';}hideLE();
@@ -1205,6 +1219,11 @@ function loginFail(m){
   document.getElementById('loginBtn').textContent='CONNECT TO DERIV';
 }
 function launchDash(auth){
+  // Save token with 24h expiry (sessionStorage auto-clears on browser close)
+  if(userToken){
+    const expiry=Date.now()+(24*60*60*1000); // 24 hours
+    try{sessionStorage.setItem('ds_token',userToken);sessionStorage.setItem('ds_expiry',String(expiry));}catch(e){}
+  }
   document.getElementById('pgLogin').style.display='none';
   document.getElementById('appShell').style.display='flex';
   navTo('ai');
@@ -1582,7 +1601,23 @@ function scalperTick(){
     SC.direction=direction;
     aiLog('⚡ SC S1 | '+ix.n+' | '+typeLabel+' ('+primaryPct.toFixed(0)+'%) | $'+stake.toFixed(2),'info');
   } else {
-    const rec=pickRecoveryBarrier(a,SC.direction);
+    // Recovery — rescan ALL markets for best OVER3/UNDER6 matching SC.direction
+    let bestRec=null,bestRecPct=0;
+    IDX.forEach(idx2=>{
+      const s2=ST[idx2.s];if(!s2||!s2.conn||s2.digits.length<20)return;
+      try{
+        const a2=ana(idx2.s);
+        const rec2=pickRecoveryBarrier(a2,SC.direction);
+        if(rec2.pct>bestRecPct){bestRecPct=rec2.pct;bestRec={sym:idx2.s,a:a2,rec:rec2};}
+      }catch(e){}
+    });
+    if(!bestRec){
+      aiLog('⏳ SC S'+(SC.step+1)+' — no recovery market found, waiting…','warn');
+      return;
+    }
+    sym=bestRec.sym; a=bestRec.a;
+    ix=IDX.find(i=>i.s===sym);
+    const rec=bestRec.rec;
     contractCode=rec.code;barrier=rec.barrier;typeLabel=rec.label;
     aiLog('🔄 SC S'+(SC.step+1)+' | '+ix.n+' | '+typeLabel+' ('+rec.pct.toFixed(0)+'%) | $'+stake.toFixed(2),'warn');
   }
