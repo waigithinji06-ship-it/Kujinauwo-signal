@@ -519,7 +519,8 @@ td.L{text-align:left;padding-left:12px;}
       <div class="cfg-block"><div class="cfg-label">BASE STAKE ($)</div><input class="cfg-input" id="scalperStake" type="number" value="5.00" min="0.35" step="0.50" oninput="refreshScalperLadder()"/></div>
       <div class="cfg-block"><div class="cfg-label">MULT ×</div><input class="cfg-input" id="scalperMult" type="number" value="2.1" min="1.5" max="5" step="0.1" oninput="refreshScalperLadder()"/></div>
       <div class="cfg-block"><div class="cfg-label">DIRECTION</div><select class="cfg-select" id="scalperBias"><option value="AUTO">AUTO</option><option value="OVER">OVER only</option><option value="UNDER">UNDER only</option></select></div>
-      <div class="cfg-block"><div class="cfg-label">MIN % THRESHOLD</div><input class="cfg-input" id="scalperThresh" type="number" value="65" min="50" max="85" step="1"/></div>
+      <div class="cfg-block"><div class="cfg-label">MIN % THRESHOLD</div><input class="cfg-input" id="scalperThresh" type="number" value="65" min="50" max="85" step="1"/><div style="font-size:8px;color:var(--muted);margin-top:3px;">S1 entry only</div></div>
+      <div class="cfg-block"><div class="cfg-label">RECOVERY % THRESH</div><input class="cfg-input" id="scalperRecThresh" type="number" placeholder="e.g. 60" min="50" max="80" step="1"/><div style="font-size:8px;color:var(--muted);margin-top:3px;">S2-S5 recovery</div></div>
     </div>
     <div style="margin-bottom:10px;">
       <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:2px;margin-bottom:8px;display:flex;justify-content:space-between;"><span>SCALPER LADDER</span><span id="scalperExposure" style="color:var(--red)"></span></div>
@@ -1602,17 +1603,20 @@ function scalperTick(){
     aiLog('⚡ SC S1 | '+ix.n+' | '+typeLabel+' ('+primaryPct.toFixed(0)+'%) | $'+stake.toFixed(2),'info');
   } else {
     // Recovery — rescan ALL markets for best OVER3/UNDER6 matching SC.direction
+    const recThreshVal=document.getElementById('scalperRecThresh').value;
+    if(!recThreshVal){aiLog('⚠ Set RECOVERY % THRESH before starting.','danger');scalperStop();return;}
+    const recThresh=parseFloat(recThreshVal);
     let bestRec=null,bestRecPct=0;
     IDX.forEach(idx2=>{
       const s2=ST[idx2.s];if(!s2||!s2.conn||s2.digits.length<20)return;
       try{
         const a2=ana(idx2.s);
         const rec2=pickRecoveryBarrier(a2,SC.direction);
-        if(rec2.pct>bestRecPct){bestRecPct=rec2.pct;bestRec={sym:idx2.s,a:a2,rec:rec2};}
+        if(rec2.pct>=recThresh&&rec2.pct>bestRecPct){bestRecPct=rec2.pct;bestRec={sym:idx2.s,a:a2,rec:rec2};}
       }catch(e){}
     });
     if(!bestRec){
-      aiLog('⏳ SC S'+(SC.step+1)+' — no recovery market found, waiting…','warn');
+      aiLog('⏳ SC S'+(SC.step+1)+' — waiting for recovery >='+recThresh+'%...','warn');
       return;
     }
     sym=bestRec.sym; a=bestRec.a;
@@ -1837,7 +1841,7 @@ function scalperStart(){
   refreshScalperLadder();updateScalperLadderUI();
   document.getElementById('startBtn').disabled=true;
   document.getElementById('stopBtn').disabled=false;
-  ['scalperStake','scalperMult','scalperBias','scalperThresh','modePioneer','modeManual','modeScalper','modeTrend']
+  ['scalperStake','scalperMult','scalperBias','scalperThresh','scalperRecThresh','modePioneer','modeManual','modeScalper','modeTrend']
     .forEach(id=>{const el=document.getElementById(id);if(el)el.disabled=true;});
   setAIState('scanning');
   document.getElementById('scalperRunning').textContent='▶ RUNNING';
@@ -1849,7 +1853,7 @@ function scalperStop(){
   SC.running=false;
   document.getElementById('startBtn').disabled=false;
   document.getElementById('stopBtn').disabled=true;
-  ['scalperStake','scalperMult','scalperBias','scalperThresh','modePioneer','modeManual','modeScalper','modeTrend']
+  ['scalperStake','scalperMult','scalperBias','scalperThresh','scalperRecThresh','modePioneer','modeManual','modeScalper','modeTrend']
     .forEach(id=>{const el=document.getElementById(id);if(el)el.disabled=false;});
   if(!AI.running&&!MAN.running&&!TR.running)setAIState('idle');
   document.getElementById('scalperRunning').textContent='⏸ IDLE';
