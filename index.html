@@ -1581,19 +1581,6 @@ function aiTick(sym){
       +' | '+typeLabel+' ('+recovery.pct.toFixed(0)+'%) | $'+stake.toFixed(2)+' ✓','warn');
   }
 
-  if(AI.martStep>0){
-    const recheck=findBestRecoveryMarket();
-    if(!recheck){aiLog('⚠ S'+(AI.martStep+1)+' — edge gone, rescanning…','warn');return;}
-    if(recheck.sym!==tradeSym||recheck.direction!==recovery.direction){
-      tradeSym=recheck.sym;
-      ix=IDX.find(i=>i.s===tradeSym);
-      const isU3=recheck.direction==='UNDER';
-      contractCode=isU3?'DIGITUNDER':'DIGITOVER';
-      barrierDigit=isU3?7:2;
-      typeLabel=isU3?'UNDER7':'OVER2';
-      aiLog('↩ S'+(AI.martStep+1)+' updated → '+ix.n+' '+typeLabel+' ('+recheck.pct.toFixed(0)+'%) better edge','info');
-    }
-  }
   lastTradeTime=Date.now();
   placeTrade(tradeSym,contractCode,stake,barrierDigit,typeLabel,'pioneer');
 }
