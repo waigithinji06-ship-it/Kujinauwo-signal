@@ -478,6 +478,8 @@ td.L{text-align:left;padding-left:12px;}
         </div>
       </div>
       <div class="cfg-block"><div class="cfg-label">STOP LOSS ($)</div><input class="cfg-input" id="cfgSL" type="number" value="50" min="1" step="1"/></div>
+      <div class="cfg-block"><div class="cfg-label">MIN SCORE</div><input class="cfg-input" id="cfgMinScore" type="number" value="45" min="30" max="85" step="5"/><div style="font-size:8px;color:var(--muted);margin-top:3px;">45=default · 60=selective</div></div>
+      <div class="cfg-block"><div class="cfg-label">SESSION LIMIT</div><input class="cfg-input" id="cfgTimeLimit" type="number" value="120" min="15" max="480" step="15"/><div style="font-size:8px;color:var(--muted);margin-top:3px;">mins · 0=unlimited</div></div>
       <div class="cfg-block" style="grid-column:1/-1;"><div class="cfg-label">INDEX</div><select class="cfg-select" id="cfgIndex"><option value="AUTO">AUTO (AI picks best)</option><option value="R_10">V10</option><option value="R_25">V25</option><option value="R_50">V50</option><option value="R_75">V75</option><option value="R_100">V100</option><option value="1HZ10V">V10 1s</option><option value="1HZ25V">V25 1s</option><option value="1HZ50V">V50 1s</option><option value="1HZ75V">V75 1s</option><option value="1HZ100V">V100 1s</option></select></div>
     </div>
     <!-- Ladder -->
@@ -716,13 +718,14 @@ let total=0,ws=null,rtimer=null,userToken=null,isGuest=false,lastTradeTime=0,las
 // ══ AI STATE ══
 const AI={
   running:false, state:'idle', mode:'pioneer',
-  tp1Hit:false, tp2Hit:false, // tiered TP flags
+  tp1Hit:false, tp2Hit:false,
   baseStake:5, mult:3.6, tp:15, sl:10,
   martStep:0, consecLoss:0,
   wins:0, losses:0, totalPnl:0, sessPnl:0,
   equityPoints:[0],
   activeCid:null, activeSym:null, activeType:null, activeDigit:null,
   activeSource:null, inTrade:false, pendingResult:false, tradeTimer:null, lateTimer:null,
+  winStreak:0, sessionStart:0, prevRecovery:null,
 };
 
 // ══ EVEN/ODD STATE ══
@@ -1340,7 +1343,15 @@ function ana(sym){
   const o2R=()=>{if(n<20)return{l:'LOADING',c:'wt',t:''};if(isCon)return{l:(o2>=u7?'OVER2':'UNDER7')+' ★',c:'sb',t:'~70% base'};return{l:o2>=u7?'OVER2':'UNDER7',c:'by',t:'70%'};};
   const difR=()=>{if(n<15)return{l:'LOADING',c:'wt',t:''};const hp=(mxF/tot*100);if(hp>15)return{l:'DIFF '+hotD+' ★',c:'sb',t:'d'+hotD+' at '+Math.round(hp)+'%'};return{l:'DIFF '+hotD,c:'by',t:'90% base'};};
   const matR=()=>{if(n<30)return{l:'LOADING',c:'wt',t:''};if((mnF/tot*100)<5&&isCon)return{l:'MATCH '+coldD,c:'wt',t:'cold digit'};return{l:'AVOID',c:'av',t:'10% only'};};
+  let hotRecent=false,hotRecentPct=0;
+  if(s.digits.length>=20){
+    const rec20=s.digits.slice(-20);
+    const rc=rec20.filter(d=>d===hotD).length;
+    hotRecentPct=Math.round(rc/20*100);
+    hotRecent=hotRecentPct>=13;
+  }
   const result={isCon,ms,vl,ep,op,o4,u5,o2,u7,hotD,coldD,fr,tot,score,
+    hotRecent,hotRecentPct,
     eo:eoR(),o4r:o4R(),o2r:o2R(),dif:difR(),mat:matR()};
   _anaCache[sym]={tick:s.ticks,result};
   return result;
@@ -1404,17 +1415,18 @@ function findBestRecoveryMarket(){
 }
 
 function findBestMarket(){
+  const minScore=parseInt(document.getElementById('cfgMinScore')?document.getElementById('cfgMinScore').value:45)||45;
   const tgt=document.getElementById('cfgIndex').value;
   if(tgt!=='AUTO'){
     const s=ST[tgt];if(!s||!s.conn||s.digits.length<30)return null;
-    try{const a=ana(tgt);if(a.score<45)return null;return{sym:tgt,a};}catch(e){return null;}
+    try{const a=ana(tgt);if(a.score<minScore)return null;return{sym:tgt,a};}catch(e){return null;}
   }
   let best=null,bestScore=0;
   IDX.forEach(i=>{
     const s=ST[i.s];if(!s||!s.conn||s.digits.length<30)return;
-    try{const a=ana(i.s);if(a.score>bestScore){bestScore=a.score;best={sym:i.s,a};}}catch(e){}
+    try{const a=ana(i.s);const eff=a.score+(a.hotRecent?8:0);if(eff>bestScore){bestScore=eff;best={sym:i.s,a};}}catch(e){}
   });
-  return best&&best.a.score>=45?best:null;
+  return best&&best.a.score>=minScore?best:null;
 }
 
 // ══ SCALPER MARKET FINDER ══
@@ -1494,6 +1506,11 @@ function aiTick(sym){
   const sl=parseFloat(document.getElementById('cfgSL').value)||50;
   if(AI.sessPnl<=-Math.abs(sl)){aiLog('🛑 SL -$'+Math.abs(AI.sessPnl).toFixed(2)+'.','danger');stopAI();return;}
   if(AI.sessPnl>=tp){aiLog('🎯 TP3 +$'+AI.sessPnl.toFixed(2)+' — Full target hit. Stopping.','success');stopAI();return;}
+  const _tl=parseInt(document.getElementById('cfgTimeLimit')?document.getElementById('cfgTimeLimit').value:0)||0;
+  if(_tl>0&&AI.sessionStart>0&&(Date.now()-AI.sessionStart)>=_tl*60000){
+    aiLog('⏱ SESSION LIMIT '+_tl+'min — locking in '+(AI.sessPnl>=0?'+':'')+AI.sessPnl.toFixed(2)+' — Stopping.','warn');
+    stopAI();return;
+  }
   // Tiered TP — only check when not already hit
   if(!AI.tp2Hit||!AI.tp1Hit){
     const tpLevels=calcTpLevels();
@@ -1527,16 +1544,29 @@ function aiTick(sym){
     contractCode='DIGITDIFF'; barrierDigit=a.hotD; typeLabel='DIFFER';
     const conf=Math.min(1.5,1.0+((a.score-45)/40)*0.5);
     const hotPct=Math.round(a.fr[barrierDigit]/a.tot*100);
+    const _rtag=a.hotRecent?' ✓':' ⚠cool';
     aiLog('🎯 S1 | '+ix.n+' | DIFFERS d.'+barrierDigit
-      +' ('+hotPct+'%) | $'+stake.toFixed(2)
+      +' ('+hotPct+'% r:'+a.hotRecentPct+'%'+_rtag+') | $'+stake.toFixed(2)
       +' Score:'+a.score+' Conf:'+conf.toFixed(2)+'x','info');
 
   } else {
-    // STEPS 2-5 — Best of OVER2/UNDER7: scan ALL markets, wait for >=65%
+    // STEPS 2-5 — OVER2/UNDER7 with 2-tick confirmation
     const recovery=findBestRecoveryMarket();
     if(!recovery){
       setAIState('waiting');
+      AI.prevRecovery=null;
       aiLog('⏳ S'+(AI.martStep+1)+' — waiting for OVER2 or UNDER7 >=65%…','warn');
+      return;
+    }
+    const _prev=AI.prevRecovery;
+    const _confirmed=_prev&&_prev.sym===recovery.sym&&_prev.direction===recovery.direction;
+    AI.prevRecovery={sym:recovery.sym,direction:recovery.direction,pct:recovery.pct};
+    if(!_confirmed){
+      setAIState('waiting');
+      const _rx=IDX.find(i=>i.s===recovery.sym);
+      aiLog('🔍 S'+(AI.martStep+1)+' | '+(_rx?_rx.n:recovery.sym)
+        +' | '+(recovery.direction==='UNDER'?'UNDER7':'OVER2')
+        +' ('+recovery.pct.toFixed(0)+'%) — confirming…','warn');
       return;
     }
     tradeSym=recovery.sym; a=recovery.a;
@@ -1546,10 +1576,24 @@ function aiTick(sym){
     contractCode=isUnder?'DIGITUNDER':'DIGITOVER';
     barrierDigit=isUnder?7:2;
     typeLabel=isUnder?'UNDER7':'OVER2';
+    AI.prevRecovery=null;
     aiLog('🔄 S'+(AI.martStep+1)+' | '+ix.n
-      +' | '+typeLabel+' ('+recovery.pct.toFixed(0)+'%) | $'+stake.toFixed(2),'warn');
+      +' | '+typeLabel+' ('+recovery.pct.toFixed(0)+'%) | $'+stake.toFixed(2)+' ✓','warn');
   }
 
+  if(AI.martStep>0){
+    const recheck=findBestRecoveryMarket();
+    if(!recheck){aiLog('⚠ S'+(AI.martStep+1)+' — edge gone, rescanning…','warn');return;}
+    if(recheck.sym!==tradeSym||recheck.direction!==recovery.direction){
+      tradeSym=recheck.sym;
+      ix=IDX.find(i=>i.s===tradeSym);
+      const isU3=recheck.direction==='UNDER';
+      contractCode=isU3?'DIGITUNDER':'DIGITOVER';
+      barrierDigit=isU3?7:2;
+      typeLabel=isU3?'UNDER7':'OVER2';
+      aiLog('↩ S'+(AI.martStep+1)+' updated → '+ix.n+' '+typeLabel+' ('+recheck.pct.toFixed(0)+'%) better edge','info');
+    }
+  }
   lastTradeTime=Date.now();
   placeTrade(tradeSym,contractCode,stake,barrierDigit,typeLabel,'pioneer');
 }
@@ -2113,13 +2157,27 @@ function onContract(poc){
     // pioneer
     const stepEl=document.getElementById('lad'+AI.martStep);
     if(won){
-      AI.wins++;AI.consecLoss=0;
+      AI.wins++;AI.consecLoss=0;AI.consecWins++;
       if(stepEl){stepEl.classList.remove('active');stepEl.classList.add('won');}
-      aiLog('✅ WIN +$'+profit.toFixed(2)+' S'+(AI.martStep+1)+' | Reset to S1','success');
-      AI.martStep=0;
+      if(AI.consecWins>=5&&!AI.streakProtected){
+        AI.streakProtected=true;
+        const _os=parseFloat(document.getElementById('cfgStake').value)||5;
+        AI.baseStake=Math.max(0.35,Math.round(_os*0.5*100)/100);
+        aiLog('🛡 WIN STREAK ×'+AI.consecWins+' — Stake →50% ($'+AI.baseStake.toFixed(2)+') protecting gains','warn');
+        refreshLadder();
+      }
+      aiLog('✅ WIN +$'+profit.toFixed(2)+' S'+(AI.martStep+1)+' | Streak:'+AI.consecWins+' | Reset to S1','success');
+      AI.martStep=0;AI.prevRecovery=null;
       setTimeout(()=>{for(let i=0;i<5;i++){const e=document.getElementById('lad'+i);if(e)e.classList.remove('won','lost','active');}updateLadderUI();},1000);
     } else {
-      AI.losses++;AI.consecLoss++;
+      AI.losses++;AI.consecLoss++;AI.consecWins=0;
+      if(AI.streakProtected){
+        AI.streakProtected=false;
+        const _os2=parseFloat(document.getElementById('cfgStake').value)||5;
+        AI.baseStake=_os2;
+        aiLog('🔓 Streak protection lifted — stake restored $'+_os2.toFixed(2),'info');
+        refreshLadder();
+      }
       if(stepEl){stepEl.classList.remove('active');stepEl.classList.add('lost');}
       if(AI.martStep<4){AI.martStep++;aiLog('❌ LOSS S'+(AI.martStep+1)+' OVER2 $'+calcStake(AI.martStep).toFixed(2),'danger');}
       else aiLog('❌ LOSS S5 — circuit breaker.','danger');
@@ -2164,11 +2222,13 @@ function startAI(){
   AI.mult=parseFloat(document.getElementById('cfgMult').value)||3.6;
   AI.tp=parseFloat(document.getElementById('cfgTP').value)||15;
   AI.sl=parseFloat(document.getElementById('cfgSL').value)||10;
-  AI.tp1Hit=false;AI.tp2Hit=false;
+  AI.tp1Hit=false;AI.tp2Hit=false;AI.streakProtected=false;
+  AI.consecLoss=0;AI.consecWins=0;
+  AI.sessionStart=Date.now();AI.prevRecovery=null;
   refreshLadder();AI.running=true;
   document.getElementById('startBtn').disabled=true;
   document.getElementById('stopBtn').disabled=false;
-  ['cfgStake','cfgMult','cfgTP','cfgSL','cfgIndex','modePioneer','modeManual','modeScalper','modeTrend']
+  ['cfgStake','cfgMult','cfgTP','cfgSL','cfgIndex','cfgMinScore','cfgTimeLimit','modePioneer','modeManual','modeScalper','modeTrend']
     .forEach(id=>{const el=document.getElementById(id);if(el)el.disabled=true;});
   updateLadderUI();setAIState('scanning');
   aiLog('🚀 PIONEER STARTED — Base:$'+AI.baseStake+' Mult:×'+AI.mult+' TP:$'+AI.tp+' SL:$'+AI.sl,'success');
@@ -2188,8 +2248,8 @@ function stopAI(){
 function resetAI(){
   stopAI();manualStop();scalperStop();trendStop();
   AI.wins=0;AI.losses=0;AI.totalPnl=0;AI.sessPnl=0;
-  AI.consecLoss=0;AI.martStep=0;AI.activeCid=null;AI.equityPoints=[0];
-  AI.tp1Hit=false;AI.tp2Hit=false;
+  AI.consecLoss=0;AI.consecWins=0;AI.martStep=0;AI.activeCid=null;AI.equityPoints=[0];AI.sessionStart=0;
+  AI.tp1Hit=false;AI.tp2Hit=false;AI.streakProtected=false;
   MAN.lossStreak=0;MAN.step=0;MAN.direction=null;MAN.sessPnl=0;MAN.wins=0;MAN.losses=0;
   SC.step=0;SC.consecLoss=0;SC.sessPnl=0;SC.wins=0;SC.losses=0;
   TR.step=0;TR.consecLoss=0;TR.lastDirection=null;TR.sessPnl=0;TR.wins=0;TR.losses=0;
