@@ -1558,8 +1558,9 @@ function aiTick(sym){
       aiLog('⏳ S'+(AI.martStep+1)+' — waiting for OVER2 or UNDER7 >=65%…','warn');
       return;
     }
+    // Confirm on direction only — best market can shift tick-to-tick
     const _prev=AI.prevRecovery;
-    const _confirmed=_prev&&_prev.sym===recovery.sym&&_prev.direction===recovery.direction;
+    const _confirmed=_prev&&_prev.direction===recovery.direction;
     AI.prevRecovery={sym:recovery.sym,direction:recovery.direction,pct:recovery.pct};
     if(!_confirmed){
       setAIState('waiting');
