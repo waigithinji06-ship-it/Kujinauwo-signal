@@ -193,7 +193,7 @@ td.L{text-align:left;padding-left:12px;}
 
 /* Trade log */
 .trade-log{max-height:220px;overflow-y:auto;background:var(–surface);border:1px solid var(–border);border-radius:10px;padding:2px;}
-.log-entry{display:grid;grid-template-columns:72px 72px 72px 70px 55px 72px;gap:8px;padding:7px 12px;border-bottom:1px solid var(–border);font-family:‘Space Mono’,monospace;font-size:9px;align-items:center;transition:background .15s;}
+.log-entry{display:grid;grid-template-columns:60px 60px 60px 68px 60px 50px 65px;gap:6px;padding:7px 10px;border-bottom:1px solid var(–border);font-family:‘Space Mono’,monospace;font-size:9px;align-items:center;transition:background .15s;}
 .log-entry:last-child{border-bottom:none;}
 .log-entry:hover{background:rgba(255,255,255,.02);}
 .log-entry.win{border-left:3px solid var(–green);}
@@ -213,7 +213,7 @@ td.L{text-align:left;padding-left:12px;}
 .mart-step.win{background:rgba(0,230,118,.2);color:var(–green);}
 
 /* AI log feed */
-.ai-log{background:var(–surface);border:1px solid var(–border);border-radius:9px;padding:10px;margin-top:10px;max-height:100px;overflow-y:auto;}
+.ai-log{background:var(–surface);border:1px solid var(–border);border-radius:9px;padding:10px;margin-top:0;max-height:160px;overflow-y:auto;}
 .ai-log-line{font-family:‘Space Mono’,monospace;font-size:9px;color:var(–muted);padding:2px 0;border-bottom:1px solid rgba(255,255,255,.03);}
 .ai-log-line:last-child{border-bottom:none;}
 .ai-log-line.info{color:var(–blue);}
@@ -387,11 +387,11 @@ td.L{text-align:left;padding-left:12px;}
   </div>
   <!-- Summary pills -->
   <div style="padding:4px 14px 8px;display:flex;gap:8px;flex-wrap:wrap;flex-shrink:0;">
-    <div class="pill"><span class="pdot g"></span>STRONG BUY</div>
-    <div class="pill"><span class="pdot g2"></span>BUY</div>
-    <div class="pill"><span class="pdot y"></span>NEUTRAL</div>
-    <div class="pill"><span class="pdot b2"></span>WATCH</div>
-    <div class="pill"><span class="pdot r"></span>AVOID</div>
+    <div class="pill"><span class="pdot g"></span>STRONG BUY <strong id="pSB" style="color:var(--green);margin-left:3px;">0</strong></div>
+    <div class="pill"><span class="pdot g2"></span>BUY <strong id="pBU" style="color:var(--green);margin-left:3px;opacity:.7;">0</strong></div>
+    <div class="pill"><span class="pdot y"></span>NEUTRAL <strong id="pNE" style="color:var(--yellow);margin-left:3px;">0</strong></div>
+    <div class="pill"><span class="pdot b2"></span>WATCH <strong id="pWA" style="color:var(--muted);margin-left:3px;">0</strong></div>
+    <div class="pill"><span class="pdot r"></span>AVOID <strong id="pAV" style="color:var(--red);margin-left:3px;">0</strong></div>
   </div>
   <div class="pscroll" style="padding-top:0;">
     <!-- Scanner table -->
@@ -408,9 +408,8 @@ td.L{text-align:left;padding-left:12px;}
 <!-- ── PAGE 2: AI TRADING ── -->
 <div id="pgAI" class="page" style="flex-direction:column;">
 
-  <!-- Fixed header: stats + equity + current trade -->
+  <!-- Fixed header: stats + controls only -->
   <div class="ai-header">
-    <!-- Session P&L + win stats -->
     <div class="cstat-row">
       <div class="cstat"><div class="cstat-l">SESSION P&L</div><div class="cstat-v" id="sessPnl" style="color:var(--green);">+0.00</div><div style="font-size:8px;color:var(--dim);font-family:'Space Mono',monospace;" id="sessPnlSub">0 trades</div></div>
       <div class="cstat"><div class="cstat-l">WINS</div><div class="cstat-v" style="color:var(--green);" id="astW">0</div></div>
@@ -418,34 +417,26 @@ td.L{text-align:left;padding-left:12px;}
       <div class="cstat"><div class="cstat-l">WIN RATE</div><div class="cstat-v" id="astWR">—</div></div>
       <div class="cstat"><div class="cstat-l">TOTAL P&L</div><div class="cstat-v" id="astPnl">+0.00</div></div>
     </div>
-    <!-- Equity curve -->
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:8px;margin-bottom:8px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-        <div style="font-size:7px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:2px;">EQUITY CURVE</div>
-        <div style="font-size:8px;font-family:'Space Mono',monospace;" id="eqStats" style="color:var(--muted);">Now +0.00  Peak +0.00  Low +0.00</div>
-      </div>
-      <canvas id="eqCanvas" style="width:100%;height:60px;display:block;min-height:60px;"></canvas>
-    </div>
-    <!-- Current trade -->
-    <div class="ct-compact" id="curTrade">
-      <div style="font-size:7px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:2px;margin-bottom:6px;">ACTIVE TRADE</div>
-      <div class="ct-row">
-        <div class="ct-item"><div class="ct-lbl">INDEX</div><div class="ct-val" id="ctIndex">—</div></div>
-        <div class="ct-item"><div class="ct-lbl">CONTRACT</div><div class="ct-val" id="ctContract">—</div></div>
-        <div class="ct-item"><div class="ct-lbl">STAKE</div><div class="ct-val" id="ctStake">—</div></div>
-        <div class="ct-item"><div class="ct-lbl">NET PROFIT</div><div class="ct-val" id="ctPayout">—</div></div>
-        <div class="ct-item"><div class="ct-lbl">STATUS</div><div class="ct-val" id="ctStatus" style="color:var(--yellow)">—</div></div>
-      </div>
-      <div style="font-size:8px;color:var(--dim);font-family:'Space Mono',monospace;margin-top:4px;" id="ctDigit"></div>
-      <div style="font-size:8px;color:var(--dim);font-family:'Space Mono',monospace;" id="ctId"></div>
-    </div>
-    <!-- AI state + global controls -->
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:8px;">
+    <!-- Controls row -->
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:6px;">
       <div id="aiStateBadge" class="ai-state-badge idle">⏸ IDLE</div>
       <div style="display:flex;gap:6px;">
         <button class="ai-btn start" id="startBtn" onclick="startAI()" style="padding:8px 14px;font-size:10px;">▶ START</button>
         <button class="ai-btn stop"  id="stopBtn"  onclick="stopAI()"  style="padding:8px 14px;font-size:10px;" disabled>■ STOP</button>
         <button class="ai-btn reset" id="resetBtn" onclick="resetAI()" style="padding:8px 14px;font-size:10px;">↺</button>
+      </div>
+    </div>
+    <!-- Active trade inline — compact single line, hidden when idle -->
+    <div id="curTrade" class="ct-compact" style="display:none;margin-top:6px;">
+      <div class="ct-row">
+        <div class="ct-item"><div class="ct-lbl">INDEX</div><div class="ct-val" id="ctIndex">—</div></div>
+        <div class="ct-item"><div class="ct-lbl">CONTRACT</div><div class="ct-val" id="ctContract">—</div></div>
+        <div class="ct-item"><div class="ct-lbl">STAKE</div><div class="ct-val" id="ctStake">—</div></div>
+        <div class="ct-item"><div class="ct-lbl">PAYOUT</div><div class="ct-val" id="ctPayout">—</div></div>
+        <div class="ct-item"><div class="ct-lbl">STATUS</div><div class="ct-val" id="ctStatus" style="color:var(--yellow)">—</div></div>
+      </div>
+      <div style="font-size:8px;color:var(--dim);font-family:'Space Mono',monospace;margin-top:2px;display:flex;gap:12px;">
+        <span id="ctDigit"></span><span id="ctId"></span>
       </div>
     </div>
   </div>
@@ -463,54 +454,65 @@ td.L{text-align:left;padding-left:12px;}
 
   <!-- 🚀 PIONEER -->
   <div id="mpPioneer" class="mpage active">
-    <div class="msec-label">🚀 PIONEER — DIFFERS PRIMARY · OVER2/UNDER7 RECOVERY · 3.6×</div>
-    <!-- Config -->
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-bottom:10px;">
-      <div class="cfg-block"><div class="cfg-label"><span>💰</span> BASE STAKE ($)</div><input class="cfg-input" id="cfgStake" type="number" value="5" min="0.35" step="0.50"/><div style="font-size:8px;color:var(--dim);margin-top:3px;font-family:'Space Mono',monospace;">Score 45=1x · 85+=1.5x</div></div>
-      <div class="cfg-block"><div class="cfg-label">MULT ×</div><input class="cfg-input" id="cfgMult" type="number" value="3.6" min="1.5" max="10" step="0.1"/></div>
-      <div class="cfg-block">
-        <div class="cfg-label">TOTAL TAKE PROFIT ($)</div>
-        <input class="cfg-input" id="cfgTP" type="number" value="30" min="1" step="1" oninput="calcTpLevels()"/>
-        <div style="font-size:8px;color:var(--dim);margin-top:4px;font-family:'Space Mono',monospace;line-height:1.7;">
-          TP1 <span id="tp1val" style="color:var(--yellow);">$10</span> → stake ×0.75<br>
-          TP2 <span id="tp2val" style="color:var(--accent);">$20</span> → stake ×0.50<br>
-          TP3 <span id="tp3val" style="color:var(--green);">$30</span> → stop
+    <!-- Equity curve — first thing visible -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:8px;margin-bottom:10px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+        <div style="font-size:7px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:2px;">🚀 PIONEER · EQUITY</div>
+        <div style="font-size:8px;font-family:'Space Mono',monospace;" id="eqStats">Now +0.00  Peak +0.00  Low +0.00</div>
+      </div>
+      <canvas id="eqCanvas" style="width:100%;height:70px;display:block;min-height:70px;"></canvas>
+    </div>
+    <!-- Config — collapsible -->
+    <div style="margin-bottom:8px;">
+      <div onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'grid':'none'" style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:2px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:var(--surface);border:1px solid var(--border);border-radius:8px;">
+        <span>⚙ CONFIG</span><span id="cfgToggleIcon">▼</span>
+      </div>
+      <div style="display:none;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-top:8px;">
+        <div class="cfg-block"><div class="cfg-label"><span>💰</span> BASE STAKE ($)</div><input class="cfg-input" id="cfgStake" type="number" value="5" min="0.35" step="0.50"/><div style="font-size:8px;color:var(--dim);margin-top:3px;font-family:'Space Mono',monospace;">MinScore=1x · +40pts=1.5x</div></div>
+        <div class="cfg-block"><div class="cfg-label">MULT ×</div><input class="cfg-input" id="cfgMult" type="number" value="3.6" min="1.5" max="10" step="0.1"/></div>
+        <div class="cfg-block">
+          <div class="cfg-label">TAKE PROFIT ($)</div>
+          <input class="cfg-input" id="cfgTP" type="number" value="30" min="1" step="1" oninput="calcTpLevels()"/>
+          <div style="font-size:8px;color:var(--dim);margin-top:4px;font-family:'Space Mono',monospace;line-height:1.7;">
+            TP1 <span id="tp1val" style="color:var(--yellow);">$10</span> ×0.75 &nbsp;
+            TP2 <span id="tp2val" style="color:var(--accent);">$20</span> ×0.50 &nbsp;
+            TP3 <span id="tp3val" style="color:var(--green);">$30</span> stop
+          </div>
         </div>
-      </div>
-      <div class="cfg-block"><div class="cfg-label">STOP LOSS ($)</div><input class="cfg-input" id="cfgSL" type="number" value="50" min="1" step="1"/></div>
-      <div class="cfg-block"><div class="cfg-label">MIN SCORE</div><input class="cfg-input" id="cfgMinScore" type="number" value="45" min="30" max="85" step="5"/><div style="font-size:8px;color:var(--muted);margin-top:3px;">45=default · 60=selective</div></div>
-      <div class="cfg-block"><div class="cfg-label">SESSION LIMIT</div><input class="cfg-input" id="cfgTimeLimit" type="number" value="120" min="15" max="480" step="15"/><div style="font-size:8px;color:var(--muted);margin-top:3px;">mins · 0=unlimited</div></div>
-      <div class="cfg-block" style="grid-column:1/-1;"><div class="cfg-label">INDEX</div><select class="cfg-select" id="cfgIndex"><option value="AUTO">AUTO (AI picks best)</option><option value="R_10">V10</option><option value="R_25">V25</option><option value="R_50">V50</option><option value="R_75">V75</option><option value="R_100">V100</option><option value="1HZ10V">V10 1s</option><option value="1HZ25V">V25 1s</option><option value="1HZ50V">V50 1s</option><option value="1HZ75V">V75 1s</option><option value="1HZ100V">V100 1s</option></select></div>
-    </div>
-    <!-- Ladder -->
-    <div id="ladderPanel" style="margin-bottom:10px;">
-      <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:2px;margin-bottom:8px;display:flex;justify-content:space-between;"><span>MARTINGALE LADDER</span><span id="ladExposure" style="color:var(--red)"></span></div>
-      <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;">
-        <div class="lad-step differ" id="lad0"><div class="lad-num">STEP 1</div><div class="lad-type">DIFFERS</div><div class="lad-stake">$5.00</div><div class="lad-sub">primary</div></div>
-        <div class="lad-arrow">→</div>
-        <div class="lad-step over" id="lad1"><div class="lad-num">STEP 2</div><div class="lad-type">OVER 2</div><div class="lad-stake">$18.00</div><div class="lad-sub">recovery</div></div>
-        <div class="lad-arrow">→</div>
-        <div class="lad-step over" id="lad2"><div class="lad-num">STEP 3</div><div class="lad-type">OVER 2</div><div class="lad-stake">$64.80</div><div class="lad-sub">recovery</div></div>
-        <div class="lad-arrow">→</div>
-        <div class="lad-step over" id="lad3"><div class="lad-num">STEP 4</div><div class="lad-type">OVER 2</div><div class="lad-stake">$233.28</div><div class="lad-sub">recovery</div></div>
-        <div class="lad-arrow">→</div>
-        <div class="lad-step over final" id="lad4"><div class="lad-num">STEP 5</div><div class="lad-type">OVER 2</div><div class="lad-stake">$839.81</div><div class="lad-sub">final</div></div>
+        <div class="cfg-block"><div class="cfg-label">STOP LOSS ($)</div><input class="cfg-input" id="cfgSL" type="number" value="50" min="1" step="1"/></div>
+        <div class="cfg-block"><div class="cfg-label">MIN SCORE</div><input class="cfg-input" id="cfgMinScore" type="number" value="45" min="30" max="85" step="5"/><div style="font-size:8px;color:var(--muted);margin-top:3px;">45=default · 60=selective</div></div>
+        <div class="cfg-block"><div class="cfg-label">SESSION LIMIT</div><input class="cfg-input" id="cfgTimeLimit" type="number" value="120" min="15" max="480" step="15"/><div style="font-size:8px;color:var(--muted);margin-top:3px;">mins · 0=unlimited</div></div>
+        <div class="cfg-block" style="grid-column:1/-1;"><div class="cfg-label">INDEX</div><select class="cfg-select" id="cfgIndex"><option value="AUTO">AUTO (AI picks best)</option><option value="R_10">V10</option><option value="R_25">V25</option><option value="R_50">V50</option><option value="R_75">V75</option><option value="R_100">V100</option><option value="1HZ10V">V10 1s</option><option value="1HZ25V">V25 1s</option><option value="1HZ50V">V50 1s</option><option value="1HZ75V">V75 1s</option><option value="1HZ100V">V100 1s</option></select></div>
       </div>
     </div>
-    <!-- Extra stats -->
-    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">
-      <div class="cstat"><div class="cstat-l">STREAK</div><div class="cstat-v" id="astCL">0</div></div>
-      <div class="cstat"><div class="cstat-l">CURRENT STEP</div><div class="cstat-v" id="astMS">DIFFERS S1</div></div>
-      <div class="cstat"><div class="cstat-l">NEXT STAKE</div><div class="cstat-v" style="color:var(--accent);" id="astNS">$5.00</div></div>
-      <div class="cstat" style="flex:2;min-width:120px;"><div class="cstat-l">TICK SPEED</div><div class="cstat-v" style="font-size:10px;" id="astTS">—</div></div>
+    <!-- Ladder + mode stats — compact row -->
+    <div id="ladderPanel" style="margin-bottom:8px;">
+      <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:2px;margin-bottom:6px;display:flex;justify-content:space-between;"><span>LADDER</span><span id="ladExposure" style="color:var(--red)"></span></div>
+      <div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">
+        <div class="lad-step differ" id="lad0"><div class="lad-num">S1</div><div class="lad-type">DIFFERS</div><div class="lad-stake">$5.00</div></div>
+        <div class="lad-arrow">→</div>
+        <div class="lad-step over" id="lad1"><div class="lad-num">S2</div><div class="lad-type">OVER 2</div><div class="lad-stake">$18.00</div></div>
+        <div class="lad-arrow">→</div>
+        <div class="lad-step over" id="lad2"><div class="lad-num">S3</div><div class="lad-type">OVER 2</div><div class="lad-stake">$64.80</div></div>
+        <div class="lad-arrow">→</div>
+        <div class="lad-step over" id="lad3"><div class="lad-num">S4</div><div class="lad-type">OVER 2</div><div class="lad-stake">$233.28</div></div>
+        <div class="lad-arrow">→</div>
+        <div class="lad-step over final" id="lad4"><div class="lad-num">S5</div><div class="lad-type">OVER 2</div><div class="lad-stake">$839.81</div></div>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        <div class="cstat"><div class="cstat-l">STREAK</div><div class="cstat-v" id="astCL">0</div></div>
+        <div class="cstat"><div class="cstat-l">STEP</div><div class="cstat-v" id="astMS">S1</div></div>
+        <div class="cstat"><div class="cstat-l">NEXT STAKE</div><div class="cstat-v" style="color:var(--accent);" id="astNS">$5.00</div></div>
+        <div class="cstat" style="flex:2;min-width:100px;"><div class="cstat-l">TICK SPEED</div><div class="cstat-v" style="font-size:10px;" id="astTS">—</div></div>
+      </div>
     </div>
-    <!-- AI log -->
-    <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:2px;margin-bottom:6px;">AI DECISION LOG</div>
+    <!-- Bot activity log -->
+    <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:2px;margin-bottom:4px;">BOT ACTIVITY</div>
     <div id="aiLog" class="ai-log"><div class="ai-log-line info"><span class="ts">--:--:--</span>System ready. Waiting for connection…</div></div>
-    <!-- Trade log -->
-    <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:2px;margin:10px 0 6px;">TRADE LOG</div>
+    <!-- Transaction log -->
+    <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:2px;margin:10px 0 4px;">TRANSACTIONS</div>
     <div id="tradeLog" class="tlog">
-      <div class="log-entry log-header"><div>TIME</div><div>INDEX</div><div>TYPE</div><div>STAKE</div><div>RESULT</div><div>P&L</div></div>
+      <div class="log-entry log-header"><div>TIME</div><div>INDEX</div><div>TYPE</div><div>ENTRY</div><div>STAKE</div><div>RESULT</div><div>P&L</div></div>
     </div>
   </div>
 
@@ -545,7 +547,7 @@ td.L{text-align:left;padding-left:12px;}
     <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:2px;margin-bottom:6px;">AI DECISION LOG</div>
     <div id="aiLogSC" class="ai-log"></div>
     <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:2px;margin:10px 0 6px;">TRADE LOG</div>
-    <div id="tradeLogSC" class="tlog"><div class="log-entry log-header"><div>TIME</div><div>INDEX</div><div>TYPE</div><div>STAKE</div><div>RESULT</div><div>P&L</div></div></div>
+    <div id="tradeLogSC" class="tlog"><div class="log-entry log-header"><div>TIME</div><div>INDEX</div><div>TYPE</div><div>ENTRY</div><div>STAKE</div><div>RESULT</div><div>P&L</div></div></div>
   </div>
 
   <!-- 📈 TREND -->
@@ -606,7 +608,7 @@ td.L{text-align:left;padding-left:12px;}
     <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:2px;margin-bottom:6px;">AI DECISION LOG</div>
     <div id="aiLogTR" class="ai-log"></div>
     <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:2px;margin:10px 0 6px;">TRADE LOG</div>
-    <div id="tradeLogTR" class="tlog"><div class="log-entry log-header"><div>TIME</div><div>INDEX</div><div>TYPE</div><div>STAKE</div><div>RESULT</div><div>P&L</div></div></div>
+    <div id="tradeLogTR" class="tlog"><div class="log-entry log-header"><div>TIME</div><div>INDEX</div><div>TYPE</div><div>ENTRY</div><div>STAKE</div><div>RESULT</div><div>P&L</div></div></div>
   </div>
 
   <!-- 🎲 EVEN/ODD -->
@@ -637,7 +639,7 @@ td.L{text-align:left;padding-left:12px;}
     <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:2px;margin-bottom:6px;">AI DECISION LOG</div>
     <div id="aiLogMAN" class="ai-log"></div>
     <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:2px;margin:10px 0 6px;">TRADE LOG</div>
-    <div id="tradeLogMAN" class="tlog"><div class="log-entry log-header"><div>TIME</div><div>INDEX</div><div>TYPE</div><div>STAKE</div><div>RESULT</div><div>P&L</div></div></div>
+    <div id="tradeLogMAN" class="tlog"><div class="log-entry log-header"><div>TIME</div><div>INDEX</div><div>TYPE</div><div>ENTRY</div><div>STAKE</div><div>RESULT</div><div>P&L</div></div></div>
   </div>
 
   </div><!-- end mode subpages wrapper -->
@@ -1055,7 +1057,7 @@ function navTo(page){
   const tabMap={analysis:'bnAnalysis',ai:'bnAI',account:'bnAccount'};
   const pg=document.getElementById(pageMap[page]);if(pg)pg.classList.add('active');
   const tb=document.getElementById(tabMap[page]);if(tb)tb.classList.add('active');
-  if(page==='analysis'){IDX.forEach(i=>{if(ST[i.s]&&ST[i.s].prices.length>0){try{updateRow(i.s);updateDC(i.s);}catch(e){}}});}
+  if(page==='analysis'){IDX.forEach(i=>{if(ST[i.s]&&ST[i.s].prices.length>0){try{updateRow(i.s);updateDC(i.s);}catch(e){}}});_sumTick=14;updateSum();}
 }
 
 // ══ MODE ══
@@ -1287,7 +1289,11 @@ function onTick(tk){
   if(onAnalysisPage){updateRow(tk.symbol);updateDC(tk.symbol);}
   updateSum();
   if(total%10===0){
-    document.getElementById('STK').textContent=total.toLocaleString();
+    const _stk=document.getElementById('STK');
+    if(_stk){
+      _stk.textContent=total.toLocaleString();
+      _stk.style.color=total<500?'var(--red)':total<1000?'var(--yellow)':'var(--green)';
+    }
     document.getElementById('TT').textContent=total;
   }
   if(AI.running&&AI.mode==='pioneer') aiTick(tk.symbol);
@@ -1948,7 +1954,7 @@ function placeTrade(sym,code,stake,barrier,typeLabel,source){
   AI.inTrade=true;AI.activeSym=sym;AI.activeType=typeLabel;AI.activeDigit=barrier;AI.activeSource=source;
   setAIState('trading');
   const ix=IDX.find(i=>i.s===sym);
-  document.getElementById('curTrade').classList.add('active');
+  const _ct=document.getElementById('curTrade');if(_ct){_ct.style.display='block';_ct.classList.add('active');}
   document.getElementById('ctIndex').textContent=(ix?ix.n:sym)+(source==='manual'?' ✏️':source==='trend'?' 📈':source==='scalper'?' ⚡':' 🤖');
   document.getElementById('ctContract').textContent=typeLabel+(typeof barrier==='number'&&barrier>0?' d.'+barrier:'');
   document.getElementById('ctStake').textContent='$'+stake.toFixed(2);
@@ -2087,7 +2093,7 @@ function onContract(poc){
     addTradeLog(AI.activeSym,AI.activeType,AI.activeDigit,stake,profit,won,'TR'+(TR.step+(won?0:0)));
     updateAIStats();drawEquity();
     setTimeout(()=>{
-      document.getElementById('curTrade').classList.remove('active');
+      const _ct2=document.getElementById('curTrade');if(_ct2){_ct2.classList.remove('active');_ct2.style.display='none';}
       if(TR.running){
         if(TR.consecLoss>=5){setAIState('stopped');aiLog('🛑 5 losses — Trend stopped.','danger');trendStop();}
         else{setAIState('scanning');updateTrendLadderUI();}
@@ -2113,7 +2119,7 @@ function onContract(poc){
     addTradeLog(AI.activeSym,AI.activeType,AI.activeDigit,stake,profit,won,'SC'+(SC.step+1));
     updateAIStats();drawEquity();
     setTimeout(()=>{
-      document.getElementById('curTrade').classList.remove('active');
+      const _ct2=document.getElementById('curTrade');if(_ct2){_ct2.classList.remove('active');_ct2.style.display='none';}
       if(SC.running){if(SC.consecLoss>=4){setAIState('stopped');aiLog('🛑 4 losses — Scalper stopped.','danger');scalperStop();}else{setAIState('scanning');updateScalperLadderUI();}}
     },600);
 
@@ -2173,7 +2179,7 @@ function onContract(poc){
     addTradeLog(AI.activeSym,AI.activeType,AI.activeDigit,stake,profit,won,'S'+(AI.martStep+1)+(AI.martStep===0?' DIFF':' OV2'));
     updateAIStats();drawEquity();
     setTimeout(()=>{
-      document.getElementById('curTrade').classList.remove('active');
+      const _ct2=document.getElementById('curTrade');if(_ct2){_ct2.classList.remove('active');_ct2.style.display='none';}
       if(AI.running){if(AI.consecLoss>=5){setAIState('stopped');aiLog('🛑 5 losses.','danger');stopAI();}else{setAIState('scanning');updateLadderUI();}}
     },600);
   }
@@ -2183,11 +2189,13 @@ function onContract(poc){
 function addTradeLog(sym,type,digit,stake,profit,won,label){
   const ix=IDX.find(i=>i.s===sym);
   const now=new Date().toUTCString().slice(17,25);
+  const entryPrice=ST[sym]&&ST[sym].last?ST[sym].last.toFixed(2):'—';
   const entry=document.createElement('div');
   entry.className='log-entry '+(won?'win':profit===0?'pending':'loss');
   const pnlCls=profit>0?'pnl-pos':profit<0?'pnl-neg':'pnl-zero';
   entry.innerHTML=
     '<div>'+now+'</div><div>'+(ix?ix.n:sym)+'</div><div>'+label+'</div>'+
+    '<div style="color:var(--muted);">'+entryPrice+'</div>'+
     '<div>$'+stake.toFixed(2)+'</div>'+
     '<div style="color:'+(won?'var(--green)':'var(--red)')+';">'+(won?'WIN':'LOSS')+'</div>'+
     '<div class="'+pnlCls+'">'+(profit>=0?'+':'')+'$'+profit.toFixed(2)+'</div>';
@@ -2319,8 +2327,11 @@ function updateRow(sym){
     if(s.tickSpeed){const sc=s.tickSpeed<1200?'fast':s.tickSpeed<3500?'med':'slow';spdBadge='<span class="tick-speed '+sc+'">'+s.tickSpeed+'ms</span>';}
     const msCls=a.isCon?'cy':a.ms==='EXPANDING'?'cn':'cw';
     const msIcon=a.isCon?'🟢':a.ms==='EXPANDING'?'🔴':'🟡';
+    const _tc=s.ticks||0;
+    const _tcCol=_tc<500?'var(--red)':_tc<1000?'var(--yellow)':'var(--green)';
+    const _tcBadge='<span style="font-family:\'Space Mono\',monospace;font-size:7px;color:'+_tcCol+';margin-left:4px;">'+_tc+'tk</span>';
     row.innerHTML=
-      '<td class="L"><div class="iname">'+ix.n+(isActive?' ⚡':'')+'</div><div class="isub">'+ix.sub+' '+spdBadge+'</div></td>'+
+      '<td class="L"><div class="iname">'+ix.n+(isActive?' ⚡':'')+'</div><div class="isub">'+ix.sub+' '+spdBadge+_tcBadge+'</div></td>'+
       '<td><div class="pcell '+dir+'">'+(p?p.toFixed(2):'—')+'</div></td>'+
       '<td><span class="ms-badge '+msCls+'">'+msIcon+' '+a.ms+'</span></td>'+
       '<td><span class="score-badge" style="color:'+(a.score>=65?'var(--green)':a.score>=45?'var(--yellow)':'var(--red)')+'">'+a.score+'</span></td>'+
@@ -2340,6 +2351,15 @@ function updateRow(sym){
       if(ms.textContent!==newTxt){ms.className='ms-badge '+msCls;ms.textContent=newTxt;}
     }
   }
+  // Update per-market tick badge colour
+  const c0=cells[0];if(c0){
+    const tb=c0.querySelector('span[style*="tk"]');
+    if(tb){
+      const _t=s.ticks||0;
+      tb.textContent=_t+'tk';
+      tb.style.color=_t<500?'var(--red)':_t<1000?'var(--yellow)':'var(--green)';
+    }
+  }
 }
 
 let _sumTick=0;
@@ -2355,6 +2375,25 @@ function updateSum(){
   document.getElementById('SE').textContent=exp;
   document.getElementById('SEV').textContent=avg?avg.toFixed(1)+'%':'—';
   document.getElementById('SB').textContent=con>0?'DIFF/OVER2':'WAIT';
+  // Populate signal pills
+  let sb=0,bu=0,ne=0,wa=0,av=0;
+  IDX.forEach(i=>{
+    const s=ST[i.s];
+    if(!s||!s.conn||s.digits.length<30){av++;return;}
+    try{
+      const a=ana(i.s);
+      if(a.score>=65&&a.isCon)      sb++;
+      else if(a.score>=55&&a.score<65) bu++;
+      else if(a.score>=45&&a.score<55) ne++;
+      else if(a.score>=35&&a.score<45) wa++;
+      else                             av++;
+    }catch(e){av++;}
+  });
+  const _ps=document.getElementById('pSB');if(_ps)_ps.textContent=sb;
+  const _pb=document.getElementById('pBU');if(_pb)_pb.textContent=bu;
+  const _pn=document.getElementById('pNE');if(_pn)_pn.textContent=ne;
+  const _pw=document.getElementById('pWA');if(_pw)_pw.textContent=wa;
+  const _pa=document.getElementById('pAV');if(_pa)_pa.textContent=av;
 }
 
 function updateDC(sym){
