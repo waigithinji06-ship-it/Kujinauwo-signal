@@ -855,10 +855,23 @@ let _trendPending=null;
 
 // Seed barriers — starting point for binary search per index
 // These are typical values that land near 28-35% — search converges from here
+// Seed barriers per index — starting point for binary search
+// These are typical values that land near 28-35% payout
+// Bot learns and updates these after each successful trade
 const BARRIER_SEEDS={
-  'R_10':0.003, 'R_25':0.008, 'R_50':0.004, 'R_75':0.006, 'R_100':0.45,
-  '1HZ10V':0.003,'1HZ25V':0.008,'1HZ50V':0.004,'1HZ75V':0.006,'1HZ100V':0.45
+  'R_10':0.15,   // V10    ~6500 spot, avg tick ~0.03
+  'R_25':2.5,    // V25    ~1800 spot, avg tick ~0.5
+  'R_50':0.8,    // V50    ~600  spot, avg tick ~0.2
+  'R_75':1.2,    // V75    ~500  spot, avg tick ~0.3
+  'R_100':0.45,  // V100   ~9000 spot, avg tick ~0.15 — confirmed by user
+  '1HZ10V':0.15, // V10 1s similar to V10
+  '1HZ25V':2.5,  // V25 1s similar to V25
+  '1HZ50V':0.8,  // V50 1s similar to V50
+  '1HZ75V':1.2,  // V75 1s similar to V75
+  '1HZ100V':0.45 // V100 1s confirmed by user
 };
+// Learned barriers — updated after each successful trade
+const BARRIER_LEARNED={};
 
 function sendProposal(p){
   ws.send(JSON.stringify({proposal:1,amount:p.stake,basis:'stake',
@@ -890,18 +903,23 @@ function onProposal(msg){
 
   aiLog('📊 Barrier '+p.barrier+' → '+actualPct+'% payout (seek 28-35%) attempt '+(p.attempt||1),'info');
 
-  // Already in target range — place immediately
+  // Already in target range — save barrier and place
   if(actualPct>=28&&actualPct<=35){
+    const successOffset=parseFloat(p.barrier.replace('-','').replace('+',''));
+    BARRIER_LEARNED[p.sym]=successOffset;
+    aiLog('✅ Barrier locked: '+p.barrier+' → '+actualPct+'% payout','success');
     _trendPending=null;
     AI.inTrade=false; AI.pendingResult=false;
     placeTrade(p.sym, p.code, p.stake, p.barrier, p.typeLabel, 'trend');
     return;
   }
 
-  // Max 5 attempts — after that use closest result seen
+  // Max 5 attempts — use closest result, save for next time
   const attempt=(p.attempt||1);
   if(attempt>=5){
-    aiLog('📊 Best barrier found: '+p.barrier+' ('+actualPct+'%) — placing','info');
+    const bestOffset=parseFloat(p.barrier.replace('-','').replace('+',''));
+    if(actualPct>=20&&actualPct<=50) BARRIER_LEARNED[p.sym]=bestOffset; // save if reasonable
+    aiLog('📊 Best barrier: '+p.barrier+' ('+actualPct+'%) — placing','warn');
     _trendPending=null;
     AI.inTrade=false; AI.pendingResult=false;
     placeTrade(p.sym, p.code, p.stake, p.barrier, p.typeLabel, 'trend');
@@ -943,7 +961,8 @@ function onProposal(msg){
 }
 
 function requestTrendProposal(sym, code, stake, typeLabel, ticks, isCall){
-  const seed=BARRIER_SEEDS[sym]||0.01;
+  // Use learned barrier if available, else seed
+  const seed=BARRIER_LEARNED[sym]||BARRIER_SEEDS[sym]||0.5;
   const sign=isCall?'-':'+';
   const ix=IDX.find(i=>i.s===sym);
   const dp=ix?ix.dp:3;
