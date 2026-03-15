@@ -1562,7 +1562,9 @@ function findBestMarket(){
     const s=ST[i.s];if(!s||!s.conn||s.digits.length<30)return;
     try{const a=ana(i.s);const eff=a.score+(a.hotRecent?8:0);if(eff>bestScore){bestScore=eff;best={sym:i.s,a};}}catch(e){}
   });
-  return best&&best.a.score>=minScore?best:null;
+  if(!best) return null;
+  const effBest=best.a.score+(best.a.hotRecent?8:0);
+  return effBest>=minScore?best:null;
 }
 
 // ══ SCALPER MARKET FINDER ══
@@ -1681,6 +1683,11 @@ function aiTick(sym){
     const conf=Math.min(1.5,1.0+((a.score-45)/40)*0.5);
     const hotPct=Math.round(a.fr[barrierDigit]/a.tot*100);
     const _rtag=a.hotRecent?' ✓':' ⚠cool';
+    // Skip if digit is cooling in last 20 ticks — wait for fresh confirmation
+    if(!a.hotRecent){
+      setAIState('waiting');
+      return; // silent skip — no log spam
+    }
     aiLog('🎯 S1 | '+ix.n+' | DIFFERS d.'+barrierDigit
       +' ('+hotPct+'% r:'+a.hotRecentPct+'%'+_rtag+') | $'+stake.toFixed(2)
       +' Score:'+a.score+' Conf:'+conf.toFixed(2)+'x','info');
