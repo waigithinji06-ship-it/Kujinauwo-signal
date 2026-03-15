@@ -855,22 +855,32 @@ let _trendPending=null;
 
 // Seed barriers — starting point for binary search per index
 // These are typical values that land near 28-35% — search converges from here
-// Seed barriers per index — starting point for binary search
-// These are typical values that land near 28-35% payout
-// Bot learns and updates these after each successful trade
+// Seed barriers per index — midpoint of confirmed 28-35% payout ranges
+// Standard indices (5-tick):
+//   V10:   0.17–0.20   mid→0.185
+//   V25:   0.247–0.255 mid→0.251
+//   V50:   0.0176–0.02 mid→0.0188
+//   V75:   9.2479–12   mid→10.624
+//   V100:  0.20–0.27   mid→0.235
+// 1s indices:
+//   V10 1s: 0.19–0.25  mid→0.220
+//   V25 1s: 55–62      mid→58.5
+//   V50 1s: 45–47      mid→46.0
+//   V75 1s: 0.38–0.45  mid→0.415
+//   V100 1s:0.78–0.95  mid→0.865
 const BARRIER_SEEDS={
-  'R_10':0.15,   // V10    ~6500 spot, avg tick ~0.03
-  'R_25':2.5,    // V25    ~1800 spot, avg tick ~0.5
-  'R_50':0.8,    // V50    ~600  spot, avg tick ~0.2
-  'R_75':1.2,    // V75    ~500  spot, avg tick ~0.3
-  'R_100':0.45,  // V100   ~9000 spot, avg tick ~0.15 — confirmed by user
-  '1HZ10V':0.15, // V10 1s similar to V10
-  '1HZ25V':2.5,  // V25 1s similar to V25
-  '1HZ50V':0.8,  // V50 1s similar to V50
-  '1HZ75V':1.2,  // V75 1s similar to V75
-  '1HZ100V':0.45 // V100 1s confirmed by user
+  'R_10':0.185,
+  'R_25':0.251,
+  'R_50':0.0188,
+  'R_75':10.624,
+  'R_100':0.235,
+  '1HZ10V':0.220,
+  '1HZ25V':58.5,
+  '1HZ50V':46.0,
+  '1HZ75V':0.415,
+  '1HZ100V':0.865
 };
-// Learned barriers — updated after each successful trade
+// Learned barriers — updated live after each successful trade
 const BARRIER_LEARNED={};
 
 function sendProposal(p){
