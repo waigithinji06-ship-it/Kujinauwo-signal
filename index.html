@@ -446,7 +446,7 @@ td.L{text-align:left;padding-left:12px;}
     <div class="mchip active" id="chipPioneer" onclick="setMode('pioneer')"><span class="mci">🚀</span>PIONEER</div>
     <div class="mchip" id="chipScalper"  onclick="setMode('scalper')"><span class="mci">⚡</span>SCALPER</div>
     <div class="mchip" id="chipTrend"    onclick="setMode('trend')"><span class="mci">📈</span>TREND</div>
-    <div class="mchip" id="chipManual"   onclick="setMode('manual')"><span class="mci">🎲</span>EVEN/ODD</div>
+    <div class="mchip" id="chipManual"   onclick="setMode('manual')"><span class="mci">📈</span>ACCUM</div>
   </div>
 
   <!-- Mode subpages -->
@@ -613,32 +613,52 @@ td.L{text-align:left;padding-left:12px;}
 
   <!-- 🎲 EVEN/ODD -->
   <div id="mpManual" class="mpage">
-    <div class="msec-label">🎲 EVEN/ODD — BIAS SCANNER · BEST EDGE RECOVERY · 2.1×</div>
+    <div class="msec-label">📈 ACCUMULATOR — COMPOUND GROWTH · AUTO-EXIT · BEST CON MARKET</div>
+    <!-- Config -->
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-bottom:10px;">
-      <div class="cfg-block"><div class="cfg-label">BASE STAKE ($)</div><input class="cfg-input" id="manStake" type="number" value="5.00" min="0.35" step="0.50"/></div>
-      <div class="cfg-block"><div class="cfg-label">MULT ×</div><input class="cfg-input" id="manMult" type="number" value="2.1" min="1.5" max="5" step="0.1"/></div>
-      <div class="cfg-block"><div class="cfg-label">MIN BIAS %</div><input class="cfg-input" id="eoThresh" type="number" value="56" min="51" max="75" step="1"/><div style="font-size:8px;color:var(--muted);margin-top:3px;">≥56% to trade</div></div>
-      <div class="cfg-block"><div class="cfg-label">MAX LOSSES</div><input class="cfg-input" id="manMaxLoss" type="number" value="4" min="1" max="8" step="1"/><div style="font-size:8px;color:var(--muted);margin-top:3px;">circuit breaker</div></div>
+      <div class="cfg-block"><div class="cfg-label">STAKE ($)</div><input class="cfg-input" id="accuStake" type="number" value="1.00" min="0.50" step="0.50"/><div style="font-size:8px;color:var(--muted);margin-top:3px;">per trade</div></div>
+      <div class="cfg-block"><div class="cfg-label">GROWTH RATE</div><select class="cfg-select" id="accuRate"><option value="0.01">1% — safest</option><option value="0.02" selected>2% — balanced</option><option value="0.03">3% — aggressive</option></select></div>
+      <div class="cfg-block"><div class="cfg-label">EXIT AT TICKS</div><input class="cfg-input" id="accuTicks" type="number" value="25" min="5" max="100" step="5"/><div style="font-size:8px;color:var(--muted);margin-top:3px;">auto-sell target</div></div>
+      <div class="cfg-block"><div class="cfg-label">MAX TRADES/DAY</div><input class="cfg-input" id="accuMaxTrades" type="number" value="3" min="1" max="10" step="1"/><div style="font-size:8px;color:var(--muted);margin-top:3px;">stop after N trades</div></div>
     </div>
-    <!-- Even/Odd Ladder -->
-    <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:2px;margin-bottom:8px;display:flex;justify-content:space-between;">
-      <span>E/O LADDER</span><span id="eoExposure" style="color:var(--red);"></span>
+    <!-- Live status -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px;margin-bottom:10px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:2px;">LIVE</div>
+        <div id="accuRunning" style="font-size:9px;font-family:'Space Mono',monospace;color:var(--dim);">⏸ IDLE</div>
+      </div>
+      <!-- Tick progress bar -->
+      <div style="margin-bottom:8px;">
+        <div style="display:flex;justify-content:space-between;font-size:8px;font-family:'Space Mono',monospace;color:var(--muted);margin-bottom:4px;">
+          <span>TICKS</span>
+          <span><span id="accuTickCount" style="color:var(--accent);font-weight:700;">0</span> / <span id="accuTickTarget">25</span></span>
+        </div>
+        <div style="background:var(--border);border-radius:4px;height:6px;overflow:hidden;">
+          <div id="accuProgress" style="height:100%;width:0%;background:var(--accent);border-radius:4px;transition:width .3s;"></div>
+        </div>
+      </div>
+      <!-- Current value -->
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <div class="cstat"><div class="cstat-l">MARKET</div><div class="cstat-v" id="accuMarket">—</div></div>
+        <div class="cstat"><div class="cstat-l">CURRENT VALUE</div><div class="cstat-v" style="color:var(--green);" id="accuValue">—</div></div>
+        <div class="cstat"><div class="cstat-l">PROFIT</div><div class="cstat-v" id="accuProfit">—</div></div>
+        <div class="cstat"><div class="cstat-l">TRADES TODAY</div><div class="cstat-v" id="accuTradeCount">0</div></div>
+      </div>
     </div>
-    <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;" id="eoLadder"></div>
-    <!-- Live status bar -->
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 12px;margin-bottom:10px;font-family:'Space Mono',monospace;font-size:9px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;">
-      <span style="color:var(--muted);">NEXT</span>
-      <span id="manNextStake" style="color:var(--accent);font-size:12px;font-weight:700;">$5.00</span>
-      <span id="eoDirection" style="color:var(--yellow);">— scanning</span>
-      <span id="manRunning" style="color:var(--dim);">⏸ IDLE</span>
-    </div>
+    <!-- Controls -->
     <div style="display:flex;gap:8px;margin-bottom:10px;">
-      <button class="ai-btn start" style="flex:1;" id="manStartBtn" onclick="eoStart()">▶ START E/O</button>
-      <button class="ai-btn stop"  style="flex:1;" id="manStopBtn"  onclick="eoStop()" disabled>■ STOP</button>
+      <button class="ai-btn start" style="flex:1;" id="accuStartBtn" onclick="accuStart()">▶ START ACCUM</button>
+      <button class="ai-btn stop"  style="flex:1;" id="accuStopBtn"  onclick="accuStop()" disabled>■ STOP</button>
     </div>
-    <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:2px;margin-bottom:6px;">AI DECISION LOG</div>
+    <!-- Payout preview -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 12px;margin-bottom:10px;font-family:'Space Mono',monospace;font-size:8px;color:var(--muted);" id="accuPreview">
+      At 2% · 25 ticks · $1.00 stake → <span style="color:var(--green);">$1.64</span> (+64%)
+    </div>
+    <!-- Bot activity log -->
+    <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:2px;margin-bottom:4px;">BOT ACTIVITY</div>
     <div id="aiLogMAN" class="ai-log"></div>
-    <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:2px;margin:10px 0 6px;">TRADE LOG</div>
+    <!-- Transaction log -->
+    <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:2px;margin:10px 0 4px;">TRANSACTIONS</div>
     <div id="tradeLogMAN" class="tlog"><div class="log-entry log-header"><div>TIME</div><div>INDEX</div><div>TYPE</div><div>ENTRY</div><div>STAKE</div><div>RESULT</div><div>P&L</div></div></div>
   </div>
 
@@ -730,15 +750,19 @@ const AI={
   winStreak:0, sessionStart:0, prevRecovery:null,
 };
 
-// ══ EVEN/ODD STATE ══
+// ══ ACCUMULATOR STATE ══
 const MAN={
-  running:false, origStake:5, currentStake:5,
-  lossStreak:0, maxLoss:4, sessPnl:0, wins:0, losses:0,
-  step:0,           // current martingale step 0-3
-  direction:null,   // 'EVEN' or 'ODD' — best edge per step
-  sym:null, mult:2.1,
-  // legacy aliases kept so nothing crashes
-  code:'DIGITEVEN', barrier:0, typeLabel:'EVEN', onLoss:'martingale', onWin:'reset', aiDriven:false,
+  running:false, sessPnl:0, wins:0, losses:0,
+  tradesToday:0,    // count of completed trades this session
+  activeCid:null,   // current open accumulator contract id
+  tickCount:0,      // ticks elapsed on current contract
+  sym:null,
+  bidPrice:0,       // current contract value
+  stake:1.0,
+  // legacy aliases — keep so nothing crashes
+  lossStreak:0, maxLoss:4, step:0, direction:null, mult:2.1,
+  code:'ACCU', barrier:0, typeLabel:'ACCU', onLoss:'repeat', onWin:'reset',
+  origStake:1, currentStake:1, aiDriven:false,
 };
 
 // ══ SCALPER STATE ══
@@ -1120,9 +1144,9 @@ document.addEventListener('DOMContentLoaded',()=>{
       if(AI.mode==='pioneer') refreshLadder();
     });
   });
-  // E/O ladder refreshes on stake/mult change
-  document.getElementById('manStake')?.addEventListener('input', refreshEOLadder);
-  document.getElementById('manMult')?.addEventListener('input', refreshEOLadder);
+  ['accuStake','accuRate','accuTicks'].forEach(id=>{
+    document.getElementById(id)?.addEventListener('input', accuPreviewUpdate);
+  });
 });
 
 // ══ MANUAL UI HELPERS ══
@@ -1220,7 +1244,7 @@ function launchDash(auth){
   }
   AI.baseStake=parseFloat(document.getElementById('cfgStake').value)||5;
   AI.mult=parseFloat(document.getElementById('cfgMult').value)||3.6;
-  initTable();initDC();refreshLadder();refreshScalperLadder();refreshTrendLadder();refreshEOLadder();drawEquity();startConn();
+  initTable();initDC();refreshLadder();refreshScalperLadder();refreshTrendLadder();accuPreviewUpdate();drawEquity();startConn();
 }
 
 // ══ WEBSOCKET ══
@@ -1258,7 +1282,12 @@ function startConn(){
       if(m.msg_type==='tick'){try{onTick(m.tick);}catch(e){console.warn('tick err',e);}}
       if(m.msg_type==='balance')updBal(m.balance);
       if(m.msg_type==='buy')onBuy(m);
-      if(m.msg_type==='proposal_open_contract')onContract(m.proposal_open_contract);
+      if(m.msg_type==='proposal_open_contract'){
+      const _p=m.proposal_open_contract;
+      if(MAN.running&&_p&&_p.contract_type==='ACCU'){accuOnUpdate(_p);}
+      else{onContract(_p);}
+      return;
+    }
     }catch(x){}
   };
   ws.onclose=()=>{updConn(false);sched();};
@@ -1721,148 +1750,207 @@ function trendTick(){
   placeTrade(sym, contractCode, stake, barrierStr, typeLabel, 'trend');
 }
 
-// ══ EVEN/ODD ENGINE ══
-function calcEOStake(step){
-  const base=parseFloat(document.getElementById('manStake').value)||5;
-  const mult=parseFloat(document.getElementById('manMult').value)||2.1;
-  let s=base;for(let i=0;i<step;i++)s=Math.round(s*mult*100)/100;
-  return Math.max(0.35,s);
+// ══ ACCUMULATOR ENGINE ══
+
+function accuPreviewUpdate(){
+  const stake=parseFloat(document.getElementById('accuStake').value)||1;
+  const rate=parseFloat(document.getElementById('accuRate').value)||0.02;
+  const ticks=parseInt(document.getElementById('accuTicks').value)||25;
+  const finalVal=Math.round(stake*Math.pow(1+rate,ticks)*100)/100;
+  const pct=Math.round((finalVal/stake-1)*100);
+  const rateLabel=Math.round(rate*100)+'%';
+  const el=document.getElementById('accuPreview');
+  if(el) el.innerHTML='At '+rateLabel+' · '+ticks+' ticks · $'+stake.toFixed(2)+' stake → <span style="color:var(--green);">$'+finalVal.toFixed(2)+'</span> (+'+pct+'%)';
+  const tt=document.getElementById('accuTickTarget');
+  if(tt) tt.textContent=ticks;
 }
 
-function refreshEOLadder(){
-  const base=parseFloat(document.getElementById('manStake').value)||5;
-  const mult=parseFloat(document.getElementById('manMult').value)||2.1;
-  const maxL=parseInt(document.getElementById('manMaxLoss').value)||4;
-  let html='',totalExp=0;
-  for(let i=0;i<maxL;i++){
-    const s=calcEOStake(i);totalExp+=s;
-    const active=MAN.running&&MAN.step===i;
-    const won=MAN.running&&i<MAN.step&&false; // simplified
-    html+='<div class="lad-step '+(i===0?'differ':'over')+(active?' active':'')+'" style="min-width:70px;">'
-      +'<div class="lad-num">S'+(i+1)+'</div>'
-      +'<div class="lad-type">'+(i===0?'E/O SCAN':'E/O BEST')+'</div>'
-      +'<div class="lad-stake">$'+s.toFixed(2)+'</div>'
-      +'<div class="lad-sub">'+(i===0?'primary':'recovery')+'</div>'
-      +'</div>';
-  }
-  const el=document.getElementById('eoLadder');if(el)el.innerHTML=html;
-  const exp=document.getElementById('eoExposure');
-  if(exp)exp.textContent='Max: $'+totalExp.toFixed(2);
-}
-
-function findBestEOMarket(minBias){
-  // Scan all markets — return best even/odd bias regardless of direction
-  let best=null,bestPct=0;
+function findBestAccuMarket(){
+  // Find most consolidating market with lowest volatility
+  let best=null, bestScore=999;
   IDX.forEach(i=>{
-    const s=ST[i.s];if(!s||!s.conn||s.digits.length<30)return;
+    const s=ST[i.s];
+    if(!s||!s.conn||s.digits.length<50) return;
     try{
       const a=ana(i.s);
-      const ep=a.ep,op=a.op;
-      if(ep>=minBias&&ep>bestPct){bestPct=ep;best={sym:i.s,a,direction:'EVEN',pct:ep};}
-      if(op>=minBias&&op>bestPct){bestPct=op;best={sym:i.s,a,direction:'ODD',pct:op};}
+      // Must be consolidating + low volatility
+      if(!a.isCon) return;
+      const vlScore=a.vl||50;
+      if(vlScore<bestScore){ bestScore=vlScore; best={sym:i.s,a,vl:vlScore}; }
     }catch(e){}
   });
   return best;
 }
 
-function findBestEORecovery(minBias){
-  // Same as findBestEOMarket — best edge anywhere, any direction
-  return findBestEOMarket(minBias);
-}
-
-function eoStart(){
+function accuStart(){
   if(!userToken||isGuest){aiLogTo('aiLogMAN','⚠ Token required.','danger');return;}
   if(!ws||ws.readyState!==1){aiLogTo('aiLogMAN','⚠ Not connected.','warn');return;}
   if(AI.running||SC.running||TR.running){aiLogTo('aiLogMAN','⚠ Stop other mode first.','warn');return;}
-  MAN.origStake=parseFloat(document.getElementById('manStake').value)||5;
-  MAN.currentStake=MAN.origStake;
-  MAN.mult=parseFloat(document.getElementById('manMult').value)||2.1;
-  MAN.maxLoss=parseInt(document.getElementById('manMaxLoss').value)||4;
-  MAN.lossStreak=0;MAN.step=0;MAN.sessPnl=0;MAN.wins=0;MAN.losses=0;
-  MAN.direction=null;MAN.sym=null;
+  MAN.stake=parseFloat(document.getElementById('accuStake').value)||1;
+  MAN.sessPnl=0;MAN.wins=0;MAN.losses=0;MAN.tradesToday=0;
+  MAN.activeCid=null;MAN.tickCount=0;MAN.bidPrice=0;
   MAN.running=true;
-  document.getElementById('manStartBtn').disabled=true;
-  document.getElementById('manStopBtn').disabled=false;
-  ['manStake','manMult','eoThresh','manMaxLoss','modePioneer','modeManual','modeScalper','modeTrend']
+  document.getElementById('accuStartBtn').disabled=true;
+  document.getElementById('accuStopBtn').disabled=false;
+  ['accuStake','accuRate','accuTicks','accuMaxTrades','modePioneer','modeManual','modeScalper','modeTrend']
     .forEach(id=>{const el=document.getElementById(id);if(el)el.disabled=true;});
   setAIState('scanning');
-  document.getElementById('manRunning').textContent='▶ RUNNING';
-  document.getElementById('manRunning').style.color='var(--green)';
-  refreshEOLadder();
-  const thresh=parseFloat(document.getElementById('eoThresh').value)||56;
-  aiLogTo('aiLogMAN','🎲 EVEN/ODD STARTED — MinBias:'+thresh+'% Base:$'+MAN.origStake.toFixed(2)+' Mult:×'+MAN.mult+' MaxLoss:'+MAN.maxLoss,'success');
+  document.getElementById('accuRunning').textContent='▶ SCANNING';
+  document.getElementById('accuRunning').style.color='var(--yellow)';
+  document.getElementById('accuTradeCount').textContent='0';
+  const rate=parseFloat(document.getElementById('accuRate').value)||0.02;
+  const ticks=parseInt(document.getElementById('accuTicks').value)||25;
+  const maxT=parseInt(document.getElementById('accuMaxTrades').value)||3;
+  aiLogTo('aiLogMAN','📈 ACCUMULATOR STARTED — Stake:$'+MAN.stake.toFixed(2)+' Rate:'+(rate*100)+'% Exit:'+ticks+'tk MaxTrades:'+maxT,'success');
+  aiLogTo('aiLogMAN','🔍 Scanning for consolidating market…','info');
 }
 
-function eoStop(){
+function accuStop(){
   if(!MAN.running)return;
-  MAN.running=false;
-  document.getElementById('manStartBtn').disabled=false;
-  document.getElementById('manStopBtn').disabled=true;
-  ['manStake','manMult','eoThresh','manMaxLoss','modePioneer','modeManual','modeScalper','modeTrend']
+  // If active contract open — sell it first
+  if(MAN.activeCid&&ws&&ws.readyState===1){
+    ws.send(JSON.stringify({sell:MAN.activeCid,price:0}));
+    aiLogTo('aiLogMAN','⏹ Selling open contract #'+MAN.activeCid+'…','warn');
+  }
+  MAN.running=false;MAN.activeCid=null;MAN.tickCount=0;
+  document.getElementById('accuStartBtn').disabled=false;
+  document.getElementById('accuStopBtn').disabled=true;
+  ['accuStake','accuRate','accuTicks','accuMaxTrades','modePioneer','modeManual','modeScalper','modeTrend']
     .forEach(id=>{const el=document.getElementById(id);if(el)el.disabled=false;});
   if(!AI.running&&!SC.running&&!TR.running)setAIState('idle');
-  document.getElementById('manRunning').textContent='⏸ IDLE';
-  document.getElementById('manRunning').style.color='var(--dim)';
-  document.getElementById('eoDirection').textContent='— scanning';
-  aiLogTo('aiLogMAN','⏹ Even/Odd stopped.','warn');
+  document.getElementById('accuRunning').textContent='⏸ IDLE';
+  document.getElementById('accuRunning').style.color='var(--dim)';
+  document.getElementById('accuProgress').style.width='0%';
+  aiLogTo('aiLogMAN','⏹ Accumulator stopped. Session P&L: '+(MAN.sessPnl>=0?'+':'')+MAN.sessPnl.toFixed(2),'warn');
 }
 
-function manualStop(){eoStop();}// alias so resetAI still works
+function manualStop(){accuStop();}// alias
 
-function eoTick(){
-  if(!MAN.running||AI.inTrade||AI.pendingResult)return;
-  if(Date.now()-lastManTradeTime<1200)return;
-  const tp=parseFloat(document.getElementById('cfgTP').value)||30;
-  const sl=parseFloat(document.getElementById('cfgSL').value)||50;
-  if(MAN.sessPnl>=tp){aiLogTo('aiLogMAN','🎯 TP +$'+MAN.sessPnl.toFixed(2),'success');eoStop();return;}
-  if(MAN.sessPnl<=-Math.abs(sl)){aiLogTo('aiLogMAN','🛑 SL -$'+Math.abs(MAN.sessPnl).toFixed(2),'danger');eoStop();return;}
-  if(MAN.lossStreak>=MAN.maxLoss){aiLogTo('aiLogMAN','🛑 Circuit breaker — '+MAN.maxLoss+' losses.','danger');eoStop();return;}
-  const thresh=parseFloat(document.getElementById('eoThresh').value)||56;
-  const stake=calcEOStake(MAN.step);
-  document.getElementById('manNextStake').textContent='$'+stake.toFixed(2);
-  if(MAN.step===0){
-    // S1 — fresh scan, pick absolute best bias
-    const market=findBestEOMarket(thresh);
-    if(!market){
-      setAIState('scanning');
-      document.getElementById('eoDirection').textContent='scanning…';
-      return;
-    }
-    MAN.direction=market.direction;
-    MAN.sym=market.sym;
-    const ix=IDX.find(i=>i.s===market.sym);
-    document.getElementById('eoDirection').textContent=market.direction+' '+market.pct.toFixed(0)+'%';
-    refreshEOLadder();
-    aiLogTo('aiLogMAN','🎲 S1 | '+ix.n+' | '+market.direction+' ('+market.pct.toFixed(0)+'%) | $'+stake.toFixed(2),'info');
-    lastManTradeTime=Date.now();
-    placeTrade(market.sym,market.direction==='EVEN'?'DIGITEVEN':'DIGITODD',stake,null,market.direction,'manual');
-  } else {
-    // S2–S4 — rescan for best bias anywhere, any direction
-    const market=findBestEORecovery(thresh);
-    if(!market){
-      setAIState('waiting');
-      document.getElementById('eoDirection').textContent='waiting…';
-      aiLogTo('aiLogMAN','⏳ S'+(MAN.step+1)+' — waiting for bias ≥'+thresh+'%…','warn');
-      return;
-    }
-    // Update direction to best available — follow the data
-    MAN.direction=market.direction;
-    MAN.sym=market.sym;
-    const ix=IDX.find(i=>i.s===market.sym);
-    document.getElementById('eoDirection').textContent=market.direction+' '+market.pct.toFixed(0)+'%';
-    refreshEOLadder();
-    aiLogTo('aiLogMAN','🔄 S'+(MAN.step+1)+' | '+ix.n+' | '+market.direction+' ('+market.pct.toFixed(0)+'%) | $'+stake.toFixed(2),'warn');
-    lastManTradeTime=Date.now();
-    placeTrade(market.sym,market.direction==='EVEN'?'DIGITEVEN':'DIGITODD',stake,null,market.direction,'manual');
+function accuPlaceTrade(sym){
+  const rate=parseFloat(document.getElementById('accuRate').value)||0.02;
+  const stake=MAN.stake;
+  const ix=IDX.find(i=>i.s===sym);
+  MAN.sym=sym;MAN.tickCount=0;MAN.bidPrice=stake;
+  AI.inTrade=true;AI.activeSym=sym;AI.activeSource='manual';
+  setAIState('trading');
+  document.getElementById('accuRunning').textContent='▶ RUNNING';
+  document.getElementById('accuRunning').style.color='var(--green)';
+  document.getElementById('accuMarket').textContent=ix?ix.n:sym;
+  document.getElementById('accuValue').textContent='$'+stake.toFixed(2);
+  document.getElementById('accuProfit').textContent='$0.00';
+  document.getElementById('accuProgress').style.width='0%';
+  aiLogTo('aiLogMAN','📈 T'+(MAN.tradesToday+1)+' | '+( ix?ix.n:sym)+' | ACCU '+(rate*100)+'% | $'+stake.toFixed(2),'info');
+  const order={buy:1,price:stake,parameters:{
+    amount:stake,basis:'stake',contract_type:'ACCU',
+    currency:'USD',symbol:sym,growth_rate:rate
+  }};
+  AI.pendingResult=true;
+  ws.send(JSON.stringify(order));
+}
+
+function accuScan(){
+  // Called every tick when running and no active contract
+  if(!MAN.running||MAN.activeCid||AI.inTrade||AI.pendingResult)return;
+  const maxT=parseInt(document.getElementById('accuMaxTrades').value)||3;
+  if(MAN.tradesToday>=maxT){
+    aiLogTo('aiLogMAN','✅ Max trades ('+maxT+') reached — session complete. P&L: '+(MAN.sessPnl>=0?'+':'')+MAN.sessPnl.toFixed(2),'success');
+    accuStop();return;
+  }
+  const market=findBestAccuMarket();
+  if(!market){
+    setAIState('waiting');
+    document.getElementById('accuRunning').textContent='⏳ WAITING';
+    return;
+  }
+  setAIState('scanning');
+  document.getElementById('accuRunning').textContent='▶ ENTERING';
+  accuPlaceTrade(market.sym);
+}
+
+function accuOnTick(sym){
+  // Called each tick — update progress if active contract on this market
+  if(!MAN.running||!MAN.activeCid||MAN.sym!==sym)return;
+  MAN.tickCount++;
+  const ticks=parseInt(document.getElementById('accuTicks').value)||25;
+  const pct=Math.min(100,Math.round(MAN.tickCount/ticks*100));
+  const el=document.getElementById('accuProgress');
+  const tc=document.getElementById('accuTickCount');
+  if(el) el.style.width=pct+'%';
+  if(tc) tc.textContent=MAN.tickCount;
+  // Auto-sell when target ticks reached
+  if(MAN.tickCount>=ticks&&MAN.activeCid&&ws&&ws.readyState===1){
+    aiLogTo('aiLogMAN','🎯 Target '+ticks+' ticks reached — selling $'+MAN.bidPrice.toFixed(2)+'…','success');
+    ws.send(JSON.stringify({sell:MAN.activeCid,price:0}));
+    MAN.activeCid=null; // prevent double sell
   }
 }
 
-// Legacy stubs — keep so resetAI doesn't crash
-function manualStart(){eoStart();}
-function manFireNext(){eoTick();}
+function accuOnBuy(msg){
+  // Called when accumulator buy response comes in
+  if(!msg.buy)return;
+  MAN.activeCid=msg.buy.contract_id;
+  aiLogTo('aiLogMAN','✅ Contract #'+MAN.activeCid+' open — compounding…','info');
+  // Subscribe to proposal_open_contract for live value updates
+  ws.send(JSON.stringify({proposal_open_contract:1,contract_id:MAN.activeCid,subscribe:1}));
+}
 
+function accuOnUpdate(poc){
+  // Called on proposal_open_contract updates for accumulator
+  if(!MAN.running||!poc)return;
+  const bidPrice=parseFloat(poc.bid_price||0);
+  const tickCount=parseInt(poc.tick_count||0);
+  MAN.bidPrice=bidPrice;
+  MAN.tickCount=tickCount;
+  // Update UI
+  const stake=MAN.stake;
+  const profit=bidPrice-stake;
+  document.getElementById('accuValue').textContent='$'+bidPrice.toFixed(2);
+  document.getElementById('accuProfit').textContent=(profit>=0?'+':'')+' $'+profit.toFixed(2);
+  document.getElementById('accuProfit').style.color=profit>=0?'var(--green)':'var(--red)';
+  const ticks=parseInt(document.getElementById('accuTicks').value)||25;
+  const pct=Math.min(100,Math.round(tickCount/ticks*100));
+  const el=document.getElementById('accuProgress');
+  const tc=document.getElementById('accuTickCount');
+  if(el){el.style.width=pct+'%'; el.style.background=pct>80?'var(--green)':pct>50?'var(--yellow)':'var(--accent)';}
+  if(tc) tc.textContent=tickCount;
+  // If contract closed by knockout — Deriv sets is_sold=true, profit negative
+  if(poc.is_sold){
+    const finalProfit=parseFloat(poc.profit||profit);
+    const won=finalProfit>0;
+    MAN.sessPnl=Math.round((MAN.sessPnl+finalProfit)*100)/100;
+    MAN.tradesToday++;
+    if(won){MAN.wins++;}else{MAN.losses++;}
+    document.getElementById('accuTradeCount').textContent=MAN.tradesToday;
+    if(!won){
+      aiLogTo('aiLogMAN','💥 KNOCKOUT on T'+MAN.tradesToday+' after '+tickCount+' ticks | -$'+Math.abs(finalProfit).toFixed(2),'danger');
+    } else {
+      aiLogTo('aiLogMAN','✅ T'+MAN.tradesToday+' SOLD | +$'+finalProfit.toFixed(2)+' | '+tickCount+' ticks','success');
+    }
+    addTradeLog(MAN.sym,'ACCU',tickCount+'tk',MAN.stake,finalProfit,won,'ACCU');
+    MAN.activeCid=null;MAN.tickCount=0;
+    AI.inTrade=false;AI.pendingResult=false;
+    updateAIStats();drawEquity();
+    document.getElementById('accuProgress').style.width='0%';
+    document.getElementById('accuRunning').textContent='▶ SCANNING';
+    document.getElementById('accuRunning').style.color='var(--yellow)';
+    setAIState('scanning');
+    setTimeout(()=>accuScan(),1500);// wait 1.5s then scan for next trade
+  }
+}
 
-
+// Legacy stubs
+function manualStart(){accuStart();}
+function manFireNext(){}
+function eoStart(){accuStart();}
+function eoStop(){accuStop();}
+function eoTick(){}
+function refreshEOLadder(){}
+function calcEOStake(){ return MAN.stake||1; }
+function findBestEOMarket(){ return null; }
+function findBestEORecovery(){ return null; }
+function onManContractChange(){}
+function onManLossChange(){}
+function updateManPreview(){}
 // ══ TREND START / STOP ══
 function trendStart(){
   if(!userToken||isGuest){aiLog('⚠ Token required.','danger');return;}
@@ -2124,29 +2212,10 @@ function onContract(poc){
     },600);
 
   } else if(source==='manual'){
-    if(won){
-      AI.wins++;MAN.wins++;AI.consecLoss=0;MAN.lossStreak=0;
-      MAN.sessPnl=Math.round((MAN.sessPnl+profit)*100)/100;
-      MAN.step=0; // reset chain on win
-      aiLogTo('aiLogMAN','✅ E/O WIN +$'+profit.toFixed(2)+' '+MAN.direction+' | Session: $'+MAN.sessPnl.toFixed(2),'success');
-      refreshEOLadder();
-    } else {
-      AI.losses++;MAN.losses++;AI.consecLoss++;MAN.lossStreak++;
-      MAN.sessPnl=Math.round((MAN.sessPnl+profit)*100)/100;
-      if(MAN.step<MAN.maxLoss-1){
-        MAN.step++;
-        aiLogTo('aiLogMAN','❌ E/O LOSS | → S'+(MAN.step+1)+' $'+calcEOStake(MAN.step).toFixed(2)+' (scanning best bias)','danger');
-      } else {
-        aiLogTo('aiLogMAN','❌ E/O LOSS S'+MAN.step+' — circuit breaker.','danger');
-      }
-      refreshEOLadder();
-    }
-    document.getElementById('manNextStake').textContent='$'+calcEOStake(MAN.step).toFixed(2);
-    document.getElementById('eoDirection').textContent=won?'— scanning':( MAN.direction||'— scanning');
-    addTradeLog(AI.activeSym,AI.activeType,AI.activeDigit,stake,profit,won,'E/O');
+    // Accumulator results handled via accuOnUpdate (POC stream)
+    // This fallback handles any edge cases
     updateAIStats();drawEquity();
-    setTimeout(()=>{document.getElementById('curTrade').classList.remove('active');if(MAN.running)setAIState('scanning');},600);
-
+    setTimeout(()=>{const _ct2=document.getElementById('curTrade');if(_ct2){_ct2.classList.remove('active');_ct2.style.display='none';}},600);
   } else {
     // pioneer
     const stepEl=document.getElementById('lad'+AI.martStep);
@@ -2281,7 +2350,7 @@ function updateAIStats(){
   document.getElementById('astCL').textContent=AI.consecLoss;
   if(TR.running){document.getElementById('astMS').textContent='[📈] '+(TR.lastDirection||'SCAN')+' S'+(TR.step+1);document.getElementById('astNS').textContent='$'+calcTrendStake(TR.step).toFixed(2);}
   else if(SC.running){document.getElementById('astMS').textContent='[⚡] '+SC.direction+' S'+(SC.step+1);document.getElementById('astNS').textContent='$'+calcScalperStake(SC.step).toFixed(2);}
-  else if(MAN.running){document.getElementById('astMS').textContent='[🎲] E/O S'+(MAN.step+1);document.getElementById('astNS').textContent='$'+calcEOStake(MAN.step).toFixed(2);}
+  else if(MAN.running){document.getElementById('astMS').textContent='[📈] ACCU T'+(MAN.tradesToday+1);document.getElementById('astNS').textContent='$'+MAN.stake.toFixed(2);}
   else{document.getElementById('astMS').textContent=(AI.martStep===0?'DIFFERS':'OVER2')+' S'+(AI.martStep+1);document.getElementById('astNS').textContent='$'+calcStake(AI.martStep).toFixed(2);}
   const sp=document.getElementById('sessPnl');
   sp.textContent=(sessPnl>=0?'+':'')+sessPnl.toFixed(2);
