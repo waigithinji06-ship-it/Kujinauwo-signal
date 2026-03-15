@@ -565,7 +565,7 @@ td.L{text-align:left;padding-left:12px;}
       <div class="cfg-block"><div class="cfg-label">BASE STAKE ($)</div><input class="cfg-input" id="trendStake" type="number" value="1.00" min="0.35" step="0.50" oninput="refreshTrendLadder()"/></div>
       <div class="cfg-block"><div class="cfg-label">MARTINGALE MULT ×</div><input class="cfg-input" id="trendMult" type="number" value="3.6" min="1.1" max="10" step="0.1" oninput="refreshTrendLadder()"/></div>
       <div class="cfg-block"><div class="cfg-label">TICKS</div><input class="cfg-input" id="trendTicks" type="number" value="5" min="1" max="10" step="1"/></div>
-      <div class="cfg-block"><div class="cfg-label">TARGET PAYOUT %</div><input class="cfg-input" id="trendPayout" type="number" value="30" min="10" max="90" step="5"/></div>
+      <div class="cfg-block"><div class="cfg-label">TARGET PAYOUT %</div><input class="cfg-input" id="trendPayout" type="number" value="30" min="10" max="50" step="5"/></div>
       <div class="cfg-block" style="grid-column:1/-1;"><div class="cfg-label">INDEX</div>
         <select class="cfg-select" id="trendIndex">
           <option value="AUTO">AUTO (AI picks best signal)</option>
@@ -829,28 +829,86 @@ function calcMomentum(prices){
 // To get ~30% payout we need barrier around -0.3 to -1.5× the avg tick range
 // Formula: barrier = -(avgRange × payoutFactor) where payoutFactor tunes payout
 function calcBarrier(sym, targetPayoutPct){
+  // Pure math fallback — used when proposal API not available
   const s=ST[sym];
   const ix=IDX.find(i=>i.s===sym);
-  const dp=ix?ix.dp:3; // per-index decimal precision
-  const minStep=parseFloat(Math.pow(0.1,dp).toFixed(dp)); // 0.01 dp2, 0.001 dp3, 0.0001 dp4
+  const dp=ix?ix.dp:3;
+  const minStep=parseFloat(Math.pow(0.1,dp).toFixed(dp));
   const fallback=minStep.toFixed(dp);
   if(!s||s.prices.length<20) return{call:'-'+fallback,put:'+'+fallback};
   const pr=s.prices.slice(-20);
   let totalRange=0;
-  for(let i=1;i<pr.length;i++) totalRange+=Math.abs(pr[i]-pr[i-1]);
-  const avgRange=totalRange/(pr.length-1);
-  const targetPct=targetPayoutPct/100;
+  for(let k=1;k<pr.length;k++) totalRange+=Math.abs(pr[k]-pr[k-1]);
+  const avgMove=totalRange/(pr.length-1);
   const ticks=parseInt(document.getElementById('trendTicks').value)||5;
-  const offset=Math.max(minStep, avgRange*ticks*(1-targetPct)*0.15);
-  // Round to this index's decimal precision
-  const rounded=parseFloat(offset.toFixed(dp));
-  const fmt=rounded.toFixed(dp);
-  return{
-    call:'-'+fmt,
-    put:'+'+fmt,
-    raw:rounded,
-    dp
-  };
+  // Small multiplier to get close barrier → low payout (28-35%)
+  const scaleFactor=(targetPayoutPct/100)*0.12;
+  const raw=avgMove*Math.sqrt(ticks)*scaleFactor;
+  const offset=Math.max(minStep, parseFloat(raw.toFixed(dp)));
+  const fmt=offset.toFixed(dp);
+  return{call:'-'+fmt,put:'+'+fmt,raw:offset,dp};
+}
+
+// ══ PROPOSAL-BASED BARRIER FINDER ══
+// Pending trend trade waiting for proposal response
+let _trendPending=null;
+
+function onProposal(msg){
+  if(!_trendPending) return;
+  if(msg.error){
+    // Proposal error — fall back to math barrier and place trade
+    aiLog('⚠ Proposal error: '+( msg.error.message||'unknown')+' — using calc barrier','warn');
+    const p=_trendPending; _trendPending=null;
+    placeTrade(p.sym, p.code, p.stake, p.barrier, p.typeLabel, 'trend');
+    return;
+  }
+  const prop=msg.proposal;
+  if(!prop) return;
+  const payout=parseFloat(prop.payout||0);
+  const stake=parseFloat(prop.ask_price||_trendPending.stake);
+  const actualPctRaw=payout/stake-1;
+  const actualPct=Math.round(actualPctRaw*100);
+  const p=_trendPending;
+  aiLog('📊 Proposal payout: '+actualPct+'% (target 28-35%) barrier:'+p.barrier,'info');
+
+  if(actualPct>=28&&actualPct<=35){
+    // Perfect — place trade with this barrier
+    _trendPending=null;
+    placeTrade(p.sym, p.code, p.stake, p.barrier, p.typeLabel, 'trend');
+  } else if(!p.adjusted){
+    // Out of range — adjust barrier and try once more
+    const ix=IDX.find(i=>i.s===p.sym);
+    const dp=ix?ix.dp:3;
+    const minStep=parseFloat(Math.pow(0.1,dp).toFixed(dp));
+    let currentOffset=parseFloat(p.barrier.replace('-','').replace('+',''));
+    let newOffset;
+    if(actualPct>35){
+      // Payout too high → barrier too far → move closer (smaller offset)
+      newOffset=Math.max(minStep, parseFloat((currentOffset*0.6).toFixed(dp)));
+    } else {
+      // Payout too low → barrier too close → move further (bigger offset)
+      newOffset=parseFloat((currentOffset*1.6).toFixed(dp));
+    }
+    const newBarrier=p.isCall?'-'+newOffset.toFixed(dp):'+'+newOffset.toFixed(dp);
+    aiLog('🔧 Adjusting barrier: '+p.barrier+' → '+newBarrier+' (payout was '+actualPct+'%)','info');
+    _trendPending={...p, barrier:newBarrier, adjusted:true};
+    // Send second proposal
+    ws.send(JSON.stringify({proposal:1,amount:p.stake,basis:'stake',
+      contract_type:p.code,currency:'USD',duration:p.ticks,duration_unit:'t',
+      symbol:p.sym,barrier:newBarrier}));
+  } else {
+    // Second attempt — accept whatever we have, closest to target
+    aiLog('📊 Using barrier '+p.barrier+' → '+actualPct+'% payout','info');
+    _trendPending=null;
+    placeTrade(p.sym, p.code, p.stake, p.barrier, p.typeLabel, 'trend');
+  }
+}
+
+function requestTrendProposal(sym, code, stake, barrier, typeLabel, ticks, isCall){
+  _trendPending={sym, code, stake, barrier, typeLabel, ticks, isCall, adjusted:false};
+  ws.send(JSON.stringify({proposal:1,amount:stake,basis:'stake',
+    contract_type:code,currency:'USD',duration:ticks,duration_unit:'t',
+    symbol:sym,barrier:barrier}));
 }
 
 // ══ TREND ANALYSIS — all three indicators ══
@@ -1282,6 +1340,7 @@ function startConn(){
       if(m.msg_type==='tick'){try{onTick(m.tick);}catch(e){console.warn('tick err',e);}}
       if(m.msg_type==='balance')updBal(m.balance);
       if(m.msg_type==='buy')onBuy(m);
+      if(m.msg_type==='proposal')onProposal(m);
       if(m.msg_type==='proposal_open_contract'){
       const _p=m.proposal_open_contract;
       if(MAN.running&&_p&&_p.contract_type==='ACCU'){accuOnUpdate(_p);}
@@ -1747,7 +1806,8 @@ function trendTick(){
     +(t.score?(' EMA:'+t.emaSig+' RSI:'+t.rsi.toFixed(0)+' Score:'+t.score):''),'info');
 
   lastTradeTime=Date.now();lastTrendTradeTime=Date.now();
-  placeTrade(sym, contractCode, stake, barrierStr, typeLabel, 'trend');
+  AI.inTrade=true; AI.pendingResult=true; // block further ticks while proposal pending
+  requestTrendProposal(sym, contractCode, stake, barrierStr, typeLabel, TR.ticks, isCAll);
 }
 
 // ══ ACCUMULATOR ENGINE ══
@@ -1981,8 +2041,8 @@ function trendStart(){
 }
 function trendStop(){
   if(!TR.running)return;
-  TR.running=false;
-  document.getElementById('startBtn').disabled=false;
+    TR.running=false;
+  _trendPending=null; // cancel any pending proposal document.getElementById('startBtn').disabled=false;
   document.getElementById('stopBtn').disabled=true;
   ['trendStake','trendMult','trendTicks','trendPayout','trendRsiThresh','trendIndex','trendDir','modePioneer','modeManual','modeScalper','modeTrend']
     .forEach(id=>{const el=document.getElementById(id);if(el)el.disabled=false;});
