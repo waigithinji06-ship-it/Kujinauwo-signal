@@ -853,62 +853,104 @@ function calcBarrier(sym, targetPayoutPct){
 // Pending trend trade waiting for proposal response
 let _trendPending=null;
 
+// Seed barriers — starting point for binary search per index
+// These are typical values that land near 28-35% — search converges from here
+const BARRIER_SEEDS={
+  'R_10':0.003, 'R_25':0.008, 'R_50':0.004, 'R_75':0.006, 'R_100':0.45,
+  '1HZ10V':0.003,'1HZ25V':0.008,'1HZ50V':0.004,'1HZ75V':0.006,'1HZ100V':0.45
+};
+
+function sendProposal(p){
+  ws.send(JSON.stringify({proposal:1,amount:p.stake,basis:'stake',
+    contract_type:p.code,currency:'USD',duration:p.ticks,duration_unit:'t',
+    symbol:p.sym,barrier:p.barrier}));
+}
+
 function onProposal(msg){
   if(!_trendPending) return;
   if(msg.error){
-    // Proposal error — fall back to math barrier and place trade
-    aiLog('⚠ Proposal error: '+( msg.error.message||'unknown')+' — using calc barrier','warn');
+    aiLog('⚠ Proposal err: '+(msg.error.message||msg.error.code)+' — placing with current barrier','warn');
     const p=_trendPending; _trendPending=null;
+    AI.inTrade=false; AI.pendingResult=false;
     placeTrade(p.sym, p.code, p.stake, p.barrier, p.typeLabel, 'trend');
     return;
   }
   const prop=msg.proposal;
   if(!prop) return;
-  const payout=parseFloat(prop.payout||0);
-  const stake=parseFloat(prop.ask_price||_trendPending.stake);
-  const actualPctRaw=payout/stake-1;
-  const actualPct=Math.round(actualPctRaw*100);
-  const p=_trendPending;
-  aiLog('📊 Proposal payout: '+actualPct+'% (target 28-35%) barrier:'+p.barrier,'info');
 
+  const p=_trendPending;
+  const ix=IDX.find(i=>i.s===p.sym);
+  const dp=ix?ix.dp:3;
+  const minStep=parseFloat(Math.pow(0.1,dp).toFixed(dp));
+
+  // Actual payout % from Deriv
+  const payout=parseFloat(prop.payout||0);
+  const askPrice=parseFloat(prop.ask_price||p.stake);
+  const actualPct=Math.round((payout/askPrice-1)*100);
+
+  aiLog('📊 Barrier '+p.barrier+' → '+actualPct+'% payout (seek 28-35%) attempt '+(p.attempt||1),'info');
+
+  // Already in target range — place immediately
   if(actualPct>=28&&actualPct<=35){
-    // Perfect — place trade with this barrier
     _trendPending=null;
+    AI.inTrade=false; AI.pendingResult=false;
     placeTrade(p.sym, p.code, p.stake, p.barrier, p.typeLabel, 'trend');
-  } else if(!p.adjusted){
-    // Out of range — adjust barrier and try once more
-    const ix=IDX.find(i=>i.s===p.sym);
-    const dp=ix?ix.dp:3;
-    const minStep=parseFloat(Math.pow(0.1,dp).toFixed(dp));
-    let currentOffset=parseFloat(p.barrier.replace('-','').replace('+',''));
-    let newOffset;
-    if(actualPct>35){
-      // Payout too high → barrier too far → move closer (smaller offset)
-      newOffset=Math.max(minStep, parseFloat((currentOffset*0.6).toFixed(dp)));
-    } else {
-      // Payout too low → barrier too close → move further (bigger offset)
-      newOffset=parseFloat((currentOffset*1.6).toFixed(dp));
-    }
-    const newBarrier=p.isCall?'-'+newOffset.toFixed(dp):'+'+newOffset.toFixed(dp);
-    aiLog('🔧 Adjusting barrier: '+p.barrier+' → '+newBarrier+' (payout was '+actualPct+'%)','info');
-    _trendPending={...p, barrier:newBarrier, adjusted:true};
-    // Send second proposal
-    ws.send(JSON.stringify({proposal:1,amount:p.stake,basis:'stake',
-      contract_type:p.code,currency:'USD',duration:p.ticks,duration_unit:'t',
-      symbol:p.sym,barrier:newBarrier}));
-  } else {
-    // Second attempt — accept whatever we have, closest to target
-    aiLog('📊 Using barrier '+p.barrier+' → '+actualPct+'% payout','info');
-    _trendPending=null;
-    placeTrade(p.sym, p.code, p.stake, p.barrier, p.typeLabel, 'trend');
+    return;
   }
+
+  // Max 5 attempts — after that use closest result seen
+  const attempt=(p.attempt||1);
+  if(attempt>=5){
+    aiLog('📊 Best barrier found: '+p.barrier+' ('+actualPct+'%) — placing','info');
+    _trendPending=null;
+    AI.inTrade=false; AI.pendingResult=false;
+    placeTrade(p.sym, p.code, p.stake, p.barrier, p.typeLabel, 'trend');
+    return;
+  }
+
+  // Binary search: track lo/hi bounds
+  let lo=p.lo, hi=p.hi;
+  let currentOffset=parseFloat(p.barrier.replace('-','').replace('+',''));
+
+  if(actualPct>35){
+    // Payout too high → barrier too far → tighten (move closer)
+    hi=currentOffset;
+    if(lo===undefined) lo=minStep;
+  } else {
+    // Payout too low → barrier too close → widen (move further)
+    lo=currentOffset;
+    if(hi===undefined) hi=currentOffset*4;
+  }
+
+  let newOffset;
+  if(lo!==undefined&&hi!==undefined){
+    // Bisect
+    newOffset=parseFloat(((lo+hi)/2).toFixed(dp));
+  } else {
+    // No bounds yet — multiply/divide by 1.8
+    newOffset=actualPct>35
+      ? Math.max(minStep, parseFloat((currentOffset*0.55).toFixed(dp)))
+      : parseFloat((currentOffset*1.8).toFixed(dp));
+  }
+  newOffset=Math.max(minStep, newOffset);
+
+  const sign=p.isCall?'-':'+';
+  const newBarrier=sign+newOffset.toFixed(dp);
+  aiLog('🔧 Attempt '+(attempt+1)+': barrier '+newBarrier,'info');
+
+  _trendPending={...p, barrier:newBarrier, lo, hi, attempt:attempt+1};
+  sendProposal(_trendPending);
 }
 
-function requestTrendProposal(sym, code, stake, barrier, typeLabel, ticks, isCall){
-  _trendPending={sym, code, stake, barrier, typeLabel, ticks, isCall, adjusted:false};
-  ws.send(JSON.stringify({proposal:1,amount:stake,basis:'stake',
-    contract_type:code,currency:'USD',duration:ticks,duration_unit:'t',
-    symbol:sym,barrier:barrier}));
+function requestTrendProposal(sym, code, stake, typeLabel, ticks, isCall){
+  const seed=BARRIER_SEEDS[sym]||0.01;
+  const sign=isCall?'-':'+';
+  const ix=IDX.find(i=>i.s===sym);
+  const dp=ix?ix.dp:3;
+  const barrier=sign+seed.toFixed(dp);
+  _trendPending={sym, code, stake, barrier, typeLabel, ticks, isCall, attempt:1,
+    lo:undefined, hi:undefined};
+  sendProposal(_trendPending);
 }
 
 // ══ TREND ANALYSIS — all three indicators ══
@@ -1807,7 +1849,7 @@ function trendTick(){
 
   lastTradeTime=Date.now();lastTrendTradeTime=Date.now();
   AI.inTrade=true; AI.pendingResult=true; // block further ticks while proposal pending
-  requestTrendProposal(sym, contractCode, stake, barrierStr, typeLabel, TR.ticks, isCAll);
+  requestTrendProposal(sym, contractCode, stake, typeLabel, TR.ticks, isCAll);
 }
 
 // ══ ACCUMULATOR ENGINE ══
