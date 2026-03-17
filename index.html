@@ -513,7 +513,7 @@ position:sticky;top:0;z-index:1;
      PAGE 0 — LOGIN
 ════════════════════════════════ -->
 
-<div id="pgLogin" class="page active" style="align-items:center;justify-content:center;background:var(--bg);position:fixed;inset:0;z-index:9999;">
+<div id="pgLogin" style="display:flex;align-items:center;justify-content:center;background:var(--bg);position:fixed;inset:0;z-index:9999;overflow-y:auto;">
   <div style="width:100%;max-width:400px;padding:20px;">
 
 ```
@@ -1316,6 +1316,7 @@ function doLogin(){
   if(!t){showLE('Please enter your API token');return;}
   if(t.length<10){showLE('Token too short');return;}
   const btn=document.getElementById('loginBtn');
+  btn.disabled=true;
   btn.classList.add('ld');btn.textContent='VERIFYING…';hideLE();
   userToken=t;verifyToken(t);
 }
@@ -1354,8 +1355,10 @@ function verifyToken(token){
 }
 function loginFail(m){
   showLE(m);
-  document.getElementById('loginBtn').classList.remove('ld');
-  document.getElementById('loginBtn').textContent='CONNECT TO DERIV';
+  const btn=document.getElementById('loginBtn');
+  btn.disabled=false;
+  btn.classList.remove('ld');
+  btn.textContent='CONNECT TO DERIV';
 }
 function launchDash(auth){
   if(userToken){
@@ -1495,6 +1498,7 @@ function ana(sym){
   const o2=[3,4,5,6,7,8,9].reduce((a,d)=>a+(fr[d]||0),0)/tot*100,u7=100-o2;
   const mxF=Math.max(...fr),mnF=Math.min(...fr.filter(f=>f>0))||0;
   const hotD=fr.indexOf(mxF),coldD=fr.indexOf(mnF);
+  // ── SCORE: how favourable is this market right now ──
   let score=0;
   if(isCon) score+=30;
   if(n>=30) score+=10;
@@ -1502,7 +1506,35 @@ function ana(sym){
   if(vl<50) score+=15;
   const diffBias=Math.abs(ep-50);
   if(diffBias>6) score+=10;
-  score=Math.min(100,score);
+
+  // Digit entropy bonus: lower entropy = more skewed = more edge
+  let entropy=0;
+  fr.forEach(f=>{if(f>0){const p2=f/tot;entropy-=p2*Math.log2(p2);}});
+  const maxEntropy=Math.log2(10);
+  const entropyBonus=Math.max(0,Math.round((1-entropy/maxEntropy)*25));
+  score=Math.min(100,score+entropyBonus);
+
+  // ── MARKET GRADE — controls whether bot should enter ──
+  // Grade A: best conditions — consolidating + strong hot digit + good score
+  // Grade B: acceptable — consolidating + moderate hot digit
+  // Grade C: borderline — some signal, wait for better
+  // SKIP:    expanding or not enough data — never trade
+  const hotPctRaw=mxF/tot*100;
+  // Recent digit activity — how many times hot digit appeared in last 10 ticks
+  let recentHotCount=0;
+  if(s.digits.length>=10){
+    const last10=s.digits.slice(-10);
+    recentHotCount=last10.filter(d=>d===hotD).length;
+  }
+  let marketGrade='SKIP';
+  if(isCon&&hotPctRaw>15&&score>=65&&recentHotCount>=1) marketGrade='A';
+  else if(isCon&&hotPctRaw>12&&score>=50) marketGrade='B';
+  else if(score>=40&&n>=20) marketGrade='C';
+  // Suppress to B if hot digit absent in last 5 ticks (momentum fading)
+  if(s.digits.length>=5){
+    const last5=s.digits.slice(-5);
+    if(last5.filter(d=>d===hotD).length===0&&marketGrade==='A') marketGrade='B';
+  }
   const eoR=()=>{if(!isCon)return{l:'AVOID',c:'av',t:'Expanding'};const b=Math.abs(ep-50);if(b>8)return{l:(ep>50?'EVEN':'ODD')+' ▲',c:'sb',t:Math.round(Math.max(ep,op))+'%'};if(b>4)return{l:ep>50?'EVEN':'ODD',c:'by',t:Math.round(Math.max(ep,op))+'%'};return{l:'NEUTRAL',c:'nt',t:'~50%'};};
   const o4R=()=>{if(!isCon)return{l:'AVOID',c:'av',t:''};const b=Math.abs(o4-50);if(b>8)return{l:(o4>50?'OVER4':'UNDER5')+' ▲',c:'sb',t:Math.round(Math.max(o4,u5))+'%'};if(b>3)return{l:o4>50?'OVER4':'UNDER5',c:'by',t:Math.round(Math.max(o4,u5))+'%'};return{l:'NEUTRAL',c:'nt',t:'~50%'};};
   const o2R=()=>{if(n<20)return{l:'LOADING',c:'wt',t:''};if(isCon)return{l:(o2>=u7?'OVER2':'UNDER7')+' ★',c:'sb',t:'~70% base'};return{l:o2>=u7?'OVER2':'UNDER7',c:'by',t:'70%'};};
@@ -1516,7 +1548,7 @@ function ana(sym){
     hotRecent=hotRecentPct>=13;
   }
   const result={isCon,ms,vl,ep,op,o4,u5,o2,u7,hotD,coldD,fr,tot,score,
-    hotRecent,hotRecentPct,
+    hotRecent,hotRecentPct,recentHotCount,marketGrade,hotPctRaw,
     eo:eoR(),o4r:o4R(),o2r:o2R(),dif:difR(),mat:matR()};
   _anaCache[sym]={tick:s.ticks,result};
   return result;
@@ -1556,11 +1588,13 @@ function findBestRecoveryMarket(){
   let best=null, bestPct=0;
   IDX.forEach(i=>{
     const s=ST[i.s];
-    if(!s||!s.conn||s.digits.length<20) return;
+    if(!s||!s.conn||s.digits.length<25) return;
     try{
       const a=ana(i.s);
-      if(a.o2>=65&&a.o2>bestPct){bestPct=a.o2;best={sym:i.s,a,direction:'OVER',barrier:2,pct:a.o2};}
-      if(a.u7>=65&&a.u7>bestPct){bestPct=a.u7;best={sym:i.s,a,direction:'UNDER',barrier:7,pct:a.u7};}
+      // Require consolidating market AND higher threshold (68%) for recovery
+      if(!a.isCon) return;
+      if(a.o2>=68&&a.o2>bestPct){bestPct=a.o2;best={sym:i.s,a,direction:'OVER',barrier:2,pct:a.o2};}
+      if(a.u7>=68&&a.u7>bestPct){bestPct=a.u7;best={sym:i.s,a,direction:'UNDER',barrier:7,pct:a.u7};}
     }catch(e){}
   });
   return best;
@@ -1571,15 +1605,29 @@ function findBestMarket(){
   const tgt=document.getElementById('cfgIndex').value;
   if(tgt!=='AUTO'){
     const s=ST[tgt];if(!s||!s.conn||s.digits.length<30)return null;
-    try{const a=ana(tgt);if(a.score<minScore)return null;return{sym:tgt,a};}catch(e){return null;}
+    try{
+      const a=ana(tgt);
+      if(a.marketGrade==='SKIP'||a.marketGrade==='C') return null;
+      if(a.score<minScore) return null;
+      return{sym:tgt,a};
+    }catch(e){return null;}
   }
+  // AUTO: rank all markets, require Grade A or B + score >= minScore
   let best=null,bestScore=0;
   IDX.forEach(i=>{
     const s=ST[i.s];if(!s||!s.conn||s.digits.length<30)return;
-    try{const a=ana(i.s);const eff=a.score+(a.hotRecent?8:0);if(eff>bestScore){bestScore=eff;best={sym:i.s,a};}}catch(e){}
+    try{
+      const a=ana(i.s);
+      if(a.marketGrade==='SKIP'||a.marketGrade==='C') return;
+      // Grade A markets get a significant boost in ranking
+      const gradeBoost=a.marketGrade==='A'?20:0;
+      const eff=a.score+gradeBoost+(a.hotRecent?8:0);
+      if(eff>bestScore){bestScore=eff;best={sym:i.s,a};}
+    }catch(e){}
   });
   if(!best) return null;
-  const effBest=best.a.score+(best.a.hotRecent?8:0);
+  const gradeBoost=best.a.marketGrade==='A'?20:0;
+  const effBest=best.a.score+gradeBoost+(best.a.hotRecent?8:0);
   return effBest>=minScore?best:null;
 }
 
@@ -1709,7 +1757,7 @@ function aiTick(sym){
     if(a.hotRecent===false){setAIState('waiting');return;}
     aiLog('🎯 S1 | '+ix.n+' | DIFFERS d.'+barrierDigit
       +' ('+hotPct+'%) | $'+stake.toFixed(2)
-      +' Score:'+a.score+' Conf:'+conf.toFixed(2)+'x','info');
+      +' Score:'+a.score+' Grade:'+a.marketGrade+' Conf:'+conf.toFixed(2)+'x','info');
   } else {
     const recovery=findBestRecoveryMarket();
     if(!recovery){
