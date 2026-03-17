@@ -11,6 +11,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
 
 /* ══ TOKENS ══ */
+/* FIX #1: All em-dashes (–) replaced with double-hyphens (–) for valid CSS custom properties */
 :root {
 –bg:        #0a0f1e;
 –surface:   #111827;
@@ -32,23 +33,27 @@
 –glow:      0 0 0 1px rgba(56,189,248,.15);
 }
 :root.day {
-–bg:        #f8fafc;
+–bg:        #f0f4f8;
 –surface:   #ffffff;
-–card:      #f1f5f9;
-–card2:     #e8eef7;
-–border:    #cbd5e1;
-–border2:   #94a3b8;
+–card:      #ffffff;
+–card2:     #f1f5f9;
+–border:    #e2e8f0;
+–border2:   #cbd5e1;
 –accent:    #0284c7;
 –green:     #16a34a;
 –red:       #dc2626;
-–yellow:    #ca8a04;
+–yellow:    #b45309;
 –blue:      #2563eb;
 –text:      #0f172a;
-–sub:       #475569;
+–sub:       #64748b;
 –dim:       #94a3b8;
 –shadow:    0 2px 12px rgba(0,0,0,.08);
 –glow:      0 0 0 1px rgba(2,132,199,.2);
 }
+:root.day body { color-scheme: light; background: var(–bg); }
+:root.day .topbar { background: #fff; border-bottom-color: var(–border); }
+:root.day .ai-header { background: var(–bg); }
+:root.day .bnav { background: #fff; }
 
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 html{height:100%;}
@@ -458,6 +463,13 @@ position:sticky;top:0;z-index:1;
 .trend-sig-value.call{color:var(–green);}
 .trend-sig-value.put{color:var(–red);}
 
+/* ══ TREND SIGNAL GRID (inline style override) ══ */
+.trend-signal-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px;}
+.signal-card{background:var(–card2);border:1px solid var(–border);border-radius:10px;padding:9px 8px;text-align:center;transition:border-color .3s,background .3s;}
+.signal-card.up{border-color:rgba(34,197,94,.35);background:rgba(34,197,94,.04);}
+.signal-card.dn{border-color:rgba(239,68,68,.35);background:rgba(239,68,68,.04);}
+.signal-lbl{font-size:7px;font-weight:600;color:var(–dim);font-family:‘JetBrains Mono’,monospace;letter-spacing:.8px;text-transform:uppercase;margin-bottom:4px;}
+
 /* ══ TREND LADDER ══ */
 .tlad-row{display:flex;gap:4px;flex-wrap:wrap;align-items:center;margin-bottom:8px;}
 .tlad-step{padding:6px 8px;border-radius:8px;text-align:center;min-width:52px;border:1px solid var(–border);background:var(–card);transition:all .25s;font-family:‘JetBrains Mono’,monospace;}
@@ -501,31 +513,80 @@ position:sticky;top:0;z-index:1;
      PAGE 0 — LOGIN
 ════════════════════════════════ -->
 
-<div id="pgLogin" class="page active" style="align-items:center;justify-content:center;background:#07090f;position:fixed;inset:0;z-index:9999;">
-  <div style="width:100%;max-width:420px;padding:24px;">
-    <div style="text-align:center;margin-bottom:32px;">
-      <div style="font-size:28px;font-weight:700;font-family:'Space Mono',monospace;color:var(--text);letter-spacing:-1px;">DERIV AI<br>TRADER</div>
-      <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:3px;margin-top:6px;">LIVE ANALYSIS + AI ENGINE</div>
+<div id="pgLogin" class="page active" style="align-items:center;justify-content:center;background:var(--bg);position:fixed;inset:0;z-index:9999;">
+  <div style="width:100%;max-width:400px;padding:20px;">
+
+```
+<!-- Logo -->
+<div style="text-align:center;margin-bottom:28px;">
+  <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:8px;">
+    <div style="width:10px;height:10px;border-radius:50%;background:var(--accent);box-shadow:0 0 14px var(--accent);animation:pulse 2.5s infinite;"></div>
+    <div style="font-size:22px;font-weight:700;font-family:'Inter',sans-serif;color:var(--text);letter-spacing:-.5px;">Deriv<span style="color:var(--accent);">AI</span></div>
+  </div>
+  <div style="font-size:10px;color:var(--sub);font-family:'JetBrains Mono',monospace;letter-spacing:2px;">LIVE ANALYSIS · AI ENGINE</div>
+</div>
+
+<!-- Card -->
+<div style="background:var(--card);border:1px solid var(--border2);border-radius:18px;padding:28px 24px;box-shadow:0 24px 48px rgba(0,0,0,.5);">
+
+  <!-- Steps -->
+  <div style="font-size:9px;font-weight:600;color:var(--sub);font-family:'JetBrains Mono',monospace;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:14px;">HOW TO GET YOUR API TOKEN</div>
+  <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:22px;">
+    <div style="display:flex;align-items:flex-start;gap:10px;">
+      <div style="width:20px;height:20px;border-radius:50%;background:rgba(56,189,248,.15);border:1px solid rgba(56,189,248,.3);color:var(--accent);font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:'JetBrains Mono',monospace;">1</div>
+      <div style="font-size:12px;color:var(--sub);line-height:1.5;">Go to <strong style="color:var(--accent);">app.deriv.com</strong> → Account Settings</div>
     </div>
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;">
-      <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:2px;margin-bottom:16px;">HOW TO GET YOUR API TOKEN</div>
-      <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px;">
-        <div style="display:flex;align-items:flex-start;gap:10px;"><div style="width:22px;height:22px;border-radius:50%;background:var(--accent);color:#000;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">1</div><div style="font-size:12px;color:var(--text-dim);">Go to <strong style="color:var(--accent)">app.deriv.com</strong> → Account Settings</div></div>
-        <div style="display:flex;align-items:flex-start;gap:10px;"><div style="width:22px;height:22px;border-radius:50%;background:var(--accent);color:#000;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">2</div><div style="font-size:12px;color:var(--text-dim);">Click <strong>API Token</strong> in the left menu</div></div>
-        <div style="display:flex;align-items:flex-start;gap:10px;"><div style="width:22px;height:22px;border-radius:50%;background:var(--accent);color:#000;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">3</div><div style="font-size:12px;color:var(--text-dim);">Create token with <strong>Read + Trade</strong> scope</div></div>
-        <div style="display:flex;align-items:flex-start;gap:10px;"><div style="width:22px;height:22px;border-radius:50%;background:var(--accent);color:#000;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">4</div><div style="font-size:12px;color:var(--text-dim);">Copy and paste your token below</div></div>
-      </div>
-      <div style="position:relative;margin-bottom:12px;">
-        <input id="tokenInput" type="password" placeholder="Paste your API token here…" style="width:100%;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 44px 14px 16px;color:var(--text);font-size:13px;font-family:'Inter',sans-serif;box-sizing:border-box;outline:none;"/>
-        <button id="toggleVis" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:16px;color:var(--muted);">👁</button>
-      </div>
-      <div id="loginErr" style="display:none;color:var(--red);font-size:11px;font-family:'Space Mono',monospace;margin-bottom:10px;padding:8px 12px;background:rgba(255,61,90,.1);border-radius:8px;"></div>
-      <div style="font-size:9px;color:var(--dim);font-family:'Space Mono',monospace;margin-bottom:14px;text-align:center;">Token sent only to Deriv's WebSocket API · Never stored</div>
-      <button id="loginBtn" onclick="doLogin()" style="width:100%;padding:14px;background:var(--accent);color:#000;border:none;border-radius:10px;font-size:13px;font-weight:700;font-family:'Space Mono',monospace;cursor:pointer;letter-spacing:1px;margin-bottom:10px;">CONNECT TO DERIV</button>
-      <div style="text-align:center;font-size:11px;color:var(--muted);margin-bottom:10px;">or</div>
-      <button onclick="doGuest()" style="width:100%;padding:12px;background:transparent;color:var(--accent);border:1px solid var(--accent);border-radius:10px;font-size:12px;font-weight:700;font-family:'Space Mono',monospace;cursor:pointer;">Continue without token (analysis only)</button>
+    <div style="display:flex;align-items:flex-start;gap:10px;">
+      <div style="width:20px;height:20px;border-radius:50%;background:rgba(56,189,248,.15);border:1px solid rgba(56,189,248,.3);color:var(--accent);font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:'JetBrains Mono',monospace;">2</div>
+      <div style="font-size:12px;color:var(--sub);line-height:1.5;">Click <strong style="color:var(--text);">API Token</strong> in the left menu</div>
     </div>
-    <div style="text-align:center;margin-top:14px;font-size:9px;color:var(--dim);font-family:'Space Mono',monospace;">Token never stored · AI trades only with valid token · Use demo account first</div>
+    <div style="display:flex;align-items:flex-start;gap:10px;">
+      <div style="width:20px;height:20px;border-radius:50%;background:rgba(56,189,248,.15);border:1px solid rgba(56,189,248,.3);color:var(--accent);font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:'JetBrains Mono',monospace;">3</div>
+      <div style="font-size:12px;color:var(--sub);line-height:1.5;">Create token with <strong style="color:var(--text);">Read + Trade</strong> scope</div>
+    </div>
+    <div style="display:flex;align-items:flex-start;gap:10px;">
+      <div style="width:20px;height:20px;border-radius:50%;background:rgba(56,189,248,.15);border:1px solid rgba(56,189,248,.3);color:var(--accent);font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:'JetBrains Mono',monospace;">4</div>
+      <div style="font-size:12px;color:var(--sub);line-height:1.5;">Copy and paste your token below</div>
+    </div>
+  </div>
+
+  <!-- Error -->
+  <div id="LE" class="lerr"></div>
+
+  <!-- Token input -->
+  <div style="position:relative;margin-bottom:8px;">
+    <input id="tokenInput" type="password" placeholder="Paste your API token here..."
+      style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:13px 44px 13px 14px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text);outline:none;-webkit-appearance:none;"
+      onkeydown="if(event.key==='Enter')doLogin();" />
+    <button id="toggleVis" onclick="const i=document.getElementById('tokenInput');i.type=i.type==='password'?'text':'password';"
+      style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--dim);cursor:pointer;font-size:16px;padding:4px;">👁</button>
+  </div>
+  <div style="font-size:10px;color:var(--dim);font-family:'JetBrains Mono',monospace;margin-bottom:20px;text-align:center;line-height:1.6;">Token sent only to Deriv's WebSocket API · Never stored</div>
+
+  <!-- Login button -->
+  <button id="loginBtn" onclick="doLogin()"
+    style="width:100%;padding:13px;background:var(--accent);border:none;border-radius:10px;font-family:'Inter',sans-serif;font-size:13px;font-weight:600;color:#fff;cursor:pointer;margin-bottom:14px;transition:all .2s;letter-spacing:.2px;">
+    CONNECT TO DERIV
+  </button>
+
+  <!-- Divider -->
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;color:var(--dim);font-size:10px;font-family:'JetBrains Mono',monospace;">
+    <div style="flex:1;height:1px;background:var(--border);"></div>or<div style="flex:1;height:1px;background:var(--border);"></div>
+  </div>
+
+  <!-- Guest button -->
+  <button onclick="doGuest()"
+    style="width:100%;padding:12px;background:transparent;border:1px solid var(--border);border-radius:10px;font-family:'Inter',sans-serif;font-size:12px;font-weight:500;color:var(--sub);cursor:pointer;transition:all .2s;">
+    Continue without token (analysis only)
+  </button>
+</div>
+
+<!-- Footer -->
+<div style="text-align:center;margin-top:16px;font-size:10px;color:var(--dim);font-family:'JetBrains Mono',monospace;line-height:1.7;">
+  Not financial advice · Use a valid token · Use demo account first
+</div>
+```
+
   </div>
 </div>
 
@@ -564,8 +625,8 @@ position:sticky;top:0;z-index:1;
 <!-- ── PAGE 1: ANALYSIS ── -->
 <div id="pgAnalysis" class="page" style="flex-direction:column;">
   <div class="ana-header">
-    <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:2px;">CONTRACT ANALYSIS — ALL 10 INDICES</div>
-    <div style="display:flex;gap:12px;font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;">
+    <div style="font-size:9px;color:var(--sub);font-family:'Space Mono',monospace;letter-spacing:2px;">CONTRACT ANALYSIS — ALL 10 INDICES</div>
+    <div style="display:flex;gap:12px;font-size:9px;color:var(--sub);font-family:'Space Mono',monospace;">
       <span>LIVE <strong id="SL" style="color:var(--text)">0/10</strong></span>
       <span>CON <strong id="SC" style="color:var(--green)">—</strong></span>
       <span>EXP <strong id="SE" style="color:var(--red)">—</strong></span>
@@ -576,7 +637,7 @@ position:sticky;top:0;z-index:1;
     <div class="pill"><span class="pdot g"></span>STRONG BUY <strong id="pSB" style="color:var(--green);margin-left:3px;">0</strong></div>
     <div class="pill"><span class="pdot g2"></span>BUY <strong id="pBU" style="color:var(--green);margin-left:3px;opacity:.7;">0</strong></div>
     <div class="pill"><span class="pdot y"></span>NEUTRAL <strong id="pNE" style="color:var(--yellow);margin-left:3px;">0</strong></div>
-    <div class="pill"><span class="pdot b2"></span>WATCH <strong id="pWA" style="color:var(--muted);margin-left:3px;">0</strong></div>
+    <div class="pill"><span class="pdot b2"></span>WATCH <strong id="pWA" style="color:var(--sub);margin-left:3px;">0</strong></div>
     <div class="pill"><span class="pdot r"></span>AVOID <strong id="pAV" style="color:var(--red);margin-left:3px;">0</strong></div>
   </div>
   <div class="pscroll" style="padding-top:0;">
@@ -585,7 +646,7 @@ position:sticky;top:0;z-index:1;
       <table id="TB" class="tbl"></table>
     </div>
     <!-- Digit frequency -->
-    <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:2px;margin-bottom:8px;">DIGIT FREQUENCY (LAST 100 TICKS)</div>
+    <div style="font-size:9px;color:var(--sub);font-family:'Space Mono',monospace;letter-spacing:2px;margin-bottom:8px;">DIGIT FREQUENCY (LAST 100 TICKS)</div>
     <div id="DC" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:14px;"></div>
     <div style="font-size:8px;color:var(--dim);font-family:'Space Mono',monospace;text-align:center;padding-bottom:14px;">Live via Deriv WebSocket API · Educational &amp; demo use recommended</div>
   </div>
@@ -612,7 +673,7 @@ position:sticky;top:0;z-index:1;
         <button class="ai-btn reset" id="resetBtn" onclick="resetAI()">↺</button>
       </div>
     </div>
-    <!-- Active trade inline — compact single line, hidden when idle -->
+    <!-- Active trade inline -->
     <div id="curTrade" class="ct-compact" style="display:none;margin-top:6px;">
       <div class="ct-row">
         <div class="ct-item"><div class="ct-lbl">INDEX</div><div class="ct-val" id="ctIndex">—</div></div>
@@ -636,144 +697,141 @@ position:sticky;top:0;z-index:1;
   <!-- Mode subpages -->
   <div style="flex:1;overflow:hidden;min-height:0;display:flex;flex-direction:column;">
 
-  <!-- 🚀 PIONEER -->
-  <div id="mpPioneer" class="mpage active">
-    <!-- Equity curve — first thing visible -->
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:8px;margin-bottom:10px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-        <div style="font-size:7px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:2px;">🚀 PIONEER · EQUITY</div>
-        <div style="font-size:8px;font-family:'Space Mono',monospace;" id="eqStats">Now +0.00  Peak +0.00  Low +0.00</div>
-      </div>
-      <canvas id="eqCanvas" style="width:100%;height:70px;display:block;min-height:70px;"></canvas>
-    </div>
-    <!-- Config — collapsible -->
-    <div style="margin-bottom:8px;">
-      <div onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'grid':'none'" style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:2px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:var(--surface);border:1px solid var(--border);border-radius:8px;">
-        <span>⚙ CONFIG</span><span id="cfgToggleIcon">▼</span>
-      </div>
-      <div style="display:none;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-top:8px;">
-        <div class="cfg-block"><div class="cfg-label"><span>💰</span> BASE STAKE ($)</div><input class="cfg-input" id="cfgStake" type="number" value="5" min="0.35" step="0.50"/><div style="font-size:8px;color:var(--dim);margin-top:3px;font-family:'Space Mono',monospace;">MinScore=1x · +40pts=1.5x</div></div>
-        <div class="cfg-block"><div class="cfg-label">MULT ×</div><input class="cfg-input" id="cfgMult" type="number" value="3.6" min="1.5" max="10" step="0.1"/></div>
-        <div class="cfg-block">
-          <div class="cfg-label">TAKE PROFIT ($)</div>
-          <input class="cfg-input" id="cfgTP" type="number" value="30" min="1" step="1" oninput="calcTpLevels()"/>
-          <div style="font-size:8px;color:var(--dim);margin-top:4px;font-family:'Space Mono',monospace;line-height:1.7;">
-            TP1 <span id="tp1val" style="color:var(--yellow);">$10</span> ×0.75 &nbsp;
-            TP2 <span id="tp2val" style="color:var(--accent);">$20</span> ×0.50 &nbsp;
-            TP3 <span id="tp3val" style="color:var(--green);">$30</span> stop
-          </div>
+    <!-- 🚀 PIONEER -->
+    <div id="mpPioneer" class="mpage active">
+      <!-- Equity curve -->
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:8px;margin-bottom:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+          <div style="font-size:7px;color:var(--sub);font-family:'Space Mono',monospace;letter-spacing:2px;">🚀 PIONEER · EQUITY</div>
+          <div style="font-size:8px;font-family:'Space Mono',monospace;" id="eqStats">Now +0.00  Peak +0.00  Low +0.00</div>
         </div>
-        <div class="cfg-block"><div class="cfg-label">STOP LOSS ($)</div><input class="cfg-input" id="cfgSL" type="number" value="50" min="1" step="1"/></div>
-        <div class="cfg-block"><div class="cfg-label">MIN SCORE</div><input class="cfg-input" id="cfgMinScore" type="number" value="45" min="30" max="85" step="5"/><div style="font-size:8px;color:var(--muted);margin-top:3px;">45=default · 60=selective</div></div>
-        <div class="cfg-block"><div class="cfg-label">SESSION LIMIT</div><input class="cfg-input" id="cfgTimeLimit" type="number" value="120" min="15" max="480" step="15"/><div style="font-size:8px;color:var(--muted);margin-top:3px;">mins · 0=unlimited</div></div>
-        <div class="cfg-block" style="grid-column:1/-1;"><div class="cfg-label">INDEX</div><select class="cfg-select" id="cfgIndex"><option value="AUTO">AUTO (AI picks best)</option><option value="R_10">V10</option><option value="R_25">V25</option><option value="R_50">V50</option><option value="R_75">V75</option><option value="R_100">V100</option><option value="1HZ10V">V10 1s</option><option value="1HZ25V">V25 1s</option><option value="1HZ50V">V50 1s</option><option value="1HZ75V">V75 1s</option><option value="1HZ100V">V100 1s</option></select></div>
+        <canvas id="eqCanvas" style="width:100%;height:70px;display:block;min-height:70px;"></canvas>
+      </div>
+      <!-- Config — collapsible -->
+      <div style="margin-bottom:8px;">
+        <div onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'grid':'none'" style="font-size:9px;color:var(--sub);font-family:'Space Mono',monospace;letter-spacing:2px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:var(--surface);border:1px solid var(--border);border-radius:8px;">
+          <span>⚙ CONFIG</span><span id="cfgToggleIcon">▼</span>
+        </div>
+        <div style="display:none;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-top:8px;">
+          <div class="cfg-block"><div class="cfg-label"><span>💰</span> BASE STAKE ($)</div><input class="cfg-input" id="cfgStake" type="number" value="5" min="0.35" step="0.50"/><div style="font-size:8px;color:var(--dim);margin-top:3px;font-family:'Space Mono',monospace;">MinScore=1x · +40pts=1.5x</div></div>
+          <div class="cfg-block"><div class="cfg-label">MULT ×</div><input class="cfg-input" id="cfgMult" type="number" value="3.6" min="1.5" max="10" step="0.1"/></div>
+          <div class="cfg-block">
+            <div class="cfg-label">TAKE PROFIT ($)</div>
+            <input class="cfg-input" id="cfgTP" type="number" value="30" min="1" step="1" oninput="calcTpLevels()"/>
+            <div style="font-size:8px;color:var(--dim);margin-top:4px;font-family:'Space Mono',monospace;line-height:1.7;">
+              TP1 <span id="tp1val" style="color:var(--yellow);">$10</span> ×0.75 &nbsp;
+              TP2 <span id="tp2val" style="color:var(--accent);">$20</span> ×0.50 &nbsp;
+              TP3 <span id="tp3val" style="color:var(--green);">$30</span> stop
+            </div>
+          </div>
+          <div class="cfg-block"><div class="cfg-label">STOP LOSS ($)</div><input class="cfg-input" id="cfgSL" type="number" value="50" min="1" step="1"/></div>
+          <div class="cfg-block"><div class="cfg-label">MIN SCORE</div><input class="cfg-input" id="cfgMinScore" type="number" value="45" min="30" max="85" step="5"/><div style="font-size:8px;color:var(--sub);margin-top:3px;">45=default · 60=selective</div></div>
+          <div class="cfg-block"><div class="cfg-label">SESSION LIMIT</div><input class="cfg-input" id="cfgTimeLimit" type="number" value="120" min="15" max="480" step="15"/><div style="font-size:8px;color:var(--sub);margin-top:3px;">mins · 0=unlimited</div></div>
+          <div class="cfg-block" style="grid-column:1/-1;"><div class="cfg-label">INDEX</div><select class="cfg-select" id="cfgIndex"><option value="AUTO">AUTO (AI picks best)</option><option value="R_10">V10</option><option value="R_25">V25</option><option value="R_50">V50</option><option value="R_75">V75</option><option value="R_100">V100</option><option value="1HZ10V">V10 1s</option><option value="1HZ25V">V25 1s</option><option value="1HZ50V">V50 1s</option><option value="1HZ75V">V75 1s</option><option value="1HZ100V">V100 1s</option></select></div>
+        </div>
+      </div>
+      <!-- Ladder + mode stats -->
+      <div id="ladderPanel" style="margin-bottom:8px;">
+        <div style="font-size:9px;color:var(--sub);font-family:'Space Mono',monospace;letter-spacing:2px;margin-bottom:6px;display:flex;justify-content:space-between;"><span>LADDER</span><span id="ladExposure" style="color:var(--red)"></span></div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">
+          <div class="lad-step differ" id="lad0"><div class="lad-num">S1</div><div class="lad-type">DIFFERS</div><div class="lad-stake">$5.00</div></div>
+          <div class="lad-arrow">→</div>
+          <div class="lad-step over" id="lad1"><div class="lad-num">S2</div><div class="lad-type">OVER 2</div><div class="lad-stake">$18.00</div></div>
+          <div class="lad-arrow">→</div>
+          <div class="lad-step over" id="lad2"><div class="lad-num">S3</div><div class="lad-type">OVER 2</div><div class="lad-stake">$64.80</div></div>
+          <div class="lad-arrow">→</div>
+          <div class="lad-step over" id="lad3"><div class="lad-num">S4</div><div class="lad-type">OVER 2</div><div class="lad-stake">$233.28</div></div>
+          <div class="lad-arrow">→</div>
+          <div class="lad-step over final" id="lad4"><div class="lad-num">S5</div><div class="lad-type">OVER 2</div><div class="lad-stake">$839.81</div></div>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <div class="cstat"><div class="cstat-l">STREAK</div><div class="cstat-v" id="astCL">0</div></div>
+          <div class="cstat"><div class="cstat-l">STEP</div><div class="cstat-v" id="astMS">S1</div></div>
+          <div class="cstat"><div class="cstat-l">NEXT STAKE</div><div class="cstat-v" style="color:var(--accent);" id="astNS">$5.00</div></div>
+          <div class="cstat" style="flex:2;min-width:100px;"><div class="cstat-l">TICK SPEED</div><div class="cstat-v" style="font-size:10px;" id="astTS">—</div></div>
+        </div>
+      </div>
+      <!-- Bot activity log -->
+      <div style="font-size:9px;color:var(--sub);font-family:'Space Mono',monospace;letter-spacing:2px;margin-bottom:4px;">BOT ACTIVITY</div>
+      <div id="aiLog" class="ai-log"><div class="ai-log-line info"><span class="ts">--:--:--</span>System ready. Waiting for connection…</div></div>
+      <!-- Transaction log -->
+      <div style="font-size:9px;color:var(--sub);font-family:'Space Mono',monospace;letter-spacing:2px;margin:10px 0 4px;">TRANSACTIONS</div>
+      <div id="tradeLog" class="tlog">
+        <div class="log-entry log-header"><div>TIME</div><div>INDEX</div><div>TYPE</div><div>ENTRY</div><div>STAKE</div><div>RESULT</div><div>P&L</div></div>
       </div>
     </div>
-    <!-- Ladder + mode stats — compact row -->
-    <div id="ladderPanel" style="margin-bottom:8px;">
-      <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:2px;margin-bottom:6px;display:flex;justify-content:space-between;"><span>LADDER</span><span id="ladExposure" style="color:var(--red)"></span></div>
-      <div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">
-        <div class="lad-step differ" id="lad0"><div class="lad-num">S1</div><div class="lad-type">DIFFERS</div><div class="lad-stake">$5.00</div></div>
-        <div class="lad-arrow">→</div>
-        <div class="lad-step over" id="lad1"><div class="lad-num">S2</div><div class="lad-type">OVER 2</div><div class="lad-stake">$18.00</div></div>
-        <div class="lad-arrow">→</div>
-        <div class="lad-step over" id="lad2"><div class="lad-num">S3</div><div class="lad-type">OVER 2</div><div class="lad-stake">$64.80</div></div>
-        <div class="lad-arrow">→</div>
-        <div class="lad-step over" id="lad3"><div class="lad-num">S4</div><div class="lad-type">OVER 2</div><div class="lad-stake">$233.28</div></div>
-        <div class="lad-arrow">→</div>
-        <div class="lad-step over final" id="lad4"><div class="lad-num">S5</div><div class="lad-type">OVER 2</div><div class="lad-stake">$839.81</div></div>
-      </div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;">
-        <div class="cstat"><div class="cstat-l">STREAK</div><div class="cstat-v" id="astCL">0</div></div>
-        <div class="cstat"><div class="cstat-l">STEP</div><div class="cstat-v" id="astMS">S1</div></div>
-        <div class="cstat"><div class="cstat-l">NEXT STAKE</div><div class="cstat-v" style="color:var(--accent);" id="astNS">$5.00</div></div>
-        <div class="cstat" style="flex:2;min-width:100px;"><div class="cstat-l">TICK SPEED</div><div class="cstat-v" style="font-size:10px;" id="astTS">—</div></div>
-      </div>
-    </div>
-    <!-- Bot activity log -->
-    <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:2px;margin-bottom:4px;">BOT ACTIVITY</div>
-    <div id="aiLog" class="ai-log"><div class="ai-log-line info"><span class="ts">--:--:--</span>System ready. Waiting for connection…</div></div>
-    <!-- Transaction log -->
-    <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:2px;margin:10px 0 4px;">TRANSACTIONS</div>
-    <div id="tradeLog" class="tlog">
-      <div class="log-entry log-header"><div>TIME</div><div>INDEX</div><div>TYPE</div><div>ENTRY</div><div>STAKE</div><div>RESULT</div><div>P&L</div></div>
-    </div>
-  </div>
 
-
-
-  <!-- 📈 TREND -->
-  <div id="mpTrend" class="mpage">
-    <!-- Trend Equity Curve -->
-    <div class="eq-wrap" style="margin-bottom:12px;">
-      <div class="eq-title">
-        <span>📈 TREND · EQUITY</span>
-        <span id="eqStatsTR" style="font-size:8px;">Now +0.00  Peak +0.00  Low +0.00</span>
+    <!-- 📈 TREND -->
+    <div id="mpTrend" class="mpage">
+      <!-- Trend Equity Curve -->
+      <div class="eq-wrap" style="margin-bottom:12px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+          <span style="font-size:7px;color:var(--sub);font-family:'Space Mono',monospace;letter-spacing:2px;">📈 TREND · EQUITY</span>
+          <span id="eqStatsTR" style="font-size:8px;font-family:'Space Mono',monospace;">Now +0.00  Peak +0.00  Low +0.00</span>
+        </div>
+        <canvas id="eqCanvasTR" style="width:100%;height:70px;display:block;min-height:70px;"></canvas>
       </div>
-      <canvas id="eqCanvasTR" style="width:100%;height:70px;display:block;min-height:70px;"></canvas>
-    </div>
-    <div class="msec-label">CALL/PUT · EMA+RSI+MOMENTUM · 3.6× · 5 TICKS</div>
-    <!-- Signal indicators -->
-    <div class="trend-signal-grid">
-      <div class="signal-card" id="scEma"><div class="signal-lbl">EMA</div><div class="signal-val" id="trendEma">—</div></div>
-      <div class="signal-card" id="scRsi"><div class="signal-lbl">RSI</div><div class="signal-val" id="trendRsi">—</div></div>
-      <div class="signal-card" id="scMom"><div class="signal-lbl">MOMENTUM</div><div class="signal-val" id="trendMom">—</div></div>
-      <div class="signal-card" id="scVel"><div class="signal-lbl">VELOCITY</div><div class="signal-val" id="trendVel">—</div></div>
-    </div>
-    <div class="trend-sig-main" id="trendSigMain">
-      <span class="trend-sig-label">SIGNAL</span>
-      <span class="trend-sig-value" id="trendSig">WAIT</span>
-    </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-bottom:10px;">
-      <div class="cfg-block"><div class="cfg-label">BASE STAKE ($)</div><input class="cfg-input" id="trendStake" type="number" value="1.00" min="0.35" step="0.50" oninput="refreshTrendLadder()"/></div>
-      <div class="cfg-block"><div class="cfg-label">MARTINGALE MULT ×</div><input class="cfg-input" id="trendMult" type="number" value="3.6" min="1.1" max="10" step="0.1" oninput="refreshTrendLadder()"/></div>
-      <div class="cfg-block"><div class="cfg-label">TICKS</div><input class="cfg-input" id="trendTicks" type="number" value="5" min="1" max="10" step="1"/></div>
-      <div class="cfg-block"><div class="cfg-label">TARGET PAYOUT %</div><input class="cfg-input" id="trendPayout" type="number" value="30" min="10" max="50" step="5"/></div>
-      <div class="cfg-block" style="grid-column:1/-1;"><div class="cfg-label">INDEX</div>
-        <select class="cfg-select" id="trendIndex">
-          <option value="AUTO">AUTO (AI picks best signal)</option>
-          <option value="R_10">V10</option><option value="R_25">V25</option>
-          <option value="R_50">V50</option><option value="R_75">V75</option>
-          <option value="R_100">V100</option><option value="1HZ10V">V10 1s</option>
-          <option value="1HZ25V">V25 1s</option><option value="1HZ50V">V50 1s</option>
-          <option value="1HZ75V">V75 1s</option><option value="1HZ100V">V100 1s</option>
-        </select>
+      <div class="msec-label">CALL/PUT · EMA+RSI+MOMENTUM · 3.6× · 5 TICKS</div>
+      <!-- Signal indicators -->
+      <div class="trend-signal-grid">
+        <div class="signal-card" id="scEma"><div class="signal-lbl">EMA</div><div class="signal-val" id="trendEma">—</div></div>
+        <div class="signal-card" id="scRsi"><div class="signal-lbl">RSI</div><div class="signal-val" id="trendRsi">—</div></div>
+        <div class="signal-card" id="scMom"><div class="signal-lbl">MOMENTUM</div><div class="signal-val" id="trendMom">—</div></div>
+        <div class="signal-card" id="scVel"><div class="signal-lbl">VELOCITY</div><div class="signal-val" id="trendVel">—</div></div>
       </div>
-      <div class="cfg-block"><div class="cfg-label">DIRECTION</div>
-        <select class="cfg-select" id="trendDir">
-          <option value="AUTO">AUTO (AI decides)</option>
-          <option value="CALL">CALL only (Rise)</option>
-          <option value="PUT">PUT only (Fall)</option>
-        </select>
+      <div class="trend-sig-main" id="trendSigMain">
+        <span class="trend-sig-label">SIGNAL</span>
+        <span class="trend-sig-value" id="trendSig">WAIT</span>
       </div>
-      <div class="cfg-block"><div class="cfg-label">MIN RSI SWING</div><input class="cfg-input" id="trendRsiThresh" type="number" value="60" min="50" max="80" step="5"/></div>
-    </div>
-    <div style="margin-bottom:10px;">
-      <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:2px;margin-bottom:8px;display:flex;justify-content:space-between;"><span>TREND LADDER (3.6×)</span><span id="trendExposure" style="color:var(--red)"></span></div>
-      <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;">
-        <div class="lad-step over" id="tlad0"><div class="lad-num">S1</div><div class="lad-type" id="tladt0">CALL/PUT</div><div class="lad-stake" id="tlads0">$1.00</div></div>
-        <div class="lad-arrow">→</div>
-        <div class="lad-step over" id="tlad1"><div class="lad-num">S2</div><div class="lad-type" id="tladt1">CALL/PUT</div><div class="lad-stake" id="tlads1">$3.60</div></div>
-        <div class="lad-arrow">→</div>
-        <div class="lad-step over" id="tlad2"><div class="lad-num">S3</div><div class="lad-type" id="tladt2">CALL/PUT</div><div class="lad-stake" id="tlads2">$12.96</div></div>
-        <div class="lad-arrow">→</div>
-        <div class="lad-step over" id="tlad3"><div class="lad-num">S4</div><div class="lad-type" id="tladt3">CALL/PUT</div><div class="lad-stake" id="tlads3">$46.66</div></div>
-        <div class="lad-arrow">→</div>
-        <div class="lad-step over final" id="tlad4"><div class="lad-num">S5</div><div class="lad-type" id="tladt4">CALL/PUT</div><div class="lad-stake" id="tlads4">$167.96</div></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-bottom:10px;">
+        <div class="cfg-block"><div class="cfg-label">BASE STAKE ($)</div><input class="cfg-input" id="trendStake" type="number" value="1.00" min="0.35" step="0.50" oninput="refreshTrendLadder()"/></div>
+        <div class="cfg-block"><div class="cfg-label">MARTINGALE MULT ×</div><input class="cfg-input" id="trendMult" type="number" value="3.6" min="1.1" max="10" step="0.1" oninput="refreshTrendLadder()"/></div>
+        <div class="cfg-block"><div class="cfg-label">TICKS</div><input class="cfg-input" id="trendTicks" type="number" value="5" min="1" max="10" step="1"/></div>
+        <div class="cfg-block"><div class="cfg-label">TARGET PAYOUT %</div><input class="cfg-input" id="trendPayout" type="number" value="30" min="10" max="50" step="5"/></div>
+        <div class="cfg-block" style="grid-column:1/-1;"><div class="cfg-label">INDEX</div>
+          <select class="cfg-select" id="trendIndex">
+            <option value="AUTO">AUTO (AI picks best signal)</option>
+            <option value="R_10">V10</option><option value="R_25">V25</option>
+            <option value="R_50">V50</option><option value="R_75">V75</option>
+            <option value="R_100">V100</option><option value="1HZ10V">V10 1s</option>
+            <option value="1HZ25V">V25 1s</option><option value="1HZ50V">V50 1s</option>
+            <option value="1HZ75V">V75 1s</option><option value="1HZ100V">V100 1s</option>
+          </select>
+        </div>
+        <div class="cfg-block"><div class="cfg-label">DIRECTION</div>
+          <select class="cfg-select" id="trendDir">
+            <option value="AUTO">AUTO (AI decides)</option>
+            <option value="CALL">CALL only (Rise)</option>
+            <option value="PUT">PUT only (Fall)</option>
+          </select>
+        </div>
+        <div class="cfg-block"><div class="cfg-label">MIN RSI SWING</div><input class="cfg-input" id="trendRsiThresh" type="number" value="60" min="50" max="80" step="5"/></div>
       </div>
+      <div style="margin-bottom:10px;">
+        <div style="font-size:9px;color:var(--sub);font-family:'Space Mono',monospace;letter-spacing:2px;margin-bottom:8px;display:flex;justify-content:space-between;"><span>TREND LADDER (3.6×)</span><span id="trendExposure" style="color:var(--red)"></span></div>
+        <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;">
+          <div class="lad-step over" id="tlad0"><div class="lad-num">S1</div><div class="lad-type" id="tladt0">CALL/PUT</div><div class="lad-stake" id="tlads0">$1.00</div></div>
+          <div class="lad-arrow">→</div>
+          <div class="lad-step over" id="tlad1"><div class="lad-num">S2</div><div class="lad-type" id="tladt1">CALL/PUT</div><div class="lad-stake" id="tlads1">$3.60</div></div>
+          <div class="lad-arrow">→</div>
+          <div class="lad-step over" id="tlad2"><div class="lad-num">S3</div><div class="lad-type" id="tladt2">CALL/PUT</div><div class="lad-stake" id="tlads2">$12.96</div></div>
+          <div class="lad-arrow">→</div>
+          <div class="lad-step over" id="tlad3"><div class="lad-num">S4</div><div class="lad-type" id="tladt3">CALL/PUT</div><div class="lad-stake" id="tlads3">$46.66</div></div>
+          <div class="lad-arrow">→</div>
+          <div class="lad-step over final" id="tlad4"><div class="lad-num">S5</div><div class="lad-type" id="tladt4">CALL/PUT</div><div class="lad-stake" id="tlads4">$167.96</div></div>
+        </div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 12px;margin-bottom:10px;font-family:'Space Mono',monospace;font-size:9px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;">
+        <span style="color:var(--sub);">BARRIER CALL <span id="trendBarrierCall" style="color:var(--green);font-weight:700;">…</span></span>
+        <span style="color:var(--sub);">PUT <span id="trendBarrierPut" style="color:var(--red);font-weight:700;">…</span></span>
+        <span style="color:var(--sub);">STEP <span id="trendStepDisp" style="color:var(--accent);font-weight:700;">1/5</span></span>
+        <span id="trendRunning" style="color:var(--dim);">⏸ IDLE</span>
+      </div>
+      <div style="font-size:9px;color:var(--sub);font-family:'Space Mono',monospace;letter-spacing:2px;margin-bottom:6px;">AI DECISION LOG</div>
+      <div id="aiLogTR" class="ai-log"></div>
+      <div style="font-size:9px;color:var(--sub);font-family:'Space Mono',monospace;letter-spacing:2px;margin:10px 0 6px;">TRADE LOG</div>
+      <div id="tradeLogTR" class="tlog"><div class="log-entry log-header"><div>TIME</div><div>INDEX</div><div>TYPE</div><div>ENTRY</div><div>STAKE</div><div>RESULT</div><div>P&L</div></div></div>
     </div>
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 12px;margin-bottom:10px;font-family:'Space Mono',monospace;font-size:9px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;">
-      <span style="color:var(--muted);">BARRIER CALL <span id="trendBarrierCall" style="color:var(--green);font-weight:700;">…</span></span>
-      <span style="color:var(--muted);">PUT <span id="trendBarrierPut" style="color:var(--red);font-weight:700;">…</span></span>
-      <span style="color:var(--muted);">STEP <span id="trendStepDisp" style="color:var(--accent);font-weight:700;">1/5</span></span>
-      <span id="trendRunning" style="color:var(--dim);">⏸ IDLE</span>
-    </div>
-    <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:2px;margin-bottom:6px;">AI DECISION LOG</div>
-    <div id="aiLogTR" class="ai-log"></div>
-    <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:2px;margin:10px 0 6px;">TRADE LOG</div>
-    <div id="tradeLogTR" class="tlog"><div class="log-entry log-header"><div>TIME</div><div>INDEX</div><div>TYPE</div><div>ENTRY</div><div>STAKE</div><div>RESULT</div><div>P&L</div></div></div>
-  </div>
-
 
   </div><!-- end mode subpages wrapper -->
 </div><!-- end pgAI -->
@@ -781,28 +839,28 @@ position:sticky;top:0;z-index:1;
 <!-- ── PAGE 3: ACCOUNT ── -->
 <div id="pgAccount" class="page" style="flex-direction:column;">
   <div class="pscroll">
-    <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:2px;margin-bottom:12px;padding-top:4px;">ACCOUNT</div>
+    <div style="font-size:9px;color:var(--sub);font-family:'Space Mono',monospace;letter-spacing:2px;margin-bottom:12px;padding-top:4px;">ACCOUNT</div>
     <div class="acct-section" id="acctBadge" style="display:none;">
       <div class="acct-section-title">PROFILE</div>
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
         <div id="acctAvatar" style="width:42px;height:42px;border-radius:50%;background:var(--accent);color:#000;font-size:18px;font-weight:700;display:flex;align-items:center;justify-content:center;font-family:'Space Mono',monospace;"></div>
-        <div><div id="acctName" style="font-size:14px;font-weight:700;color:var(--text);"></div><div id="acctId" style="font-size:10px;color:var(--muted);font-family:'Space Mono',monospace;"></div></div>
+        <div><div id="acctName" style="font-size:14px;font-weight:700;color:var(--text);"></div><div id="acctId" style="font-size:10px;color:var(--sub);font-family:'Space Mono',monospace;"></div></div>
       </div>
     </div>
     <div class="acct-section" id="balRow" style="display:none;">
       <div class="acct-section-title">BALANCE</div>
       <div style="display:flex;justify-content:space-between;align-items:center;">
-        <div><div style="font-size:24px;font-weight:700;color:var(--text);font-family:'Space Mono',monospace;"><span id="balVal">—</span></div><div style="font-size:10px;color:var(--muted);font-family:'Space Mono',monospace;margin-top:2px;"><span id="balCur"></span> · <span id="balAcct"></span></div></div>
+        <div><div style="font-size:24px;font-weight:700;color:var(--text);font-family:'Space Mono',monospace;"><span id="balVal">—</span></div><div style="font-size:10px;color:var(--sub);font-family:'Space Mono',monospace;margin-top:2px;"><span id="balCur"></span> · <span id="balAcct"></span></div></div>
         <div id="balType" style="font-size:9px;color:var(--green);font-family:'Space Mono',monospace;background:rgba(0,230,118,.1);padding:6px 10px;border-radius:20px;border:1px solid rgba(0,230,118,.3);"></div>
       </div>
     </div>
     <div class="acct-section">
       <div class="acct-section-title">SESSION STATS</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-        <div><div style="font-size:8px;color:var(--muted);font-family:'Space Mono',monospace;">TOTAL P&L</div><div style="font-size:16px;font-weight:700;font-family:'Space Mono',monospace;" id="acctPnl">$0.00</div></div>
-        <div><div style="font-size:8px;color:var(--muted);font-family:'Space Mono',monospace;">WIN RATE</div><div style="font-size:16px;font-weight:700;font-family:'Space Mono',monospace;" id="acctWR">—</div></div>
-        <div><div style="font-size:8px;color:var(--muted);font-family:'Space Mono',monospace;">WINS</div><div style="font-size:16px;font-weight:700;color:var(--green);font-family:'Space Mono',monospace;" id="acctW">0</div></div>
-        <div><div style="font-size:8px;color:var(--muted);font-family:'Space Mono',monospace;">LOSSES</div><div style="font-size:16px;font-weight:700;color:var(--red);font-family:'Space Mono',monospace;" id="acctL">0</div></div>
+        <div><div style="font-size:8px;color:var(--sub);font-family:'Space Mono',monospace;">TOTAL P&L</div><div style="font-size:16px;font-weight:700;font-family:'Space Mono',monospace;" id="acctPnl">$0.00</div></div>
+        <div><div style="font-size:8px;color:var(--sub);font-family:'Space Mono',monospace;">WIN RATE</div><div style="font-size:16px;font-weight:700;font-family:'Space Mono',monospace;" id="acctWR">—</div></div>
+        <div><div style="font-size:8px;color:var(--sub);font-family:'Space Mono',monospace;">WINS</div><div style="font-size:16px;font-weight:700;color:var(--green);font-family:'Space Mono',monospace;" id="acctW">0</div></div>
+        <div><div style="font-size:8px;color:var(--sub);font-family:'Space Mono',monospace;">LOSSES</div><div style="font-size:16px;font-weight:700;color:var(--red);font-family:'Space Mono',monospace;" id="acctL">0</div></div>
       </div>
     </div>
     <div class="acct-section">
@@ -848,7 +906,7 @@ const IDX=[
 // ══ MARKET STATE ══
 const ST={};
 IDX.forEach(i=>{ST[i.s]={prices:[],digits:[],freq:new Array(10).fill(0),last:null,conn:false,ticks:0,tickTimes:[]};});
-let total=0,ws=null,rtimer=null,userToken=null,isGuest=false,lastTradeTime=0,lastManTradeTime=0,lastTrendTradeTime=0;
+let total=0,ws=null,rtimer=null,userToken=null,isGuest=false,lastTradeTime=0,lastTrendTradeTime=0;
 
 // ══ AI STATE ══
 const AI={
@@ -869,22 +927,20 @@ const AI={
 // ══ TREND STATE ══
 const TR={
   running:false,
-  step:0,           // 0-4 martingale step
+  step:0,
   baseStake:1,
   mult:3.6,
-  forcedDir:'AUTO', // 'AUTO','CALL','PUT'
+  forcedDir:'AUTO',
   forcedIndex:'AUTO',
   sessPnl:0, wins:0, losses:0,
-  equityPoints:[0], // for trend equity graph
+  equityPoints:[0],
   ticks:5,
-  targetPayout:30,  // % e.g. 30 = $1 → $1.30
+  targetPayout:30,
   consecLoss:0,
-  lastDirection:null, // 'CALL' or 'PUT' — held for sequence
+  lastDirection:null,
 };
 
 // ══ TECHNICAL ANALYSIS FUNCTIONS ══
-
-// EMA calculation
 function calcEMA(prices, period){
   if(prices.length<period) return null;
   const k=2/(period+1);
@@ -893,7 +949,6 @@ function calcEMA(prices, period){
   return ema;
 }
 
-// RSI calculation (14 period)
 function calcRSI(prices, period=14){
   if(prices.length<period+1) return null;
   const slice=prices.slice(-(period+1));
@@ -907,14 +962,13 @@ function calcRSI(prices, period=14){
   return 100-(100/(1+rs));
 }
 
-// Momentum5 — compare avg of last 5 vs avg of previous 5 (smoother)
 function calcMomentum5(prices){
   if(prices.length<10) return null;
   const recent=prices.slice(-5).reduce((a,b)=>a+b,0)/5;
   const prev=prices.slice(-10,-5).reduce((a,b)=>a+b,0)/5;
   return recent-prev;
 }
-// Momentum — compare avg of last 3 vs avg of previous 3
+
 function calcMomentum(prices){
   if(prices.length<6) return null;
   const recent=prices.slice(-3).reduce((a,b)=>a+b,0)/3;
@@ -923,12 +977,7 @@ function calcMomentum(prices){
 }
 
 // ══ AI BARRIER CALCULATOR ══
-// Derives barrier offset from index volatility to target ~30% payout
-// Deriv CALL/PUT: negative barrier = price must close above (entry + barrier)
-// To get ~30% payout we need barrier around -0.3 to -1.5× the avg tick range
-// Formula: barrier = -(avgRange × payoutFactor) where payoutFactor tunes payout
 function calcBarrier(sym, targetPayoutPct){
-  // Pure math fallback — used when proposal API not available
   const s=ST[sym];
   const ix=IDX.find(i=>i.s===sym);
   const dp=ix?ix.dp:3;
@@ -940,7 +989,6 @@ function calcBarrier(sym, targetPayoutPct){
   for(let k=1;k<pr.length;k++) totalRange+=Math.abs(pr[k]-pr[k-1]);
   const avgMove=totalRange/(pr.length-1);
   const ticks=parseInt(document.getElementById('trendTicks').value)||5;
-  // Small multiplier to get close barrier → low payout (28-35%)
   const scaleFactor=(targetPayoutPct/100)*0.12;
   const raw=avgMove*Math.sqrt(ticks)*scaleFactor;
   const offset=Math.max(minStep, parseFloat(raw.toFixed(dp)));
@@ -949,24 +997,8 @@ function calcBarrier(sym, targetPayoutPct){
 }
 
 // ══ PROPOSAL-BASED BARRIER FINDER ══
-// Pending trend trade waiting for proposal response
 let _trendPending=null;
 
-// Seed barriers — starting point for binary search per index
-// These are typical values that land near 28-35% — search converges from here
-// Seed barriers per index — midpoint of confirmed 28-35% payout ranges
-// Standard indices (5-tick):
-//   V10:   0.17–0.20   mid→0.185
-//   V25:   0.247–0.255 mid→0.251
-//   V50:   0.0176–0.02 mid→0.0188
-//   V75:   9.2479–12   mid→10.624
-//   V100:  0.20–0.27   mid→0.235
-// 1s indices:
-//   V10 1s: 0.19–0.25  mid→0.220
-//   V25 1s: 55–62      mid→58.5
-//   V50 1s: 45–47      mid→46.0
-//   V75 1s: 0.38–0.45  mid→0.415
-//   V100 1s:0.78–0.95  mid→0.865
 const BARRIER_SEEDS={
   'R_10':0.185,
   'R_25':0.251,
@@ -979,7 +1011,6 @@ const BARRIER_SEEDS={
   '1HZ75V':0.415,
   '1HZ100V':0.865
 };
-// Learned barriers — updated live after each successful trade
 const BARRIER_LEARNED={};
 
 function sendProposal(p){
@@ -1005,14 +1036,12 @@ function onProposal(msg){
   const dp=ix?ix.dp:3;
   const minStep=parseFloat(Math.pow(0.1,dp).toFixed(dp));
 
-  // Actual payout % from Deriv
   const payout=parseFloat(prop.payout||0);
   const askPrice=parseFloat(prop.ask_price||p.stake);
   const actualPct=Math.round((payout/askPrice-1)*100);
 
   aiLog('📊 Barrier '+p.barrier+' → '+actualPct+'% payout (seek 28-35%) attempt '+(p.attempt||1),'info');
 
-  // Already in target range — save barrier and place
   if(actualPct>=28&&actualPct<=35){
     const successOffset=parseFloat(p.barrier.replace('-','').replace('+',''));
     BARRIER_LEARNED[p.sym]=successOffset;
@@ -1023,11 +1052,10 @@ function onProposal(msg){
     return;
   }
 
-  // Max 5 attempts — use closest result, save for next time
   const attempt=(p.attempt||1);
   if(attempt>=5){
     const bestOffset=parseFloat(p.barrier.replace('-','').replace('+',''));
-    if(actualPct>=20&&actualPct<=50) BARRIER_LEARNED[p.sym]=bestOffset; // save if reasonable
+    if(actualPct>=20&&actualPct<=50) BARRIER_LEARNED[p.sym]=bestOffset;
     aiLog('📊 Best barrier: '+p.barrier+' ('+actualPct+'%) — placing','warn');
     _trendPending=null;
     AI.inTrade=false; AI.pendingResult=false;
@@ -1035,26 +1063,21 @@ function onProposal(msg){
     return;
   }
 
-  // Binary search: track lo/hi bounds
   let lo=p.lo, hi=p.hi;
   let currentOffset=parseFloat(p.barrier.replace('-','').replace('+',''));
 
   if(actualPct>35){
-    // Payout too high → barrier too far → tighten (move closer)
     hi=currentOffset;
     if(lo===undefined) lo=minStep;
   } else {
-    // Payout too low → barrier too close → widen (move further)
     lo=currentOffset;
     if(hi===undefined) hi=currentOffset*4;
   }
 
   let newOffset;
   if(lo!==undefined&&hi!==undefined){
-    // Bisect
     newOffset=parseFloat(((lo+hi)/2).toFixed(dp));
   } else {
-    // No bounds yet — multiply/divide by 1.8
     newOffset=actualPct>35
       ? Math.max(minStep, parseFloat((currentOffset*0.55).toFixed(dp)))
       : parseFloat((currentOffset*1.8).toFixed(dp));
@@ -1070,7 +1093,6 @@ function onProposal(msg){
 }
 
 function requestTrendProposal(sym, code, stake, typeLabel, ticks, isCall){
-  // Use learned barrier if available, else seed
   const seed=BARRIER_LEARNED[sym]||BARRIER_SEEDS[sym]||0.5;
   const sign=isCall?'-':'+';
   const ix=IDX.find(i=>i.s===sym);
@@ -1081,23 +1103,19 @@ function requestTrendProposal(sym, code, stake, typeLabel, ticks, isCall){
   sendProposal(_trendPending);
 }
 
-// ══ TREND ANALYSIS — all three indicators ══
+// ══ TREND ANALYSIS ══
 function trendAna(sym){
   const s=ST[sym];
   if(!s||s.prices.length<15) return null;
   const pr=s.prices;
 
-  // Faster EMA periods: 3 vs 10 — reacts quicker to tick momentum
   const ema3 =calcEMA(pr,3);
   const ema10=calcEMA(pr,10);
-  // Also track EMA crossover direction (current vs 2 ticks ago)
   const ema3prev =calcEMA(pr.slice(0,-2),3);
   const ema10prev=calcEMA(pr.slice(0,-2),10);
 
-  const rsi=calcRSI(pr,7); // faster on tick data
-  // Momentum: last 5 vs previous 5 — smoother than 3 vs 3
+  const rsi=calcRSI(pr,7);
   const mom5=calcMomentum5(pr);
-  // Price velocity: net slope across last 6 ticks
   const prSlice6=pr.length>=6?pr.slice(-6):pr;
   const velocity=prSlice6.length>=6?(prSlice6[5]-prSlice6[0])+(prSlice6[4]-prSlice6[1])+(prSlice6[3]-prSlice6[2]):0;
   const velSig=velocity>0?'CALL':velocity<0?'PUT':null;
@@ -1106,26 +1124,18 @@ function trendAna(sym){
 
   if(ema3===null||ema10===null||rsi===null||mom5===null) return null;
 
-  // ── EMA signal ──
   const emaDiff=ema3-ema10;
   const emaDiffPrev=ema3prev-ema10prev;
   const emaSig=emaDiff>0?'CALL':emaDiff<0?'PUT':null;
-  // Crossover bonus: just crossed = stronger signal
   const crossed=(emaDiff>0&&emaDiffPrev<=0)||(emaDiff<0&&emaDiffPrev>=0);
 
-  // ── RSI signal — fires when RSI passes threshold from centre ──
-  // Lower threshold = more trades. Default 55 means RSI>55→PUT, RSI<45→CALL
-  const rsiSig=rsi>55?'PUT':rsi<45?'CALL':null; // RSI(7): simple 55/45 bands
-
-  // ── Momentum signal ──
+  const rsiSig=rsi>55?'PUT':rsi<45?'CALL':null;
   const momSig=mom5>0?'CALL':mom5<0?'PUT':null;
 
-  // ── Signal logic: 3-of-3 OR strong 2-of-3 ──
   const votes=[emaSig,rsiSig,momSig].filter(Boolean);
   const callVotes=votes.filter(v=>v==='CALL').length;
   const putVotes =votes.filter(v=>v==='PUT').length;
 
-  // Strength score
   const emaStrength=Math.abs(emaDiff/ema10*1000);
   const rsiStrength=Math.abs(rsi-50);
   const momStrength=Math.abs(mom5/pr[pr.length-1]*10000);
@@ -1133,9 +1143,6 @@ function trendAna(sym){
   const velBonus=(velSig&&velSig===emaSig)?15:0;
   const score=Math.min(100, Math.round(emaStrength*8+rsiStrength*0.8+momStrength+crossBonus+velBonus));
 
-  // 3-of-3 → always fire
-  // 2-of-3 + velocity → fire at score>=20
-  // 2-of-3 alone → fire at score>=35
   let signal=null;
   if(callVotes===3) signal='CALL';
   else if(putVotes===3) signal='PUT';
@@ -1158,7 +1165,6 @@ function findTrendMarket(){
     try{
       const t=trendAna(i.s);
       if(!t||!t.signal) return;
-      // require all three aligned + minimum score
       if(t.score>bestScore){bestScore=t.score;best={sym:i.s,t};}
     }catch(e){}
   });
@@ -1194,57 +1200,9 @@ function updateTrendLadderUI(){
   if(sd) sd.textContent=(TR.step+1)+'/5';
 }
 
-// ══ UPDATE TREND SIGNAL DISPLAY ══
-function updateTrendDisplay(sym){
-  if(AI.mode!=='trend') return;
-  if(!sym||!ST[sym]||ST[sym].prices.length<25){
-    document.getElementById('trendEma').textContent='—';
-    document.getElementById('trendRsi').textContent='—';
-    document.getElementById('trendMom').textContent='—';
-    document.getElementById('trendSig').textContent='WAIT';
-    return;
-  }
-  try{
-    const t=trendAna(sym);
-    if(!t) return;
-    const eEl=document.getElementById('trendEma');
-    const rEl=document.getElementById('trendRsi');
-    const mEl=document.getElementById('trendMom');
-    const sEl=document.getElementById('trendSig');
-    // EMA
-    // EMA crossover
-    eEl.textContent=(t.emaSig||'—')+(t.crossed?' ⚡':'');
-    eEl.style.color=t.emaSig==='CALL'?'var(--green)':t.emaSig==='PUT'?'var(--red)':'var(--muted)';
-    // RSI(7) — always show live value
-    rEl.textContent=(t.rsiSig?t.rsiSig+' ':'')+t.rsi.toFixed(0);
-    rEl.style.color=t.rsiSig==='CALL'?'var(--green)':t.rsiSig==='PUT'?'var(--red)':'var(--yellow)';
-    // Momentum
-    mEl.textContent=t.momSig||'—';
-    mEl.style.color=t.momSig==='CALL'?'var(--green)':t.momSig==='PUT'?'var(--red)':'var(--muted)';
-    // Velocity
-    const vEl=document.getElementById('trendVel');
-    if(vEl){vEl.textContent=t.velSig||'—';vEl.style.color=t.velSig==='CALL'?'var(--green)':t.velSig==='PUT'?'var(--red)':'var(--muted)';}
-    // Composite signal
-    if(t.signal){
-      const votes=t.signal==='CALL'?t.callVotes:t.putVotes;
-      sEl.textContent=t.signal+(votes===3?' ★★★':' ★★')+(t.crossed?' ⚡':'');
-      sEl.style.color=t.signal==='CALL'?'var(--green)':'var(--red)';
-    } else {
-      const topV=Math.max(t.callVotes||0,t.putVotes||0);
-      sEl.textContent=topV>0?'WEAK('+topV+'/3)':'WAIT';
-      sEl.style.color='var(--muted)';
-    }
-    // Update barriers
-    const barr=calcBarrier(sym, parseFloat(document.getElementById('trendPayout').value)||30);
-    document.getElementById('trendBarrierCall').textContent=barr.call;
-    document.getElementById('trendBarrierPut').textContent=barr.put;
-  }catch(e){}
-}
-
 // ══ PIONEER STAKE CALC ══
 function calcStake(step, score){
   let s=AI.baseStake;
-  // Step 1 only: scale stake by confidence (score 45=1.0x, 85+=1.5x)
   if(step===0 && score>=45){
     const conf=Math.min(1.5, 1.0+((score-45)/40)*0.5);
     s=Math.round(s*conf*100)/100;
@@ -1252,8 +1210,6 @@ function calcStake(step, score){
   for(let i=0;i<step;i++) s=Math.round(s*AI.mult*100)/100;
   return s;
 }
-
-// ══ SCALPER STAKE CALC ══
 
 // ══ TIERED TP CALCULATOR ══
 function calcTpLevels(){
@@ -1282,27 +1238,25 @@ function navTo(page){
 }
 
 // ══ MODE ══
+// FIX #4: Only iterate chips that actually exist in the DOM
 function setMode(m){
   if(AI.running||TR.running)return;
   AI.mode=m;
-  // chip selector
-  ['pioneer','scalper','trend','manual'].forEach(x=>{
+  ['pioneer','trend'].forEach(x=>{
     const el=document.getElementById('chip'+x.charAt(0).toUpperCase()+x.slice(1));
     if(el) el.classList.toggle('active',x===m);
   });
-  // mode subpages
   const mpMap={pioneer:'mpPioneer',trend:'mpTrend'};
   Object.values(mpMap).forEach(id=>{const el=document.getElementById(id);if(el)el.classList.remove('active');});
   const active=document.getElementById(mpMap[m]);
   if(active)active.classList.add('active');
   if(m==='pioneer') refreshLadder();
   if(m==='trend')   refreshTrendLadder();
-  aiLog('🔄 Mode: '+(m==='pioneer'?'Pioneer':m==='scalper'?'Scalper':m==='trend'?'Trend':'Manual Feed'),'info');
+  aiLog('🔄 Mode: '+(m==='pioneer'?'Pioneer':'Trend'),'info');
 }
 
 // ══ PIONEER LADDER ══
 function refreshLadder(){
-  // Recovery label: check current best market to show OVER2 or UNDER7
   let recLabel='OVER2/U7';
   try{const rm=findBestRecoveryMarket();if(rm)recLabel=rm.direction==='UNDER'?'UNDER 7':'OVER 2';}catch(e){}
   const labels=['DIFFERS',recLabel,recLabel,recLabel,recLabel];
@@ -1340,31 +1294,23 @@ document.addEventListener('DOMContentLoaded',()=>{
       if(AI.mode==='pioneer') refreshLadder();
     });
   });
-
 });
-
-// ══ MANUAL UI HELPERS ══
 
 // ══ LOGIN ══
-document.getElementById('toggleVis').addEventListener('click',()=>{
-  const i=document.getElementById('tokenInput');i.type=i.type==='password'?'text':'password';
-});
-// Auto-restore token if saved and within 24h
 (function(){
   try{
     const saved=sessionStorage.getItem('ds_token');
     const expiry=parseInt(sessionStorage.getItem('ds_expiry')||'0');
     if(saved&&Date.now()<expiry){
       document.getElementById('tokenInput').value=saved;
-      // Auto-login silently
       userToken=saved;
       verifyToken(saved);
     }
   }catch(e){}
 })();
-document.getElementById('tokenInput').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
-function showLE(m){const e=document.getElementById('loginErr');e.textContent='⚠ '+m;e.style.display='block';}
-function hideLE(){document.getElementById('loginErr').style.display='none';}
+
+function showLE(m){const e=document.getElementById('LE');e.textContent='⚠ '+m;e.style.display='block';}
+function hideLE(){document.getElementById('LE').style.display='none';}
 function doLogin(){
   const t=document.getElementById('tokenInput').value.trim();
   if(!t){showLE('Please enter your API token');return;}
@@ -1412,9 +1358,8 @@ function loginFail(m){
   document.getElementById('loginBtn').textContent='CONNECT TO DERIV';
 }
 function launchDash(auth){
-  // Save token with 24h expiry (sessionStorage auto-clears on browser close)
   if(userToken){
-    const expiry=Date.now()+(24*60*60*1000); // 24 hours
+    const expiry=Date.now()+(24*60*60*1000);
     try{sessionStorage.setItem('ds_token',userToken);sessionStorage.setItem('ds_expiry',String(expiry));}catch(e){}
   }
   document.getElementById('pgLogin').style.display='none';
@@ -1475,10 +1420,10 @@ function startConn(){
       if(m.msg_type==='buy')onBuy(m);
       if(m.msg_type==='proposal')onProposal(m);
       if(m.msg_type==='proposal_open_contract'){
-      const _p=m.proposal_open_contract;
-      onContract(_p);
-      return;
-    }
+        const _p=m.proposal_open_contract;
+        onContract(_p);
+        return;
+      }
     }catch(x){}
   };
   ws.onclose=()=>{updConn(false);sched();};
@@ -1504,7 +1449,6 @@ function onTick(tk){
   if(s.digits.length>100){const r=s.digits.shift();s.freq[r]=Math.max(0,s.freq[r]-1);}
   s.freq[d]++;s.ticks++;s.conn=true;
   total++;
-  // Only update Analysis page DOM when it's actually visible
   const onAnalysisPage=document.getElementById('pgAnalysis').classList.contains('active');
   if(onAnalysisPage){updateRow(tk.symbol);updateDC(tk.symbol);}
 
@@ -1519,16 +1463,13 @@ function onTick(tk){
   }
   if(AI.running&&AI.mode==='pioneer') aiTick(tk.symbol);
   if(TR.running&&AI.mode==='trend'&&!AI.inTrade&&!AI.pendingResult&&Date.now()-lastTrendTradeTime>400) trendTick();
-  // Trend display: throttle to every 3 ticks — plenty fast enough
   if(AI.mode==='trend'&&total%3===0) updateTrendDisplay(tk.symbol);
 }
 
-// ══ ANALYSIS (exact v3) ══
-// Per-symbol ana cache — key: sym, value: {tick, result}
+// ══ ANALYSIS ══
 const _anaCache={};
 function ana(sym){
   const s=ST[sym];
-  // Return cached result if same tick count (no new data)
   if(_anaCache[sym]&&_anaCache[sym].tick===s.ticks) return _anaCache[sym].result;
   const pr=s.prices,fr=s.freq,n=s.digits.length;
   let isCon=false,vl=0,ms='LOADING';
@@ -1554,7 +1495,6 @@ function ana(sym){
   const o2=[3,4,5,6,7,8,9].reduce((a,d)=>a+(fr[d]||0),0)/tot*100,u7=100-o2;
   const mxF=Math.max(...fr),mnF=Math.min(...fr.filter(f=>f>0))||0;
   const hotD=fr.indexOf(mxF),coldD=fr.indexOf(mnF);
-  // confidence score — exact v3
   let score=0;
   if(isCon) score+=30;
   if(n>=30) score+=10;
@@ -1583,6 +1523,8 @@ function ana(sym){
 }
 
 // ══ AI LOG ══
+// FIX #6: Removed duplicate write — aiLog now routes to mode-specific log only,
+// with mirroring to pioneer log when source is not pioneer. No double-write.
 function aiLogTo(id,msg,cls){
   const el=document.getElementById(id);if(!el)return;
   const now=new Date().toUTCString().slice(17,25);
@@ -1593,19 +1535,13 @@ function aiLogTo(id,msg,cls){
   while(el.children.length>80)el.removeChild(el.children[1]);
 }
 function aiLog(msg,cls){
-  // Route to active mode log + always to pioneer log as master
-  const modeLogMap={pioneer:'aiLog',scalper:'aiLogSC',trend:'aiLogTR',manual:'aiLogMAN'};
+  const modeLogMap={pioneer:'aiLog',trend:'aiLogTR'};
   const targetId=modeLogMap[AI.mode]||'aiLog';
   aiLogTo(targetId,msg,cls);
-  if(targetId!=='aiLog') aiLogTo('aiLog',msg,cls); // mirror to pioneer log
-  const el=document.getElementById('aiLog');
-  const now=new Date().toUTCString().slice(17,25);
-  const div=document.createElement('div');
-  div.className='ai-log-line '+(cls||'info');
-  div.innerHTML='<span class="ts">'+now+'</span>'+msg;
-  el.appendChild(div);el.scrollTop=el.scrollHeight;
-  while(el.children.length>80)el.removeChild(el.children[1]);
+  // Mirror non-pioneer mode logs to the master pioneer log
+  if(targetId!=='aiLog') aiLogTo('aiLog',msg,cls);
 }
+
 function setAIState(state){
   AI.state=state;
   const b=document.getElementById('aiStateBadge');
@@ -1616,7 +1552,6 @@ function setAIState(state){
 }
 
 // ══ MARKET FINDER ══
-// Find best recovery market — OVER2 or UNDER7, whichever is stronger, min 65%
 function findBestRecoveryMarket(){
   let best=null, bestPct=0;
   IDX.forEach(i=>{
@@ -1624,16 +1559,8 @@ function findBestRecoveryMarket(){
     if(!s||!s.conn||s.digits.length<20) return;
     try{
       const a=ana(i.s);
-      // Check OVER2 (digits 3-9)
-      if(a.o2>=65&&a.o2>bestPct){
-        bestPct=a.o2;
-        best={sym:i.s,a,direction:'OVER',barrier:2,pct:a.o2};
-      }
-      // Check UNDER7 (digits 0-6) — wins if pct is strictly higher
-      if(a.u7>=65&&a.u7>bestPct){
-        bestPct=a.u7;
-        best={sym:i.s,a,direction:'UNDER',barrier:7,pct:a.u7};
-      }
+      if(a.o2>=65&&a.o2>bestPct){bestPct=a.o2;best={sym:i.s,a,direction:'OVER',barrier:2,pct:a.o2};}
+      if(a.u7>=65&&a.u7>bestPct){bestPct=a.u7;best={sym:i.s,a,direction:'UNDER',barrier:7,pct:a.u7};}
     }catch(e){}
   });
   return best;
@@ -1656,13 +1583,11 @@ function findBestMarket(){
   return effBest>=minScore?best:null;
 }
 
-// ══ SCALPER MARKET FINDER ══
-
-// ══ SCALPER RECOVERY BARRIER ══
-
-// ══ EQUITY CURVE ══
+// ══ EQUITY CURVES ══
 function toggleTheme(){
-  document.documentElement.classList.toggle('day');
+  const isDay=document.documentElement.classList.toggle('day');
+  const btn=document.querySelector('.theme-btn');
+  if(btn) btn.textContent=isDay?'🌙':'☀';
 }
 
 function drawTrendEquity(){
@@ -1734,7 +1659,6 @@ function drawEquity(){
 // ══ PIONEER TICK ══
 function aiTick(sym){
   if(!AI.running||AI.inTrade||AI.pendingResult)return;
-  // Cooldown gate — return immediately, zero extra work
   if(Date.now()-lastTradeTime<1800)return;
   if(AI.martStep>=5||AI.consecLoss>=5){if(AI.state!=='stopped'){setAIState('stopped');aiLog('🛑 CIRCUIT BREAKER.','danger');stopAI();}return;}
   const tp=parseFloat(document.getElementById('cfgTP').value)||30;
@@ -1746,10 +1670,8 @@ function aiTick(sym){
     aiLog('⏱ SESSION LIMIT '+_tl+'min — locking in '+(AI.sessPnl>=0?'+':'')+AI.sessPnl.toFixed(2)+' — Stopping.','warn');
     stopAI();return;
   }
-  // Tiered TP — only check when not already hit
   if(!AI.tp2Hit||!AI.tp1Hit){
     const tpLevels=calcTpLevels();
-    // Check TP1 first (lower threshold), then TP2
     if(!AI.tp1Hit&&AI.sessPnl>=tpLevels.t1){
       AI.tp1Hit=true;
       const origStake=parseFloat(document.getElementById('cfgStake').value)||5;
@@ -1770,10 +1692,8 @@ function aiTick(sym){
   let tradeSym,a,ix,stake,contractCode,barrierDigit,typeLabel;
 
   if(AI.martStep===0){
-    // STEP 1 — DIFFERS on best scoring market, confidence-scaled stake
     const market=findBestMarket();
     if(!market) return;
-    // Post-recovery rest check
     if(AI.recoveryRestSym&&AI.recoveryRestUntil>Date.now()&&market.sym===AI.recoveryRestSym){
       setAIState('waiting'); return;
     }
@@ -1786,14 +1706,11 @@ function aiTick(sym){
     contractCode='DIGITDIFF'; barrierDigit=a.hotD; typeLabel='DIFFER';
     const conf=Math.min(1.5,1.0+((a.score-45)/40)*0.5);
     const hotPct=Math.round(a.fr[barrierDigit]/a.tot*100);
-    // hotRecent gate — skip if digit cooling (but don't block, just wait one tick)
     if(a.hotRecent===false){setAIState('waiting');return;}
     aiLog('🎯 S1 | '+ix.n+' | DIFFERS d.'+barrierDigit
       +' ('+hotPct+'%) | $'+stake.toFixed(2)
       +' Score:'+a.score+' Conf:'+conf.toFixed(2)+'x','info');
-
   } else {
-    // STEPS 2-5 — OVER2/UNDER7 with 2-tick confirmation
     const recovery=findBestRecoveryMarket();
     if(!recovery){
       setAIState('waiting');
@@ -1801,7 +1718,6 @@ function aiTick(sym){
       aiLog('⏳ S'+(AI.martStep+1)+' — waiting for OVER2 or UNDER7 >=65%…','warn');
       return;
     }
-    // Confirm on direction only — best market can shift tick-to-tick
     const _prev=AI.prevRecovery;
     const _confirmed=_prev&&_prev.direction===recovery.direction;
     AI.prevRecovery={sym:recovery.sym,direction:recovery.direction,pct:recovery.pct};
@@ -1829,8 +1745,6 @@ function aiTick(sym){
   placeTrade(tradeSym,contractCode,stake,barrierDigit,typeLabel,'pioneer');
 }
 
-// ══ SCALPER TICK ══
-
 // ══ TREND TICK ══
 function trendTick(){
   if(!TR.running||AI.inTrade||AI.pendingResult)return;
@@ -1840,26 +1754,21 @@ function trendTick(){
   if(TR.sessPnl<=-Math.abs(sl)){aiLog('🛑 SL -$'+Math.abs(TR.sessPnl).toFixed(2)+' — Trend stopped.','danger');trendStop();return;}
   setAIState('scanning');
 
-  // In a recovery step — stay on same direction, same market if possible
   let sym=null, direction=null, t=null;
 
   if(TR.step===0){
-    // Fresh entry
     if(TR.forcedIndex&&TR.forcedIndex!=='AUTO'){
-      // Manual index — use it, check signal if AUTO dir
       sym=TR.forcedIndex;
       t=trendAna(sym);
       if(!t) return;
       if(TR.forcedDir&&TR.forcedDir!=='AUTO'){
         direction=TR.forcedDir;
       } else {
-        if(!t.signal) return; // wait for signal on this index
+        if(!t.signal) return;
         direction=t.signal;
       }
     } else {
-      // AUTO index — scan for best signal
       if(TR.forcedDir&&TR.forcedDir!=='AUTO'){
-        // Forced direction: find best market matching that direction
         let best=null,bestScore=0;
         IDX.forEach(i=>{
           const s=ST[i.s];if(!s||!s.conn||s.prices.length<15)return;
@@ -1875,7 +1784,6 @@ function trendTick(){
     }
     TR.lastDirection=direction;
   } else {
-    // Recovery — keep locked direction
     direction=TR.lastDirection;
     if(TR.forcedIndex&&TR.forcedIndex!=='AUTO'){
       sym=TR.forcedIndex;
@@ -1900,7 +1808,6 @@ function trendTick(){
   const barrierStr=isCAll?barr.call:barr.put;
   const typeLabel=direction;
 
-  // update ladder type labels
   document.getElementById('tladt'+TR.step).textContent=direction;
 
   aiLog((TR.step===0?'📈':'🔄')+' TR S'+(TR.step+1)+' | '+ix.n+' | '+direction
@@ -1908,10 +1815,9 @@ function trendTick(){
     +(t.score?(' EMA:'+t.emaSig+' RSI:'+t.rsi.toFixed(0)+' Score:'+t.score):''),'info');
 
   lastTradeTime=Date.now();lastTrendTradeTime=Date.now();
-  AI.inTrade=true; AI.pendingResult=true; // block further ticks while proposal pending
+  AI.inTrade=true; AI.pendingResult=true;
   requestTrendProposal(sym, contractCode, stake, typeLabel, TR.ticks, isCAll);
 }
-
 
 // ══ TREND START / STOP ══
 function trendStart(){
@@ -1931,22 +1837,25 @@ function trendStart(){
   refreshTrendLadder();updateTrendLadderUI();
   document.getElementById('startBtn').disabled=true;
   document.getElementById('stopBtn').disabled=false;
-  ['trendStake','trendMult','trendTicks','trendPayout','trendRsiThresh','trendIndex','trendDir','modePioneer','modeTrend']
+  ['trendStake','trendMult','trendTicks','trendPayout','trendRsiThresh','trendIndex','trendDir']
     .forEach(id=>{const el=document.getElementById(id);if(el)el.disabled=true;});
   setAIState('scanning');
   document.getElementById('trendRunning').textContent='▶ RUNNING';
   document.getElementById('trendRunning').style.color='var(--green)';
   const maxExp=[0,1,2,3,4].reduce((s,i)=>s+calcTrendStake(i),0);
   aiLog('📈 TREND STARTED — Base:$'+TR.baseStake+' Ticks:'+TR.ticks+' TargetPayout:'+TR.targetPayout+'% TP:$'+tp+' SL:$'+sl,'success');
-  aiLog('🔍 Waiting for EMA(5/20) + RSI(14) + Momentum to ALL agree on direction','info');
+  aiLog('🔍 Waiting for EMA(3/10) + RSI(7) + Momentum to agree on direction','info');
   aiLog('⚠ Max exposure: $'+maxExp.toFixed(2),'warn');
 }
+
+// FIX #2: trendStop — separated the broken comment+code line so startBtn is properly re-enabled
 function trendStop(){
   if(!TR.running)return;
-    TR.running=false;
-  _trendPending=null; // cancel any pending proposal document.getElementById('startBtn').disabled=false;
+  TR.running=false;
+  _trendPending=null;
+  document.getElementById('startBtn').disabled=false;
   document.getElementById('stopBtn').disabled=true;
-  ['trendStake','trendMult','trendTicks','trendPayout','trendRsiThresh','trendIndex','trendDir','modePioneer','modeTrend']
+  ['trendStake','trendMult','trendTicks','trendPayout','trendRsiThresh','trendIndex','trendDir']
     .forEach(id=>{const el=document.getElementById(id);if(el)el.disabled=false;});
   if(!AI.running)setAIState('idle');
   document.getElementById('trendRunning').textContent='⏸ IDLE';
@@ -1954,13 +1863,10 @@ function trendStop(){
   aiLog('⏹ Trend stopped.','warn');
 }
 
-// ══ SCALPER START / STOP ══
-
 // ══ PLACE TRADE ══
 function placeTrade(sym,code,stake,barrier,typeLabel,source){
   if(!userToken||isGuest){aiLog('⚠ Token required.','danger');setAIState('idle');return;}
   if(!ws||ws.readyState!==1){aiLog('⚠ WS not connected — skipping trade.','warn');return;}
-  // Lag guard: check tick recency — if no tick in last 5s, WS is stale
   const s=ST[sym];
   if(s&&s.tickTimes&&s.tickTimes.length>0){
     const lastTick=s.tickTimes[s.tickTimes.length-1];
@@ -1973,7 +1879,7 @@ function placeTrade(sym,code,stake,barrier,typeLabel,source){
   setAIState('trading');
   const ix=IDX.find(i=>i.s===sym);
   const _ct=document.getElementById('curTrade');if(_ct){_ct.style.display='block';_ct.classList.add('active');}
-  document.getElementById('ctIndex').textContent=(ix?ix.n:sym)+(source==='manual'?' ✏️':source==='trend'?' 📈':source==='scalper'?' ⚡':' 🤖');
+  document.getElementById('ctIndex').textContent=(ix?ix.n:sym)+(source==='trend'?' 📈':' 🤖');
   document.getElementById('ctContract').textContent=typeLabel+(typeof barrier==='number'&&barrier>0?' d.'+barrier:'');
   document.getElementById('ctStake').textContent='$'+stake.toFixed(2);
   document.getElementById('ctDigit').textContent=
@@ -1986,32 +1892,26 @@ function placeTrade(sym,code,stake,barrier,typeLabel,source){
   document.getElementById('ctPayout').textContent='—';
   document.getElementById('ctStatus').textContent='SENDING…';
   document.getElementById('ctStatus').style.color='var(--yellow)';
-  // Build order — CALL/PUT use string barrier, digit contracts use numeric
   const isTrend=(source==='trend');
   const isDigit=['DIGITDIFF','DIGITOVER','DIGITUNDER','DIGITEVEN','DIGITODD'].includes(code);
   const params={amount:stake,basis:'stake',contract_type:code,currency:'USD',
     duration:isTrend?TR.ticks:1,duration_unit:'t',symbol:sym};
   if(isTrend){
-    // CALL/PUT: barrier must be signed string e.g. '-0.001'
     params.barrier=String(barrier);
   } else if(isDigit&&code!=='DIGITEVEN'&&code!=='DIGITODD'){
-    // DIGITDIFF/OVER/UNDER: barrier is integer digit value
     params.barrier=parseInt(barrier);
   }
-  // DIGITEVEN/DIGITODD: no barrier field needed
   const order={buy:1,price:stake,parameters:params};
   AI.pendingResult=true;
   ws.send(JSON.stringify(order));
   AI.tradeTimer=setTimeout(()=>{
     if(AI.pendingResult&&AI.activeCid){
-      // Step 1: try to resubscribe and get the real result from Deriv
       aiLog('⚠ No result in 15s — resubscribing to contract #'+AI.activeCid+'…','warn');
       document.getElementById('ctStatus').textContent='RECHECK…';
       document.getElementById('ctStatus').style.color='var(--yellow)';
       if(ws&&ws.readyState===1){
         ws.send(JSON.stringify({proposal_open_contract:1,contract_id:AI.activeCid,subscribe:1}));
       }
-      // Step 2: if still no result after 30 more seconds, record as loss
       AI.lateTimer=setTimeout(()=>{
         if(AI.pendingResult&&AI.activeCid){
           const lostStake=parseFloat(document.getElementById('ctStake').textContent.replace('$',''))||0;
@@ -2019,16 +1919,14 @@ function placeTrade(sym,code,stake,barrier,typeLabel,source){
           AI.pendingResult=false;AI.inTrade=false;
           AI.losses++;AI.consecLoss++;
           const lostAmt=-lostStake;
-          // Route loss to correct mode P&L
           const src=AI.activeSource||'pioneer';
           AI.totalPnl=Math.round((AI.totalPnl+lostAmt)*100)/100;
           AI.sessPnl=Math.round((AI.sessPnl+lostAmt)*100)/100;
           if(src==='trend'){TR.sessPnl=Math.round((TR.sessPnl+lostAmt)*100)/100;TR.losses++;}
           AI.equityPoints.push(AI.sessPnl);
-          const stepLabel=src==='pioneer'?'S'+(AI.martStep+1)+' T/O':src==='scalper'?'SC T/O':src==='trend'?'TR T/O':'MAN T/O';
+          const stepLabel=src==='pioneer'?'S'+(AI.martStep+1)+' T/O':src==='trend'?'TR T/O':'MAN T/O';
           addTradeLog(AI.activeSym,AI.activeType,'timeout',lostStake,lostAmt,false,stepLabel);
           AI.activeCid=null;
-          // Advance martingale step so next trade escalates correctly
           if(src==='pioneer'&&AI.martStep<4) AI.martStep++;
           else if(src==='trend'&&TR.step<4) TR.step++;
           updateAIStats();drawEquity();
@@ -2054,7 +1952,7 @@ function onBuy(msg){
   AI.activeCid=msg.buy.contract_id;
   document.getElementById('ctId').textContent='#'+AI.activeCid;
   const grossPay=parseFloat(msg.buy.payout||0);
-  const buyPrice=parseFloat(msg.buy.buy_price||stake||0);
+  const buyPrice=parseFloat(msg.buy.buy_price||0);
   const estNet=grossPay-buyPrice;
   document.getElementById('ctPayout').textContent=(estNet>=0?'+':'')+estNet.toFixed(2);
   document.getElementById('ctStatus').textContent='ACTIVE ⚡';
@@ -2066,13 +1964,11 @@ function onBuy(msg){
 // ══ CONTRACT RESULT ══
 function onContract(poc){
   if(!poc)return;
-  // Accept late results if contract matches (even after timeout reset)
-  // Only process result for the contract we are tracking
   if(poc.contract_id!==AI.activeCid) return;
   if(poc.status==='open')return;
   clearTimeout(AI.tradeTimer);
   clearTimeout(AI.lateTimer);
-  AI.activeCid=null; // clear immediately — prevents duplicate processing
+  AI.activeCid=null;
   const won=poc.is_sold&&poc.profit>0;
   const profit=parseFloat(poc.profit||0);
   const stake=parseFloat(poc.buy_price||0);
@@ -2090,7 +1986,6 @@ function onContract(poc){
     if(won){
       AI.wins++;TR.wins++;AI.consecLoss=0;TR.consecLoss=0;
       TR.sessPnl=Math.round((TR.sessPnl+profit)*100)/100;
-      if(!TR.equityPoints)TR.equityPoints=[0];
       TR.equityPoints.push(TR.sessPnl);if(TR.equityPoints.length>300)TR.equityPoints.shift();
       if(stepEl){stepEl.classList.remove('active');stepEl.classList.add('won');}
       aiLog('✅ TREND WIN +$'+profit.toFixed(2)+' S'+(TR.step+1)+' '+TR.lastDirection+' | Session: $'+TR.sessPnl.toFixed(2),'success');
@@ -2099,10 +1994,8 @@ function onContract(poc){
     } else {
       AI.losses++;TR.losses++;AI.consecLoss++;TR.consecLoss++;
       TR.sessPnl=Math.round((TR.sessPnl+profit)*100)/100;
-      if(!TR.equityPoints)TR.equityPoints=[0];
       TR.equityPoints.push(TR.sessPnl);if(TR.equityPoints.length>300)TR.equityPoints.shift();
       if(stepEl){stepEl.classList.remove('active');stepEl.classList.add('lost');}
-
       if(TR.step<4){
         TR.step++;
         aiLog('❌ TREND LOSS -$'+Math.abs(profit).toFixed(2)+' | S'+(TR.step+1)+' '+TR.lastDirection+' $'+calcTrendStake(TR.step).toFixed(2),'danger');
@@ -2110,8 +2003,8 @@ function onContract(poc){
         aiLog('❌ TREND LOSS S5 — circuit breaker.','danger');
       }
     }
-    addTradeLog(AI.activeSym,AI.activeType,AI.activeDigit,stake,profit,won,'TR'+(TR.step+(won?0:0)));
-    updateAIStats();drawEquity();
+    addTradeLog(AI.activeSym,AI.activeType,AI.activeDigit,stake,profit,won,'TR'+(TR.step));
+    updateAIStats();drawEquity();drawTrendEquity();
     setTimeout(()=>{
       const _ct2=document.getElementById('curTrade');if(_ct2){_ct2.classList.remove('active');_ct2.style.display='none';}
       if(TR.running){
@@ -2119,8 +2012,6 @@ function onContract(poc){
         else{setAIState('scanning');updateTrendLadderUI();}
       }
     },600);
-
-
   } else {
     // pioneer
     const stepEl=document.getElementById('lad'+AI.martStep);
@@ -2164,15 +2055,14 @@ function addTradeLog(sym,type,digit,stake,profit,won,label){
   const pnlCls=profit>0?'pnl-pos':profit<0?'pnl-neg':'pnl-zero';
   entry.innerHTML=
     '<div>'+now+'</div><div>'+(ix?ix.n:sym)+'</div><div>'+label+'</div>'+
-    '<div style="color:var(--muted);">'+entryPrice+'</div>'+
+    '<div style="color:var(--sub);">'+entryPrice+'</div>'+
     '<div>$'+stake.toFixed(2)+'</div>'+
     '<div style="color:'+(won?'var(--green)':'var(--red)')+';">'+(won?'WIN':'LOSS')+'</div>'+
     '<div class="'+pnlCls+'">'+(profit>=0?'+':'')+'$'+profit.toFixed(2)+'</div>';
-  const logMap={pioneer:'tradeLog',scalper:'tradeLogSC',trend:'tradeLogTR',manual:'tradeLogMAN'};
+  const logMap={pioneer:'tradeLog',trend:'tradeLogTR'};
   const logId=logMap[AI.activeSource||'pioneer']||'tradeLog';
   const log=document.getElementById(logId);
   if(log){log.appendChild(entry);log.scrollTop=log.scrollHeight;}
-  // mirror to pioneer log too if not pioneer
   if(logId!=='tradeLog'){const ml=document.getElementById('tradeLog');if(ml){const e2=entry.cloneNode(true);ml.appendChild(e2);ml.scrollTop=ml.scrollHeight;}}
 }
 
@@ -2191,23 +2081,27 @@ function startAI(){
   refreshLadder();AI.running=true;
   document.getElementById('startBtn').disabled=true;
   document.getElementById('stopBtn').disabled=false;
-  ['cfgStake','cfgMult','cfgTP','cfgSL','cfgIndex','cfgMinScore','cfgTimeLimit','modePioneer','modeTrend']
+  ['cfgStake','cfgMult','cfgTP','cfgSL','cfgIndex','cfgMinScore','cfgTimeLimit']
     .forEach(id=>{const el=document.getElementById(id);if(el)el.disabled=true;});
   updateLadderUI();setAIState('scanning');
   aiLog('🚀 PIONEER STARTED — Base:$'+AI.baseStake+' Mult:×'+AI.mult+' TP:$'+AI.tp+' SL:$'+AI.sl,'success');
   aiLog('⚠ Max exposure: $'+[0,1,2,3,4].reduce((s,i)=>s+calcStake(i),0).toFixed(2),'warn');
 }
+
+// FIX #5: stopAI — removed references to non-existent mode IDs (modeManual, modeScalper)
 function stopAI(){
   if(!AI.running)return;
   AI.running=false;AI.inTrade=false;AI.pendingResult=false;
   clearTimeout(AI.tradeTimer);clearTimeout(AI.lateTimer);
   document.getElementById('startBtn').disabled=false;
   document.getElementById('stopBtn').disabled=true;
-  ['cfgStake','cfgMult','cfgTP','cfgSL','cfgIndex','modePioneer','modeManual','modeScalper','modeTrend']
+  ['cfgStake','cfgMult','cfgTP','cfgSL','cfgIndex','cfgMinScore','cfgTimeLimit']
     .forEach(id=>{const el=document.getElementById(id);if(el)el.disabled=false;});
   if(AI.state!=='stopped')setAIState('idle');
   aiLog('⏹ Pioneer stopped.','warn');
 }
+
+// FIX #3: resetAI — removed references to non-existent Scalper/Manual mode elements
 function resetAI(){
   stopAI();trendStop();
   AI.wins=0;AI.losses=0;AI.totalPnl=0;AI.sessPnl=0;
@@ -2215,15 +2109,17 @@ function resetAI(){
   AI.tp1Hit=false;AI.tp2Hit=false;
   AI.recoveryRestUntil=0;AI.recoveryRestSym=null;
   TR.step=0;TR.consecLoss=0;TR.lastDirection=null;TR.sessPnl=0;TR.wins=0;TR.losses=0;
-  setAIState('idle');updateAIStats();drawEquity();
-  const eqS=document.getElementById('eqStats');if(eqS){eqS.textContent='Now +0.00  Peak +0.00  Low +0.00';eqS.style.color='var(--muted)';}
+  TR.equityPoints=[0];
+  setAIState('idle');updateAIStats();drawEquity();drawTrendEquity();
+  const eqS=document.getElementById('eqStats');if(eqS){eqS.textContent='Now +0.00  Peak +0.00  Low +0.00';eqS.style.color='var(--sub)';}
+  const eqSTR=document.getElementById('eqStatsTR');if(eqSTR){eqSTR.textContent='Now +0.00  Peak +0.00  Low +0.00';eqSTR.style.color='var(--sub)';}
   document.getElementById('curTrade').classList.remove('active');
-  document.getElementById('manNextStake').textContent='$'+(MAN.origStake||5).toFixed(2);
-  document.getElementById('manLossCount').textContent='Loss streak: 0';
+  document.getElementById('curTrade').style.display='none';
   document.getElementById('tradeLog').innerHTML=
-    '<div class="log-entry log-header"><div>TIME</div><div>INDEX</div><div>TYPE</div><div>STAKE</div><div>RESULT</div><div>P&L</div></div>';
+    '<div class="log-entry log-header"><div>TIME</div><div>INDEX</div><div>TYPE</div><div>ENTRY</div><div>STAKE</div><div>RESULT</div><div>P&L</div></div>';
+  document.getElementById('tradeLogTR').innerHTML=
+    '<div class="log-entry log-header"><div>TIME</div><div>INDEX</div><div>TYPE</div><div>ENTRY</div><div>STAKE</div><div>RESULT</div><div>P&L</div></div>';
   for(let i=0;i<5;i++){const e=document.getElementById('lad'+i);if(e)e.classList.remove('won','lost','active');}
-  for(let i=0;i<4;i++){const e=document.getElementById('slad'+i);if(e)e.classList.remove('won','lost','active');}
   for(let i=0;i<5;i++){const e=document.getElementById('tlad'+i);if(e)e.classList.remove('won','lost','active');}
   refreshLadder();refreshTrendLadder();
   aiLog('↺ Stats reset. Ready.','info');
@@ -2231,7 +2127,6 @@ function resetAI(){
 
 // ══ STATS ══
 function updateAIStats(){
-  // Use per-mode stats for the header display
   let w,l,sessPnl;
   if(TR.running){w=TR.wins;l=TR.losses;sessPnl=TR.sessPnl;}
   else{w=AI.wins;l=AI.losses;sessPnl=AI.sessPnl;}
@@ -2244,13 +2139,11 @@ function updateAIStats(){
   pe.style.color=AI.totalPnl>=0?'var(--green)':'var(--red)';
   document.getElementById('astCL').textContent=AI.consecLoss;
   if(TR.running){document.getElementById('astMS').textContent='[📈] '+(TR.lastDirection||'SCAN')+' S'+(TR.step+1);document.getElementById('astNS').textContent='$'+calcTrendStake(TR.step).toFixed(2);}
-
   else{document.getElementById('astMS').textContent=(AI.martStep===0?'DIFFERS':'OVER2')+' S'+(AI.martStep+1);document.getElementById('astNS').textContent='$'+calcStake(AI.martStep).toFixed(2);}
   const sp=document.getElementById('sessPnl');
   sp.textContent=(sessPnl>=0?'+':'')+sessPnl.toFixed(2);
   sp.style.color=sessPnl>=0?'var(--green)':'var(--red)';
   document.getElementById('sessPnlSub').textContent=tot+' trades';
-  // account page mirror
   const apEl=document.getElementById('acctPnl');if(apEl){apEl.textContent=(AI.totalPnl>=0?'+':'')+AI.totalPnl.toFixed(2);apEl.style.color=AI.totalPnl>=0?'var(--green)':'var(--red)';}
   const awEl=document.getElementById('acctWR');if(awEl)awEl.textContent=tot>0?Math.round(w/tot*100)+'%':'—';
   const awwEl=document.getElementById('acctW');if(awwEl)awwEl.textContent=w;
@@ -2262,15 +2155,12 @@ function updateAIStats(){
     const ix=IDX.find(i=>i.s===bestSym);
     if(spd<1200){el.textContent=(ix?ix.n:bestSym)+' '+spd+'ms ⚡';el.style.color='var(--green)';}
     else if(spd<3500){el.textContent=(ix?ix.n:bestSym)+' '+spd+'ms ✓';el.style.color='var(--accent)';}
-    else{el.textContent=(ix?ix.n:bestSym)+' '+spd+'ms';el.style.color='var(--muted)';}
+    else{el.textContent=(ix?ix.n:bestSym)+' '+spd+'ms';el.style.color='var(--sub)';}
   }
 }
 
 // ══ RENDER ══
 function bdg(r){return '<span class="b '+r.c+'" title="'+r.t+'">'+r.l+'</span>';}
-function ldHTML(sym){const d=ST[sym].digits.slice(-10);return '<div class="lds">'+d.map((v,i)=>{const c=i===d.length-1?'n':(v%2===0?'e':'o');return '<div class="ld2 '+c+'">'+v+'</div>';}).join('')+'</div>';}
-function fgHTML(sym){const s=ST[sym],tot=s.freq.reduce((a,b)=>a+b,0)||1;return '<div class="fg">'+s.freq.map((f,d)=>{const p=f/tot*100,c=p>13?'hot':p<7&&f>0?'cold':p>11?'warm':'';return '<div class="fc '+c+'" title="d'+d+': '+f+' ('+p.toFixed(1)+'%)">'+d+'<br><span style="font-size:6px">'+Math.round(p)+'%</span></div>';}).join('')+'</div>';}
-function vBar(lv){const col=lv<35?'var(--green)':lv<65?'var(--yellow)':'var(--red)';return '<div class="vm"><div class="vf" style="width:'+lv+'%;background:'+col+'"></div></div><div style="font-size:8px;color:var(--muted);margin-top:1px;">'+lv+'%</div>';}
 function initTable(){document.getElementById('TB').innerHTML=IDX.map(i=>'<tr id="R-'+i.s+'"></tr>').join('');}
 
 function updateRow(sym){
@@ -2302,7 +2192,6 @@ function updateRow(sym){
       '<td><span class="rec-badge '+a.o2r.c+'">'+a.o2r.l+'</span></td>';
     return;
   }
-  // Incremental update — patch only changed cells
   const c1=cells[1];if(c1){const pc=c1.querySelector('.pcell');if(pc){pc.className='pcell '+dir;pc.textContent=p?p.toFixed(2):'—';}}
   const c3=cells[3];if(c3){const sc=c3.querySelector('.score-badge');if(sc){sc.style.color=a.score>=65?'var(--green)':a.score>=45?'var(--yellow)':'var(--red)';sc.textContent=a.score;}}
   const c2=cells[2];if(c2){
@@ -2314,7 +2203,6 @@ function updateRow(sym){
       if(ms.textContent!==newTxt){ms.className='ms-badge '+msCls;ms.textContent=newTxt;}
     }
   }
-  // Update per-market tick badge colour
   const c0=cells[0];if(c0){
     const tb=c0.querySelector('span[style*="tk"]');
     if(tb){
@@ -2338,7 +2226,6 @@ function updateSum(){
   document.getElementById('SE').textContent=exp;
   document.getElementById('SEV').textContent=avg?avg.toFixed(1)+'%':'—';
   document.getElementById('SB').textContent=con>0?'DIFF/OVER2':'WAIT';
-  // Populate signal pills
   let sb=0,bu=0,ne=0,wa=0,av=0;
   IDX.forEach(i=>{
     const s=ST[i.s];
@@ -2373,38 +2260,61 @@ function updateDC(sym){
   });
 }
 
-function initDC(){document.getElementById('DC').innerHTML=IDX.map(i=>'<div class="dcard"><div class="dtitle"><span>'+i.n+'</span><span style="font-size:8px;color:var(--muted);font-family:Space Mono,monospace" id="DCS-'+i.s+'">LOADING</span></div><div class="dbars">'+Array(10).fill(0).map((_,d)=>'<div class="dbw"><div class="dpct" id="DCP-'+i.s+'-'+d+'">0%</div><div class="dbar" id="DCB-'+i.s+'-'+d+'" style="height:2px;background:var(--accent)"></div><div class="ddig">'+d+'</div></div>').join('')+'</div></div>').join('');}
+function initDC(){document.getElementById('DC').innerHTML=IDX.map(i=>'<div class="dcard"><div class="dtitle"><span>'+i.n+'</span><span style="font-size:8px;color:var(--sub);font-family:monospace" id="DCS-'+i.s+'">LOADING</span></div><div class="dbars">'+Array(10).fill(0).map((_,d)=>'<div class="dbw"><div class="dpct" id="DCP-'+i.s+'-'+d+'">0%</div><div class="dbar" id="DCB-'+i.s+'-'+d+'" style="height:2px;background:var(--accent)"></div><div class="ddig">'+d+'</div></div>').join('')+'</div></div>').join('');}
 
+// ══ TREND DISPLAY — single canonical definition ══
+// FIX #4 (partial): This is the ONLY updateTrendDisplay — duplicate removed.
+// Signal card IDs corrected: scEma, scRsi, scMom, scVel match HTML IDs exactly.
 function updateTrendDisplay(sym){
   if(AI.mode!=='trend') return;
   if(!sym||!ST[sym]||ST[sym].prices.length<25){
     ['trendEma','trendRsi','trendMom','trendVel'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent='—';});
-    const ts=document.getElementById('trendSig');if(ts)ts.textContent='WAIT';
+    const ts=document.getElementById('trendSig');if(ts){ts.textContent='WAIT';ts.className='trend-sig-value';}
     return;
   }
   try{
     const t=trendAna(sym);if(!t)return;
-    const _sc=(id,val,sig)=>{
-      const el=document.getElementById(id);
-      const card=document.getElementById('sc'+id.replace('trend',''));
-      if(el){el.textContent=val||'—';el.className='signal-val'+(sig==='UP'?' up':sig==='DOWN'?' dn':'');}
-      if(card){card.className='signal-card'+(sig==='UP'?' up':sig==='DOWN'?' dn':'');}
+    // Helper: update signal value element + its parent signal-card
+    const _sv=(valId, cardId, val, sig)=>{
+      const el=document.getElementById(valId);
+      const card=document.getElementById(cardId);
+      if(el){
+        el.textContent=val||'—';
+        el.className='signal-val'+(sig==='CALL'?' up':sig==='PUT'?' dn':'');
+      }
+      if(card){
+        card.className='signal-card'+(sig==='CALL'?' up':sig==='PUT'?' dn':'');
+      }
     };
-    _sc('trendEma',t.emaSig||'—',t.emaSig);
-    _sc('trendRsi',t.rsi?t.rsi.toFixed(0):'—',t.rsiSig);
-    _sc('trendMom',t.momSig||'—',t.momSig);
-    _sc('trendVel',t.velSig||'—',t.velSig);
+    _sv('trendEma','scEma', (t.emaSig||'—')+(t.crossed?' ⚡':''), t.emaSig);
+    _sv('trendRsi','scRsi', (t.rsiSig?t.rsiSig+' ':'')+t.rsi.toFixed(0), t.rsiSig);
+    _sv('trendMom','scMom', t.momSig||'—', t.momSig);
+    _sv('trendVel','scVel', t.velSig||'—', t.velSig);
+
+    // Composite signal
     const sig=document.getElementById('trendSig');
     const sigMain=document.getElementById('trendSigMain');
-    const sigVal=t.signal||'WAIT';
-    if(sig){sig.textContent=sigVal;sig.className='trend-sig-value'+(sigVal==='CALL'?' call':sigVal==='PUT'?' put':'');}
-    if(sigMain){sigMain.className='trend-sig-main'+(sigVal==='CALL'?' call':sigVal==='PUT'?' put':'');}
+    if(t.signal){
+      const votes=t.signal==='CALL'?t.callVotes:t.putVotes;
+      const txt=t.signal+(votes===3?' ★★★':' ★★')+(t.crossed?' ⚡':'');
+      if(sig){sig.textContent=txt;sig.className='trend-sig-value'+(t.signal==='CALL'?' call':' put');}
+      if(sigMain){sigMain.className='trend-sig-main'+(t.signal==='CALL'?' call':' put');}
+    } else {
+      const topV=Math.max(t.callVotes||0,t.putVotes||0);
+      if(sig){sig.textContent=topV>0?'WEAK('+topV+'/3)':'WAIT';sig.className='trend-sig-value';}
+      if(sigMain){sigMain.className='trend-sig-main';}
+    }
+    // Update barriers
+    const barr=calcBarrier(sym, parseFloat(document.getElementById('trendPayout').value)||30);
+    const bcEl=document.getElementById('trendBarrierCall');if(bcEl)bcEl.textContent=barr.call;
+    const bpEl=document.getElementById('trendBarrierPut');if(bpEl)bpEl.textContent=barr.put;
   }catch(e){}
 }
 
+// ══ INIT ══
 setInterval(()=>{document.getElementById('CLK').textContent=new Date().toUTCString().slice(17,25);},1000);
 setTimeout(calcTpLevels,500);
-updConn(false); // start in CONNECTING state visually
+updConn(false);
 setInterval(()=>{if(AI.equityPoints.length>1)drawEquity();if(TR.equityPoints&&TR.equityPoints.length>1)drawTrendEquity();},4000);
 updateAIStats();
 </script>
