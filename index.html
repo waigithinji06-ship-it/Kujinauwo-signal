@@ -54,6 +54,13 @@
 :root.day .topbar { background: #fff; border-bottom-color: var(–border); }
 :root.day .ai-header { background: var(–bg); }
 :root.day .bnav { background: #fff; }
+/* Day mode: login page background and card */
+:root.day #pgLogin { background: var(–bg) !important; }
+:root.day #pgLogin input { background: var(–surface) !important; color: var(–text) !important; border-color: var(–border) !important; }
+:root.day #pgLogin button#loginBtn { background: #dc2626 !important; }
+/* Ensure body background applies in day mode everywhere */
+:root.day body,
+:root.day #appShell { background: var(–bg); }
 
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 html{height:100%;}
@@ -565,8 +572,8 @@ position:sticky;top:0;z-index:1;
 
   <!-- Login button -->
   <button id="loginBtn" onclick="doLogin()"
-    style="width:100%;padding:13px;background:var(--accent);border:none;border-radius:10px;font-family:'Inter',sans-serif;font-size:13px;font-weight:600;color:#fff;cursor:pointer;margin-bottom:14px;transition:all .2s;letter-spacing:.2px;">
-    CONNECT TO DERIV
+    style="width:100%;padding:13px;background:#ef4444;border:none;border-radius:10px;font-family:'Inter',sans-serif;font-size:13px;font-weight:600;color:#fff;cursor:pointer;margin-bottom:14px;transition:all .2s;letter-spacing:.2px;box-shadow:0 4px 18px rgba(239,68,68,.35);">
+    🔴 CONNECT TO DERIV
   </button>
 
   <!-- Divider -->
@@ -1332,7 +1339,7 @@ function doLogout(){
   try{sessionStorage.removeItem('ds_token');sessionStorage.removeItem('ds_expiry');}catch(e){}
   document.getElementById('appShell').style.display='none';
   document.getElementById('pgLogin').style.display='flex';
-  const lb=document.getElementById('loginBtn');if(lb){lb.classList.remove('ld');lb.textContent='CONNECT TO DERIV';}hideLE();
+  const lb=document.getElementById('loginBtn');if(lb){lb.disabled=false;lb.classList.remove('ld');lb.textContent='🔴 CONNECT TO DERIV';lb.style.background='#ef4444';}hideLE();
 }
 function verifyToken(token){
   let vws;
@@ -1358,7 +1365,8 @@ function loginFail(m){
   const btn=document.getElementById('loginBtn');
   btn.disabled=false;
   btn.classList.remove('ld');
-  btn.textContent='CONNECT TO DERIV';
+  btn.textContent='🔴 CONNECT TO DERIV';
+  btn.style.background='#ef4444';
 }
 function launchDash(auth){
   if(userToken){
@@ -2094,24 +2102,44 @@ function onContract(poc){
 }
 
 // ══ TRADE LOG ══
+function _ensureLogHeader(logId){
+  const log=document.getElementById(logId);if(!log)return;
+  // Re-add header if missing (wiped by reset or first load)
+  if(!log.querySelector('.log-header')){
+    const h=document.createElement('div');
+    h.className='log-entry log-header';
+    h.innerHTML='<div>TIME</div><div>INDEX</div><div>TYPE</div><div>ENTRY</div><div>STAKE</div><div>RESULT</div><div>P&L</div>';
+    log.insertBefore(h,log.firstChild);
+  }
+}
 function addTradeLog(sym,type,digit,stake,profit,won,label){
   const ix=IDX.find(i=>i.s===sym);
   const now=new Date().toUTCString().slice(17,25);
-  const entryPrice=ST[sym]&&ST[sym].last?ST[sym].last.toFixed(2):'—';
+  const entryPrice=sym&&ST[sym]&&ST[sym].last?ST[sym].last.toFixed(2):'—';
   const entry=document.createElement('div');
   entry.className='log-entry '+(won?'win':profit===0?'pending':'loss');
   const pnlCls=profit>0?'pnl-pos':profit<0?'pnl-neg':'pnl-zero';
   entry.innerHTML=
-    '<div>'+now+'</div><div>'+(ix?ix.n:sym)+'</div><div>'+label+'</div>'+
+    '<div>'+now+'</div>'+
+    '<div>'+(ix?ix.n:(sym||'—'))+'</div>'+
+    '<div>'+label+'</div>'+
     '<div style="color:var(--sub);">'+entryPrice+'</div>'+
-    '<div>$'+stake.toFixed(2)+'</div>'+
-    '<div style="color:'+(won?'var(--green)':'var(--red)')+';">'+(won?'WIN':'LOSS')+'</div>'+
-    '<div class="'+pnlCls+'">'+(profit>=0?'+':'')+'$'+profit.toFixed(2)+'</div>';
+    '<div>$'+parseFloat(stake||0).toFixed(2)+'</div>'+
+    '<div style="color:'+(won?'var(--green)':'var(--red)')+';">'+(won?'✅ WIN':'❌ LOSS')+'</div>'+
+    '<div class="'+pnlCls+'">'+(profit>=0?'+':'')+'$'+parseFloat(profit||0).toFixed(2)+'</div>';
+  // Route to correct log
+  const src=AI.activeSource||'pioneer';
   const logMap={pioneer:'tradeLog',trend:'tradeLogTR'};
-  const logId=logMap[AI.activeSource||'pioneer']||'tradeLog';
+  const logId=logMap[src]||'tradeLog';
+  _ensureLogHeader(logId);
   const log=document.getElementById(logId);
   if(log){log.appendChild(entry);log.scrollTop=log.scrollHeight;}
-  if(logId!=='tradeLog'){const ml=document.getElementById('tradeLog');if(ml){const e2=entry.cloneNode(true);ml.appendChild(e2);ml.scrollTop=ml.scrollHeight;}}
+  // Mirror to pioneer master log if source is not pioneer
+  if(logId!=='tradeLog'){
+    _ensureLogHeader('tradeLog');
+    const ml=document.getElementById('tradeLog');
+    if(ml){const e2=entry.cloneNode(true);ml.appendChild(e2);ml.scrollTop=ml.scrollHeight;}
+  }
 }
 
 // ══ AI CONTROLS ══
@@ -2163,10 +2191,10 @@ function resetAI(){
   const eqSTR=document.getElementById('eqStatsTR');if(eqSTR){eqSTR.textContent='Now +0.00  Peak +0.00  Low +0.00';eqSTR.style.color='var(--sub)';}
   document.getElementById('curTrade').classList.remove('active');
   document.getElementById('curTrade').style.display='none';
-  document.getElementById('tradeLog').innerHTML=
-    '<div class="log-entry log-header"><div>TIME</div><div>INDEX</div><div>TYPE</div><div>ENTRY</div><div>STAKE</div><div>RESULT</div><div>P&L</div></div>';
-  document.getElementById('tradeLogTR').innerHTML=
-    '<div class="log-entry log-header"><div>TIME</div><div>INDEX</div><div>TYPE</div><div>ENTRY</div><div>STAKE</div><div>RESULT</div><div>P&L</div></div>';
+  document.getElementById('tradeLog').innerHTML='';
+  document.getElementById('tradeLogTR').innerHTML='';
+  _ensureLogHeader('tradeLog');
+  _ensureLogHeader('tradeLogTR');
   for(let i=0;i<5;i++){const e=document.getElementById('lad'+i);if(e)e.classList.remove('won','lost','active');}
   for(let i=0;i<5;i++){const e=document.getElementById('tlad'+i);if(e)e.classList.remove('won','lost','active');}
   refreshLadder();refreshTrendLadder();
@@ -2303,12 +2331,38 @@ function updateDC(sym){
     const p=f/tot*100,hp=f/mxF*100;
     const bar=document.getElementById('DCB-'+sym+'-'+d);
     const lbl=document.getElementById('DCP-'+sym+'-'+d);
-    if(bar){bar.style.height=Math.max(2,hp*0.42)+'px';bar.style.background=p>13?'var(--green)':p<7&&f>0?'var(--red)':'var(--accent)';}
-    if(lbl)lbl.textContent=Math.round(p)+'%';
+    if(bar){
+      // Minimum 4px height so bars are always visible; scale up to 40px max
+      bar.style.height=Math.max(4, Math.round(hp*0.40))+'px';
+      // Color: green=hot (>13%), red=cold (<7%), yellow=neutral
+      const isHot=p>13, isCold=p<7&&f>0;
+      bar.style.background=isHot?'#22c55e':isCold?'#ef4444':'#eab308';
+      bar.style.boxShadow=isHot?'0 0 6px rgba(34,197,94,.6)':isCold?'0 0 4px rgba(239,68,68,.4)':'none';
+      bar.style.borderRadius='3px 3px 0 0';
+    }
+    if(lbl){
+      lbl.textContent=Math.round(p)+'%';
+      lbl.style.color=p>13?'#22c55e':p<7&&f>0?'#ef4444':'#eab308';
+      lbl.style.fontWeight=p>13?'700':'400';
+    }
   });
 }
 
-function initDC(){document.getElementById('DC').innerHTML=IDX.map(i=>'<div class="dcard"><div class="dtitle"><span>'+i.n+'</span><span style="font-size:8px;color:var(--sub);font-family:monospace" id="DCS-'+i.s+'">LOADING</span></div><div class="dbars">'+Array(10).fill(0).map((_,d)=>'<div class="dbw"><div class="dpct" id="DCP-'+i.s+'-'+d+'">0%</div><div class="dbar" id="DCB-'+i.s+'-'+d+'" style="height:2px;background:var(--accent)"></div><div class="ddig">'+d+'</div></div>').join('')+'</div></div>').join('');}
+function initDC(){
+  document.getElementById('DC').innerHTML=IDX.map(i=>
+    '<div class="dcard">'+
+    '<div class="dtitle"><span>'+i.n+'</span><span style="font-size:8px;color:var(--sub);font-family:monospace" id="DCS-'+i.s+'">LOADING</span></div>'+
+    '<div class="dbars">'+
+    Array(10).fill(0).map((_,d)=>
+      '<div class="dbw">'+
+      '<div class="dpct" id="DCP-'+i.s+'-'+d+'" style="color:#eab308;">0%</div>'+
+      '<div class="dbar" id="DCB-'+i.s+'-'+d+'" style="height:4px;background:#eab308;border-radius:3px 3px 0 0;transition:height .4s,background .3s;"></div>'+
+      '<div class="ddig">'+d+'</div>'+
+      '</div>'
+    ).join('')+
+    '</div></div>'
+  ).join('');
+}
 
 // ══ TREND DISPLAY — single canonical definition ══
 // FIX #4 (partial): This is the ONLY updateTrendDisplay — duplicate removed.
