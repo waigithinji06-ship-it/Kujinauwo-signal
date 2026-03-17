@@ -237,12 +237,12 @@ font-size:10px;font-weight:600;border:1px solid;transition:all .3s;
 padding:8px 16px;border-radius:9px;font-family:‘Inter’,sans-serif;
 font-size:12px;font-weight:600;cursor:pointer;border:none;transition:all .2s;
 }
-.ai-btn.start{background:var(–green);color:#fff;}
-.ai-btn.start:hover{filter:brightness(1.1);box-shadow:0 4px 16px rgba(34,197,94,.3);}
-.ai-btn.stop{background:var(–red);color:#fff;}
-.ai-btn.stop:hover{filter:brightness(1.1);box-shadow:0 4px 16px rgba(239,68,68,.3);}
-.ai-btn.reset{background:var(–card);border:1px solid var(–border);color:var(–sub);padding:8px 10px;}
-.ai-btn.reset:hover{border-color:var(–yellow);color:var(–yellow);}
+.ai-btn.start{background:#2563eb;color:#fff;box-shadow:0 2px 10px rgba(37,99,235,.35);}
+.ai-btn.start:hover{filter:brightness(1.12);box-shadow:0 4px 18px rgba(37,99,235,.5);}
+.ai-btn.stop{background:#ef4444;color:#fff;box-shadow:0 2px 10px rgba(239,68,68,.35);}
+.ai-btn.stop:hover{filter:brightness(1.12);box-shadow:0 4px 18px rgba(239,68,68,.5);}
+.ai-btn.reset{background:var(–card);border:2px solid var(–border2);color:var(–sub);padding:9px 16px;font-size:18px;min-width:42px;}
+.ai-btn.reset:hover{border-color:var(–yellow);color:var(–yellow);transform:rotate(20deg);}
 .ai-btn:disabled{opacity:.3;cursor:not-allowed;filter:none!important;box-shadow:none!important;}
 
 /* ══ ACTIVE TRADE ══ */
@@ -363,29 +363,29 @@ padding:9px 11px;max-height:150px;overflow-y:auto;margin-bottom:10px;
 /* ══ TRANSACTION LOG ══ */
 .tlog{
 background:var(–card);border:1px solid var(–border);
-border-radius:10px;overflow:hidden;max-height:200px;overflow-y:auto;
+border-radius:10px;overflow:hidden;max-height:280px;overflow-y:auto;
 }
 .tlog::-webkit-scrollbar{width:3px;}
 .log-entry{
-display:grid;grid-template-columns:52px 56px 52px 64px 54px 46px 60px;
-gap:4px;padding:7px 10px;
+display:grid;grid-template-columns:54px 60px 58px 62px 56px 72px 66px;
+gap:3px;padding:8px 10px;
 border-bottom:1px solid var(–border);
-font-family:‘JetBrains Mono’,monospace;font-size:9px;align-items:center;
+font-family:‘JetBrains Mono’,monospace;font-size:9.5px;align-items:center;
 transition:background .12s;
 }
 .log-entry:last-child{border-bottom:none;}
-.log-entry:hover{background:rgba(255,255,255,.02);}
-.log-entry.win{border-left:2px solid var(–green);}
-.log-entry.loss{border-left:2px solid var(–red);}
-.log-entry.pending{border-left:2px solid var(–yellow);}
+.log-entry:hover{background:rgba(255,255,255,.03);}
+.log-entry.win{border-left:3px solid var(–green);background:rgba(34,197,94,.03);}
+.log-entry.loss{border-left:3px solid var(–red);background:rgba(239,68,68,.03);}
+.log-entry.pending{border-left:3px solid var(–yellow);}
 .log-header{
-background:var(–card2);font-size:8px;font-weight:600;color:var(–dim);
-letter-spacing:.8px;text-transform:uppercase;border-bottom:1px solid var(–border);
+background:var(–card2);font-size:8px;font-weight:700;color:var(–sub);
+letter-spacing:.8px;text-transform:uppercase;border-bottom:2px solid var(–border2);
 position:sticky;top:0;z-index:1;
 }
-.log-header.log-entry{border-left:2px solid transparent;}
-.pnl-pos{color:var(–green);font-weight:700;}
-.pnl-neg{color:var(–red);font-weight:700;}
+.log-header.log-entry{border-left:3px solid transparent;}
+.pnl-pos{color:var(–green);font-weight:800;}
+.pnl-neg{color:var(–red);font-weight:800;}
 .pnl-zero{color:var(–dim);}
 
 /* ══ ANALYSIS PAGE ══ */
@@ -433,9 +433,9 @@ position:sticky;top:0;z-index:1;
 .dtitle{font-weight:600;font-size:11px;margin-bottom:7px;display:flex;justify-content:space-between;align-items:center;}
 .dbars{display:flex;gap:2px;align-items:flex-end;height:42px;}
 .dbw{flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;}
-.dpct{font-size:7px;font-family:‘JetBrains Mono’,monospace;color:var(–dim);}
+.dpct{font-size:7px;font-family:‘JetBrains Mono’,monospace;color:var(–dim);font-weight:700;}
 .dbar{width:100%;border-radius:2px 2px 0 0;transition:height .4s,background .3s;}
-.ddig{font-size:8px;font-family:‘JetBrains Mono’,monospace;color:var(–dim);}
+.ddig{font-size:10px;font-family:‘JetBrains Mono’,monospace;color:var(–text);font-weight:800;}
 .ld2{width:15px;height:15px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-family:‘JetBrains Mono’,monospace;font-size:8px;font-weight:700;background:var(–border);color:var(–sub);}
 .ld2.e{background:rgba(34,197,94,.12);color:var(–green);}
 .ld2.o{background:rgba(249,115,22,.12);color:var(–accent2);}
@@ -762,9 +762,12 @@ position:sticky;top:0;z-index:1;
       <div style="font-size:9px;color:var(--sub);font-family:'Space Mono',monospace;letter-spacing:2px;margin-bottom:4px;">BOT ACTIVITY</div>
       <div id="aiLog" class="ai-log"><div class="ai-log-line info"><span class="ts">--:--:--</span>System ready. Waiting for connection…</div></div>
       <!-- Transaction log -->
-      <div style="font-size:9px;color:var(--sub);font-family:'Space Mono',monospace;letter-spacing:2px;margin:10px 0 4px;">TRANSACTIONS</div>
+      <div style="font-size:9px;color:var(--sub);font-family:'Space Mono',monospace;letter-spacing:2px;margin:10px 0 4px;display:flex;justify-content:space-between;align-items:center;">
+        <span>📋 TRANSACTIONS</span>
+        <span id="tradeCount" style="color:var(--dim);font-size:8px;">0 trades</span>
+      </div>
       <div id="tradeLog" class="tlog">
-        <div class="log-entry log-header"><div>TIME</div><div>INDEX</div><div>TYPE</div><div>ENTRY</div><div>STAKE</div><div>RESULT</div><div>P&L</div></div>
+        <div class="log-entry log-header"><div>TIME</div><div>INDEX</div><div>TYPE</div><div>ENTRY</div><div>STAKE</div><div>RESULT</div><div>P&amp;L</div></div>
       </div>
     </div>
 
@@ -2102,9 +2105,9 @@ function onContract(poc){
 }
 
 // ══ TRADE LOG ══
+let _totalTrades=0;
 function _ensureLogHeader(logId){
   const log=document.getElementById(logId);if(!log)return;
-  // Re-add header if missing (wiped by reset or first load)
   if(!log.querySelector('.log-header')){
     const h=document.createElement('div');
     h.className='log-entry log-header';
@@ -2120,26 +2123,28 @@ function addTradeLog(sym,type,digit,stake,profit,won,label){
   entry.className='log-entry '+(won?'win':profit===0?'pending':'loss');
   const pnlCls=profit>0?'pnl-pos':profit<0?'pnl-neg':'pnl-zero';
   entry.innerHTML=
-    '<div>'+now+'</div>'+
-    '<div>'+(ix?ix.n:(sym||'—'))+'</div>'+
-    '<div>'+label+'</div>'+
+    '<div style="color:var(--dim);">'+now+'</div>'+
+    '<div style="font-weight:700;color:var(--text);">'+(ix?ix.n:(sym||'—'))+'</div>'+
+    '<div style="color:var(--accent);font-weight:600;">'+label+'</div>'+
     '<div style="color:var(--sub);">'+entryPrice+'</div>'+
-    '<div>$'+parseFloat(stake||0).toFixed(2)+'</div>'+
-    '<div style="color:'+(won?'var(--green)':'var(--red)')+';">'+(won?'✅ WIN':'❌ LOSS')+'</div>'+
+    '<div style="color:var(--text);font-weight:700;">$'+parseFloat(stake||0).toFixed(2)+'</div>'+
+    '<div style="font-weight:800;color:'+(won?'#22c55e':'#ef4444')+';">'+(won?'✅WIN':'❌LOSS')+'</div>'+
     '<div class="'+pnlCls+'">'+(profit>=0?'+':'')+'$'+parseFloat(profit||0).toFixed(2)+'</div>';
-  // Route to correct log
   const src=AI.activeSource||'pioneer';
   const logMap={pioneer:'tradeLog',trend:'tradeLogTR'};
   const logId=logMap[src]||'tradeLog';
   _ensureLogHeader(logId);
   const log=document.getElementById(logId);
   if(log){log.appendChild(entry);log.scrollTop=log.scrollHeight;}
-  // Mirror to pioneer master log if source is not pioneer
   if(logId!=='tradeLog'){
     _ensureLogHeader('tradeLog');
     const ml=document.getElementById('tradeLog');
     if(ml){const e2=entry.cloneNode(true);ml.appendChild(e2);ml.scrollTop=ml.scrollHeight;}
   }
+  // Update trade counter badge
+  _totalTrades++;
+  const tc=document.getElementById('tradeCount');
+  if(tc) tc.textContent=_totalTrades+(_totalTrades===1?' trade':' trades');
 }
 
 // ══ AI CONTROLS ══
@@ -2195,6 +2200,8 @@ function resetAI(){
   document.getElementById('tradeLogTR').innerHTML='';
   _ensureLogHeader('tradeLog');
   _ensureLogHeader('tradeLogTR');
+  _totalTrades=0;
+  const tc=document.getElementById('tradeCount');if(tc)tc.textContent='0 trades';
   for(let i=0;i<5;i++){const e=document.getElementById('lad'+i);if(e)e.classList.remove('won','lost','active');}
   for(let i=0;i<5;i++){const e=document.getElementById('tlad'+i);if(e)e.classList.remove('won','lost','active');}
   refreshLadder();refreshTrendLadder();
