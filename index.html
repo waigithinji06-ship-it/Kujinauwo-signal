@@ -363,20 +363,19 @@ padding:9px 11px;max-height:150px;overflow-y:auto;margin-bottom:10px;
 /* ══ TRANSACTION LOG ══ */
 .tlog{
 background:var(–card);border:1px solid var(–border);
-border-radius:10px;overflow:hidden;max-height:300px;overflow-y:auto;
+border-radius:10px;overflow:auto;max-height:300px;
+-webkit-overflow-scrolling:touch;
 }
-.tlog::-webkit-scrollbar{width:3px;}
-.tlog-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;max-height:300px;overflow-y:auto;}
-.tlog-wrap::-webkit-scrollbar{width:3px;height:3px;}
-.tlog-wrap::-webkit-scrollbar-thumb{background:var(–border2);border-radius:2px;}
+.tlog::-webkit-scrollbar{width:3px;height:3px;}
+.tlog::-webkit-scrollbar-thumb{background:var(–border2);border-radius:2px;}
 .log-entry{
 display:grid;
-grid-template-columns:46px 54px 62px 68px 54px 66px 64px;
+grid-template-columns:46px 56px 62px 66px 54px 64px 60px;
 gap:3px;padding:9px 10px;
 border-bottom:1px solid var(–border);
 font-family:‘JetBrains Mono’,monospace;font-size:10px;align-items:center;
 transition:background .12s;
-min-width:430px;
+min-width:440px;
 }
 .log-entry:last-child{border-bottom:none;}
 .log-entry:hover{background:rgba(255,255,255,.04);}
@@ -386,7 +385,7 @@ min-width:430px;
 .log-header{
 background:var(–card2);font-size:8px;font-weight:700;color:var(–sub);
 letter-spacing:.8px;text-transform:uppercase;border-bottom:2px solid var(–border2);
-position:sticky;top:0;z-index:1;
+position:sticky;top:0;left:0;z-index:2;
 }
 .log-header.log-entry{border-left:3px solid transparent;}
 .pnl-pos{color:#22c55e;font-weight:800;}
@@ -771,10 +770,8 @@ position:sticky;top:0;z-index:1;
         <span>📋 TRANSACTIONS</span>
         <span id="tradeCount" style="color:var(--dim);font-size:8px;">0 trades</span>
       </div>
-      <div class="tlog tlog-wrap">
-        <div id="tradeLog">
-          <div class="log-entry log-header"><div>TIME</div><div>INDEX</div><div>CONTRACT</div><div>ENTRY</div><div>STAKE</div><div>RESULT</div><div>P&amp;L</div></div>
-        </div>
+      <div id="tradeLog" class="tlog">
+        <div class="log-entry log-header"><div>TIME</div><div>INDEX</div><div>CONTRACT</div><div>ENTRY</div><div>STAKE</div><div>RESULT</div><div>P&amp;L</div></div>
       </div>
     </div>
 
@@ -847,10 +844,8 @@ position:sticky;top:0;z-index:1;
       <div style="font-size:9px;color:var(--sub);font-family:'Space Mono',monospace;letter-spacing:2px;margin-bottom:6px;">AI DECISION LOG</div>
       <div id="aiLogTR" class="ai-log"></div>
       <div style="font-size:9px;color:var(--sub);font-family:'Space Mono',monospace;letter-spacing:2px;margin:10px 0 6px;">📋 TRADE LOG</div>
-      <div class="tlog tlog-wrap">
-        <div id="tradeLogTR">
-          <div class="log-entry log-header"><div>TIME</div><div>INDEX</div><div>CONTRACT</div><div>ENTRY</div><div>STAKE</div><div>RESULT</div><div>P&L</div></div>
-        </div>
+      <div id="tradeLogTR" class="tlog">
+        <div class="log-entry log-header"><div>TIME</div><div>INDEX</div><div>CONTRACT</div><div>ENTRY</div><div>STAKE</div><div>RESULT</div><div>P&L</div></div>
       </div>
     </div>
 
