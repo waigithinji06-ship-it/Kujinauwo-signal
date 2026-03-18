@@ -797,6 +797,7 @@ letter-spacing:.5px;white-space:nowrap;margin-top:1px;
   <div class="mode-row">
     <div class="mchip active" id="chipPioneer" onclick="setMode('pioneer')"><span class="mci">🚀</span>PIONEER</div>
     <div class="mchip" id="chipTrend"    onclick="setMode('trend')"><span class="mci">📈</span>TREND</div>
+    <div class="mchip" id="chipPower"    onclick="setMode('power')"><span class="mci">⚡</span>POWER</div>
   </div>
 
   <!-- Mode subpages -->
@@ -967,6 +968,101 @@ letter-spacing:.5px;white-space:nowrap;margin-top:1px;
             <th>REF #</th>
           </tr></thead>
           <tbody id="tradeLogBodyTR"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ⚡ POWER -->
+    <div id="mpPower" class="mpage">
+      <!-- Equity curve -->
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:8px;margin-bottom:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+          <div style="font-size:7px;color:var(--sub);font-family:'Space Mono',monospace;letter-spacing:2px;">⚡ POWER · EQUITY</div>
+          <div style="font-size:8px;font-family:'Space Mono',monospace;" id="eqStatsPW">Now +0.00  Peak +0.00  Low +0.00</div>
+        </div>
+        <canvas id="eqCanvasPW" style="width:100%;height:70px;display:block;min-height:70px;"></canvas>
+      </div>
+
+      <!-- Strategy info bar -->
+      <div style="background:rgba(250,204,21,.06);border:1px solid rgba(250,204,21,.2);border-radius:8px;padding:8px 12px;margin-bottom:10px;font-family:'Space Mono',monospace;font-size:9px;color:var(--yellow);line-height:1.8;">
+        S1: <strong style="color:#fff;">OVER 1</strong> or <strong style="color:#fff;">UNDER 8</strong> (80% win) &nbsp;·&nbsp;
+        S2–S5: <strong style="color:#fff;">OVER 2</strong> or <strong style="color:#fff;">UNDER 7</strong> recovery ×3.6
+      </div>
+
+      <!-- Config collapsible -->
+      <div style="margin-bottom:8px;">
+        <div onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'grid':'none'"
+          style="font-size:9px;color:var(--sub);font-family:'Space Mono',monospace;letter-spacing:2px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:var(--surface);border:1px solid var(--border);border-radius:8px;">
+          <span>⚙ CONFIG</span><span>▼</span>
+        </div>
+        <div style="display:none;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-top:8px;">
+          <div class="cfg-block"><div class="cfg-label">BASE STAKE ($)</div><input class="cfg-input" id="pwStake" type="number" value="1" min="0.35" step="0.25"/></div>
+          <div class="cfg-block"><div class="cfg-label">MULT ×</div><input class="cfg-input" id="pwMult" type="number" value="3.6" min="1.5" max="10" step="0.1" oninput="refreshPowerLadder()"/></div>
+          <div class="cfg-block"><div class="cfg-label">TAKE PROFIT ($)</div><input class="cfg-input" id="pwTP" type="number" value="20" min="1" step="1"/></div>
+          <div class="cfg-block"><div class="cfg-label">STOP LOSS ($)</div><input class="cfg-input" id="pwSL" type="number" value="30" min="1" step="1"/></div>
+          <div class="cfg-block"><div class="cfg-label">MIN SCORE</div><input class="cfg-input" id="pwMinScore" type="number" value="55" min="30" max="85" step="5"/><div style="font-size:8px;color:var(--sub);margin-top:3px;">55=default</div></div>
+          <div class="cfg-block" style="grid-column:1/-1;"><div class="cfg-label">INDEX</div>
+            <select class="cfg-select" id="pwIndex">
+              <option value="AUTO">AUTO (AI picks best)</option>
+              <option value="R_10">V10</option><option value="R_25">V25</option>
+              <option value="R_50">V50</option><option value="R_75">V75</option>
+              <option value="R_100">V100</option><option value="1HZ10V">V10 1s</option>
+              <option value="1HZ25V">V25 1s</option><option value="1HZ50V">V50 1s</option>
+              <option value="1HZ75V">V75 1s</option><option value="1HZ100V">V100 1s</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Ladder -->
+      <div style="margin-bottom:8px;">
+        <div style="font-size:9px;color:var(--sub);font-family:'Space Mono',monospace;letter-spacing:2px;margin-bottom:6px;display:flex;justify-content:space-between;">
+          <span>POWER LADDER</span><span id="pwExposure" style="color:var(--red);"></span>
+        </div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">
+          <div class="lad-step" style="border-color:rgba(250,204,21,.35);" id="plad0"><div class="lad-num">S1</div><div class="lad-type" style="color:#facc15;">OVER 1</div><div class="lad-stake" id="plads0">$1.00</div></div>
+          <div class="lad-arrow">→</div>
+          <div class="lad-step over" id="plad1"><div class="lad-num">S2</div><div class="lad-type" id="pladt1">OVER 2</div><div class="lad-stake" id="plads1">$3.60</div></div>
+          <div class="lad-arrow">→</div>
+          <div class="lad-step over" id="plad2"><div class="lad-num">S3</div><div class="lad-type" id="pladt2">OVER 2</div><div class="lad-stake" id="plads2">$12.96</div></div>
+          <div class="lad-arrow">→</div>
+          <div class="lad-step over" id="plad3"><div class="lad-num">S4</div><div class="lad-type" id="pladt3">OVER 2</div><div class="lad-stake" id="plads3">$46.66</div></div>
+          <div class="lad-arrow">→</div>
+          <div class="lad-step over final" id="plad4"><div class="lad-num">S5</div><div class="lad-type" id="pladt4">OVER 2</div><div class="lad-stake" id="plads4">$167.98</div></div>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <div class="cstat"><div class="cstat-l">STEP</div><div class="cstat-v" id="pwStep">S1</div></div>
+          <div class="cstat"><div class="cstat-l">DIRECTION</div><div class="cstat-v" id="pwDir" style="color:var(--yellow);">—</div></div>
+          <div class="cstat"><div class="cstat-l">NEXT STAKE</div><div class="cstat-v" style="color:var(--accent);" id="pwNS">$1.00</div></div>
+          <div class="cstat"><div class="cstat-l">STREAK</div><div class="cstat-v" id="pwStreak">0</div></div>
+        </div>
+      </div>
+
+      <!-- Signal bar showing digit cluster -->
+      <div id="pwSignalBar" style="background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;margin-bottom:8px;font-family:'Space Mono',monospace;font-size:9px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;">
+        <span style="color:var(--sub);">LOW CLUSTER (0+1) <span id="pwLow" style="color:var(--green);font-weight:700;">—</span></span>
+        <span style="color:var(--sub);">HIGH CLUSTER (8+9) <span id="pwHigh" style="color:var(--blue);font-weight:700;">—</span></span>
+        <span style="color:var(--sub);">SIGNAL <span id="pwSignal" style="color:var(--yellow);font-weight:700;">WAIT</span></span>
+        <span id="pwRunning" style="color:var(--dim);">⏸ IDLE</span>
+      </div>
+
+      <!-- Bot log -->
+      <div style="font-size:9px;color:var(--sub);font-family:'Space Mono',monospace;letter-spacing:2px;margin-bottom:4px;">BOT ACTIVITY</div>
+      <div id="aiLogPW" class="ai-log"></div>
+
+      <!-- Statement table -->
+      <div style="font-size:9px;color:var(--sub);font-family:'Space Mono',monospace;letter-spacing:2px;margin:10px 0 6px;display:flex;justify-content:space-between;align-items:center;">
+        <span>📋 STATEMENT</span>
+        <span id="pwTradeCount" style="color:var(--dim);font-size:8px;">0 trades</span>
+      </div>
+      <div id="tradeLogPW" class="tlog">
+        <table class="dtable">
+          <thead><tr>
+            <th class="c">STATUS</th><th>DATE/TIME</th><th>MARKET</th><th>CONTRACT</th>
+            <th class="r">DURATION</th><th class="r">BUY</th><th class="r">SELL</th>
+            <th class="r">P&amp;L</th><th class="r">BALANCE</th><th>REF #</th>
+          </tr></thead>
+          <tbody id="tradeLogBodyPW"></tbody>
         </table>
       </div>
     </div>
@@ -1378,19 +1474,20 @@ function navTo(page){
 // ══ MODE ══
 // FIX #4: Only iterate chips that actually exist in the DOM
 function setMode(m){
-  if(AI.running||TR.running)return;
+  if(AI.running||TR.running||PW.running)return;
   AI.mode=m;
-  ['pioneer','trend'].forEach(x=>{
+  ['pioneer','trend','power'].forEach(x=>{
     const el=document.getElementById('chip'+x.charAt(0).toUpperCase()+x.slice(1));
     if(el) el.classList.toggle('active',x===m);
   });
-  const mpMap={pioneer:'mpPioneer',trend:'mpTrend'};
+  const mpMap={pioneer:'mpPioneer',trend:'mpTrend',power:'mpPower'};
   Object.values(mpMap).forEach(id=>{const el=document.getElementById(id);if(el)el.classList.remove('active');});
   const active=document.getElementById(mpMap[m]);
   if(active)active.classList.add('active');
   if(m==='pioneer') refreshLadder();
   if(m==='trend')   refreshTrendLadder();
-  aiLog('🔄 Mode: '+(m==='pioneer'?'Pioneer':'Trend'),'info');
+  if(m==='power')   refreshPowerLadder();
+  aiLog('🔄 Mode: '+(m==='pioneer'?'Pioneer':m==='trend'?'Trend':'Power'),'info');
 }
 
 // ══ PIONEER LADDER ══
@@ -1680,7 +1777,9 @@ function onTick(tk){
   }
   if(AI.running&&AI.mode==='pioneer') aiTick(tk.symbol);
   if(TR.running&&AI.mode==='trend'&&!AI.inTrade&&!AI.pendingResult&&Date.now()-lastTrendTradeTime>400) trendTick();
+  if(PW.running&&AI.mode==='power'&&!AI.inTrade&&!AI.pendingResult) powerTick();
   if(AI.mode==='trend'&&total%3===0) updateTrendDisplay(tk.symbol);
+  if(AI.mode==='power'&&total%5===0) updatePowerSignalDisplay();
 }
 
 // ══ ANALYSIS ══
@@ -2244,12 +2343,12 @@ function onContract(poc){
   const stake=parseFloat(poc.buy_price||0);
   const source=AI.activeSource||'pioneer';
   AI.pendingResult=false;AI.inTrade=false;
-  AI.totalPnl=Math.round((AI.totalPnl+profit)*100)/100;
-  AI.sessPnl=Math.round((AI.sessPnl+profit)*100)/100;
   AI.equityPoints.push(AI.sessPnl);
   if(AI.equityPoints.length>300)AI.equityPoints.shift();
   document.getElementById('ctStatus').textContent=won?'WON ✅':'LOST ❌';
   document.getElementById('ctStatus').style.color=won?'var(--green)':'var(--red)';
+
+  if(source==='power'){onPowerContract(poc);return;}
 
   if(source==='trend'){
     const stepEl=document.getElementById('tlad'+TR.step);
@@ -2319,6 +2418,436 @@ function onContract(poc){
     },600);
   }
 }
+
+// ════════════════════════════════════════════
+// ⚡ POWER MODE
+// ════════════════════════════════════════════
+
+const PW={
+  running:false,
+  step:0,            // 0=S1 (OVER1/UNDER8), 1-4=recovery (OVER2/UNDER7)
+  baseStake:1,
+  mult:3.6,
+  direction:null,    // 'OVER' or 'UNDER' — locked at S1, held through recovery
+  sessPnl:0, wins:0, losses:0, consecLoss:0,
+  equityPoints:[0],
+  prevMarket:null,   // for 2-tick confirm on recovery
+  restUntil:0, restSym:null,
+};
+
+// ── Power market analyser ──
+// Looks for digit CLUSTER at the extremes (0+1 for OVER, 8+9 for UNDER)
+function powerAna(sym){
+  const s=ST[sym];
+  if(!s||!s.conn||s.digits.length<30) return null;
+  const a=ana(sym);
+  if(!a.isCon) return null;  // must be consolidating
+
+  const tot=a.tot||1;
+  const fr=a.fr;
+
+  // Low cluster: digits 0 + 1
+  const lowPct=((fr[0]||0)+(fr[1]||0))/tot*100;
+  // High cluster: digits 8 + 9
+  const highPct=((fr[8]||0)+(fr[9]||0))/tot*100;
+
+  // Recent momentum — how many of last 5 ticks are in cluster
+  let recentLow=0, recentHigh=0;
+  if(s.digits.length>=5){
+    const last5=s.digits.slice(-5);
+    recentLow =last5.filter(d=>d<=1).length;
+    recentHigh=last5.filter(d=>d>=8).length;
+  }
+
+  // Signal: OVER1 if low cluster ≥12% AND ≥2 of last 5 ticks are low
+  // Signal: UNDER8 if high cluster ≥12% AND ≥2 of last 5 ticks are high
+  let signal=null;
+  if(lowPct>=12&&recentLow>=2)  signal='OVER';
+  if(highPct>=12&&recentHigh>=2){
+    // Pick the stronger cluster
+    if(!signal||highPct>lowPct) signal='UNDER';
+  }
+
+  return{lowPct,highPct,recentLow,recentHigh,signal,score:a.score,isCon:a.isCon,sym};
+}
+
+// ── Find best Power market ──
+function findPowerMarket(){
+  const minScore=parseInt(document.getElementById('pwMinScore')?document.getElementById('pwMinScore').value:55)||55;
+  const tgt=document.getElementById('pwIndex')?document.getElementById('pwIndex').value:'AUTO';
+
+  if(tgt!=='AUTO'){
+    const p=powerAna(tgt);
+    if(!p||!p.signal||p.score<minScore) return null;
+    return p;
+  }
+  let best=null, bestStrength=0;
+  IDX.forEach(i=>{
+    try{
+      const p=powerAna(i.s);
+      if(!p||!p.signal||p.score<minScore) return;
+      const strength=p.signal==='OVER'?p.lowPct:p.highPct;
+      if(strength>bestStrength){bestStrength=strength;best=p;}
+    }catch(e){}
+  });
+  return best;
+}
+
+// ── Find best Power recovery market ──
+function findPowerRecoveryMarket(direction){
+  // direction = 'OVER' → look for OVER2 (o2 ≥68%, isCon)
+  // direction = 'UNDER' → look for UNDER7 (u7 ≥68%, isCon)
+  let best=null, bestPct=0;
+  IDX.forEach(i=>{
+    const s=ST[i.s];
+    if(!s||!s.conn||s.digits.length<25) return;
+    try{
+      const a=ana(i.s);
+      if(!a.isCon) return;
+      if(direction==='OVER'&&a.o2>=68&&a.o2>bestPct){bestPct=a.o2;best={sym:i.s,a,pct:a.o2};}
+      if(direction==='UNDER'&&a.u7>=68&&a.u7>bestPct){bestPct=a.u7;best={sym:i.s,a,pct:a.u7};}
+    }catch(e){}
+  });
+  return best;
+}
+
+// ── Power ladder ──
+function calcPowerStake(step){
+  const base=parseFloat(document.getElementById('pwStake')?document.getElementById('pwStake').value:1)||1;
+  let s=base;
+  for(let i=0;i<step;i++) s=Math.round(s*PW.mult*100)/100;
+  return s;
+}
+function refreshPowerLadder(){
+  PW.mult=parseFloat(document.getElementById('pwMult')?document.getElementById('pwMult').value:3.6)||3.6;
+  let totalExp=0;
+  for(let i=0;i<5;i++){
+    const stake=calcPowerStake(i); totalExp+=stake;
+    const se=document.getElementById('plads'+i);
+    if(se) se.textContent='$'+stake.toFixed(2);
+    // Update label based on locked direction if running
+    const lt=document.getElementById('pladt'+i);
+    if(lt&&i>0){
+      if(PW.direction==='OVER') lt.textContent='OVER 2';
+      else if(PW.direction==='UNDER') lt.textContent='UNDER 7';
+    }
+  }
+  const exp=document.getElementById('pwExposure');
+  if(exp) exp.textContent='Max: $'+totalExp.toFixed(2);
+}
+function updatePowerLadderUI(){
+  for(let i=0;i<5;i++){
+    const el=document.getElementById('plad'+i);if(!el)continue;
+    el.classList.remove('active','won','lost');
+    if(i<PW.step) el.classList.add('lost');
+    else if(i===PW.step&&PW.running) el.classList.add('active');
+  }
+  const sd=document.getElementById('pwStep');
+  if(sd) sd.textContent='S'+(PW.step+1);
+  const nd=document.getElementById('pwNS');
+  if(nd) nd.textContent='$'+calcPowerStake(PW.step).toFixed(2);
+  const dEl=document.getElementById('pwDir');
+  if(dEl){
+    dEl.textContent=PW.direction||'—';
+    dEl.style.color=PW.direction==='OVER'?'var(--green)':PW.direction==='UNDER'?'var(--blue)':'var(--yellow)';
+  }
+  const str=document.getElementById('pwStreak');
+  if(str) str.textContent=PW.consecLoss;
+}
+
+// ── Power equity curve ──
+function drawPowerEquity(){
+  const canvas=document.getElementById('eqCanvasPW');if(!canvas)return;
+  const ctx=canvas.getContext('2d');
+  const W=canvas.offsetWidth||500;canvas.width=W;canvas.height=70;
+  ctx.clearRect(0,0,W,70);
+  const pts=PW.equityPoints||[];
+  if(!pts||pts.length<2){
+    ctx.strokeStyle='rgba(250,204,21,.15)';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(0,35);ctx.lineTo(W,35);ctx.stroke();return;
+  }
+  const mn=Math.min(...pts),mx=Math.max(...pts),range=mx-mn||1;
+  const toY=v=>5+(60*(1-(v-mn)/range));
+  ctx.strokeStyle='rgba(250,204,21,.12)';ctx.lineWidth=1;ctx.setLineDash([3,4]);
+  ctx.beginPath();ctx.moveTo(0,toY(0));ctx.lineTo(W,toY(0));ctx.stroke();ctx.setLineDash([]);
+  const last=pts[pts.length-1];
+  const grad=ctx.createLinearGradient(0,0,0,70);
+  if(last>=0){grad.addColorStop(0,'rgba(250,204,21,.25)');grad.addColorStop(1,'rgba(250,204,21,.02)');}
+  else{grad.addColorStop(0,'rgba(239,68,68,.02)');grad.addColorStop(1,'rgba(239,68,68,.2)');}
+  ctx.beginPath();
+  pts.forEach((v,i)=>{const x=i/(pts.length-1)*W,y=toY(v);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
+  ctx.lineTo(W,70);ctx.lineTo(0,70);ctx.closePath();ctx.fillStyle=grad;ctx.fill();
+  ctx.strokeStyle=last>=0?'#facc15':'#ff3d5a';ctx.lineWidth=2;
+  ctx.beginPath();
+  pts.forEach((v,i)=>{const x=i/(pts.length-1)*W,y=toY(v);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
+  ctx.stroke();
+  const es=document.getElementById('eqStatsPW');
+  if(es){
+    const peak=Math.max(...pts),trough=Math.min(...pts);
+    es.textContent='Now '+(last>=0?'+':'')+last.toFixed(2)+'  Peak '+(peak>=0?'+':'')+peak.toFixed(2)+'  Low '+(trough>=0?'+':'')+trough.toFixed(2);
+    es.style.color=last>=0?'#facc15':'var(--red)';
+  }
+}
+
+// ── Power tick handler ──
+let _lastPowerTradeTime=0;
+function powerTick(){
+  if(!PW.running||AI.inTrade||AI.pendingResult)return;
+  if(Date.now()-_lastPowerTradeTime<1800)return;
+  // Cooldown check
+  if(PW.restUntil>0&&Date.now()<PW.restUntil){setAIState('waiting');return;}
+  if(PW.restUntil>0&&Date.now()>=PW.restUntil){PW.restUntil=0;PW.restSym=null;}
+
+  const tp=parseFloat(document.getElementById('pwTP')?document.getElementById('pwTP').value:20)||20;
+  const sl=parseFloat(document.getElementById('pwSL')?document.getElementById('pwSL').value:30)||30;
+
+  if(PW.sessPnl>=tp){
+    aiLogPW('🎯 TP +$'+PW.sessPnl.toFixed(2)+' — Power stopped.','success');
+    powerStop();return;
+  }
+  if(PW.sessPnl<=-Math.abs(sl)){
+    aiLogPW('🛑 SL -$'+Math.abs(PW.sessPnl).toFixed(2)+' — Power stopped.','danger');
+    powerStop();return;
+  }
+  if(PW.consecLoss>=5){
+    pushError('circuit','Power circuit breaker — 5 consecutive losses','Reset to start a new session');
+    setAIState('stopped');powerStop();return;
+  }
+
+  setAIState('scanning');
+
+  let tradeSym, contractCode, barrier, typeLabel, stake;
+
+  if(PW.step===0){
+    // ── S1: OVER 1 or UNDER 8 ──
+    const market=findPowerMarket();
+    if(!market){
+      // Update signal display even when no trade
+      updatePowerSignalDisplay();
+      setAIState('waiting');return;
+    }
+    // Rest check
+    if(PW.restSym&&market.sym===PW.restSym&&PW.restUntil>Date.now()){
+      setAIState('waiting');return;
+    }
+    tradeSym=market.sym;
+    PW.direction=market.signal; // lock direction
+    if(PW.direction==='OVER'){
+      contractCode='DIGITOVER'; barrier=1; typeLabel='OVER 1';
+    } else {
+      contractCode='DIGITUNDER'; barrier=8; typeLabel='UNDER 8';
+    }
+    stake=calcPowerStake(0);
+    const ix=IDX.find(i=>i.s===tradeSym);
+    const clusterPct=PW.direction==='OVER'?market.lowPct:market.highPct;
+    aiLogPW('⚡ S1 | '+(ix?ix.n:tradeSym)+' | '+typeLabel
+      +' | cluster '+clusterPct.toFixed(1)+'% | $'+stake.toFixed(2)
+      +' Score:'+market.score,'info');
+    refreshPowerLadder();
+  } else {
+    // ── S2–S5: Recovery — OVER 2 or UNDER 7, same direction as S1 ──
+    const recovery=findPowerRecoveryMarket(PW.direction);
+    if(!recovery){
+      PW.prevMarket=null;
+      aiLogPW('⏳ S'+(PW.step+1)+' — waiting for '+(PW.direction==='OVER'?'OVER 2':'UNDER 7')+' ≥68%…','warn');
+      setAIState('waiting');return;
+    }
+    // 2-tick confirmation
+    const prev=PW.prevMarket;
+    const confirmed=prev&&prev.sym===recovery.sym;
+    PW.prevMarket={sym:recovery.sym};
+    if(!confirmed){
+      const ix=IDX.find(i=>i.s===recovery.sym);
+      aiLogPW('🔍 S'+(PW.step+1)+' | '+(ix?ix.n:recovery.sym)
+        +' | '+(PW.direction==='OVER'?'OVER 2':'UNDER 7')
+        +' ('+recovery.pct.toFixed(0)+'%) — confirming…','warn');
+      setAIState('waiting');return;
+    }
+    tradeSym=recovery.sym;
+    PW.prevMarket=null;
+    if(PW.direction==='OVER'){
+      contractCode='DIGITOVER'; barrier=2; typeLabel='OVER 2';
+    } else {
+      contractCode='DIGITUNDER'; barrier=7; typeLabel='UNDER 7';
+    }
+    stake=calcPowerStake(PW.step);
+    const ix=IDX.find(i=>i.s===tradeSym);
+    aiLogPW('🔄 S'+(PW.step+1)+' | '+(ix?ix.n:tradeSym)
+      +' | '+typeLabel+' ('+recovery.pct.toFixed(0)+'%) | $'+stake.toFixed(2)+' ✓','warn');
+  }
+
+  updatePowerLadderUI();
+  _lastPowerTradeTime=Date.now();
+  placeTrade(tradeSym,contractCode,stake,barrier,typeLabel,'power');
+}
+
+// ── Power signal display ──
+function updatePowerSignalDisplay(){
+  if(AI.mode!=='power') return;
+  let bestLow=0,bestHigh=0,bestSig='WAIT';
+  IDX.forEach(i=>{
+    try{
+      const s=ST[i.s];if(!s||!s.conn||s.digits.length<30)return;
+      const a=ana(i.s);if(!a.isCon)return;
+      const lp=((a.fr[0]||0)+(a.fr[1]||0))/a.tot*100;
+      const hp=((a.fr[8]||0)+(a.fr[9]||0))/a.tot*100;
+      if(lp>bestLow){bestLow=lp;bestSig='OVER 1';}
+      if(hp>bestHigh){bestHigh=hp;bestSig='UNDER 8';}
+    }catch(e){}
+  });
+  const lEl=document.getElementById('pwLow');if(lEl)lEl.textContent=bestLow.toFixed(1)+'%';
+  const hEl=document.getElementById('pwHigh');if(hEl)hEl.textContent=bestHigh.toFixed(1)+'%';
+  const sEl=document.getElementById('pwSignal');
+  if(sEl){
+    sEl.textContent=bestSig;
+    sEl.style.color=bestSig==='OVER 1'?'var(--green)':bestSig==='UNDER 8'?'var(--blue)':'var(--yellow)';
+  }
+}
+
+// ── Power log helper ──
+function aiLogPW(msg,cls){
+  aiLogTo('aiLogPW',msg,cls);
+  aiLogTo('aiLog',msg,cls); // mirror to master log
+}
+
+// ── Power onContract handler — called from onContract() ──
+function onPowerContract(poc){
+  const won=poc.is_sold&&poc.profit>0;
+  const profit=parseFloat(poc.profit||0);
+  const stake=parseFloat(poc.buy_price||0);
+  PW.sessPnl=Math.round((PW.sessPnl+profit)*100)/100;
+  PW.equityPoints.push(PW.sessPnl);
+  if(PW.equityPoints.length>300)PW.equityPoints.shift();
+  AI.totalPnl=Math.round((AI.totalPnl+profit)*100)/100;
+  AI.sessPnl=Math.round((AI.sessPnl+profit)*100)/100;
+  AI.equityPoints.push(AI.sessPnl);
+
+  const stepEl=document.getElementById('plad'+PW.step);
+  if(won){
+    PW.wins++;AI.wins++;PW.consecLoss=0;AI.consecLoss=0;
+    if(stepEl){stepEl.classList.remove('active');stepEl.classList.add('won');}
+    // Rest after any win
+    const restMs=PW.step===0?30000:45000;
+    PW.restUntil=Date.now()+restMs;
+    PW.restSym=AI.activeSym;
+    aiLogPW('✅ WIN +$'+profit.toFixed(2)+' S'+(PW.step+1)+' '+AI.activeType+' | Session: $'+PW.sessPnl.toFixed(2),'success');
+    aiLogPW('⏸ Resting '+(restMs/1000)+'s','info');
+    PW.step=0;PW.direction=null;PW.prevMarket=null;
+    setTimeout(()=>{
+      for(let i=0;i<5;i++){const e=document.getElementById('plad'+i);if(e)e.classList.remove('won','lost','active');}
+      updatePowerLadderUI();
+    },1000);
+  } else {
+    PW.losses++;AI.losses++;PW.consecLoss++;AI.consecLoss++;
+    if(stepEl){stepEl.classList.remove('active');stepEl.classList.add('lost');}
+    if(PW.step<4){
+      PW.step++;
+      aiLogPW('❌ LOSS S'+PW.step+' | Next: '+typeLabel_for_step(PW.step)+' $'+calcPowerStake(PW.step).toFixed(2),'danger');
+    } else {
+      aiLogPW('❌ LOSS S5 — circuit breaker.','danger');
+    }
+  }
+  // Add to Power statement table
+  addPowerTradeLog(AI.activeSym,AI.activeType,stake,profit,won,poc.contract_id);
+  updateAIStats();drawEquity();drawPowerEquity();
+  setTimeout(()=>{
+    const _ct=document.getElementById('curTrade');if(_ct){_ct.classList.remove('active');_ct.style.display='none';}
+    if(PW.running){
+      if(PW.consecLoss>=5){
+        pushError('circuit','Power circuit breaker — 5 consecutive losses','Reset to start a new session');
+        setAIState('stopped');powerStop();
+      } else {
+        setAIState('scanning');updatePowerLadderUI();
+      }
+    }
+  },600);
+}
+
+function typeLabel_for_step(step){
+  if(step===0) return PW.direction==='OVER'?'OVER 1':'UNDER 8';
+  return PW.direction==='OVER'?'OVER 2':'UNDER 7';
+}
+
+// ── Power trade log ──
+let _pwTrades=0;
+function addPowerTradeLog(sym,type,stake,profit,won,contractId){
+  const ix=IDX.find(i=>i.s===sym);
+  const now=new Date();
+  const dateStr=now.toUTCString().slice(5,11)+' '+now.toUTCString().slice(17,25)+' UTC';
+  const buyPrice=parseFloat(stake||0);
+  const sellPrice=won?(buyPrice+parseFloat(profit||0)):0;
+  const pnl=parseFloat(profit||0);
+  const balVal=document.getElementById('balVal');
+  const bal=balVal?parseFloat(balVal.textContent)||null:null;
+  if(bal!==null)_runningBalance=bal;
+  const balDisplay=_runningBalance!==null?('$'+_runningBalance.toFixed(2)):'—';
+  const cidNum=contractId||AI.activeCid||'—';
+  const cidShort=cidNum&&cidNum!=='—'?String(cidNum).slice(-8):cidNum;
+  const pnlClass=pnl>0?'dpnl-pos':pnl<0?'dpnl-neg':'dpnl-zero';
+  const row=document.createElement('tr');
+  row.className='drow-'+(won?'win':'loss');
+  row.innerHTML=
+    '<td class="c"><span class="dstatus-badge '+(won?'won':'lost')+'">'+
+      '<span class="dstatus-dot '+(won?'win':'loss')+'"></span>'+(won?'Won':'Lost')+'</span></td>'+
+    '<td class="dim" style="font-size:9px;">'+dateStr+'</td>'+
+    '<td><div style="font-weight:700;font-size:10px;">'+(ix?ix.n:(sym||'—'))+'</div>'+
+        '<div style="color:var(--dim);font-size:8px;">'+(ix?ix.sub:(sym||'—'))+'</div></td>'+
+    '<td>'+_contractTypePill(type)+'</td>'+
+    '<td class="r dim">1 tick</td>'+
+    '<td class="r" style="color:var(--text);font-weight:600;">$'+buyPrice.toFixed(2)+'</td>'+
+    '<td class="r" style="color:'+(won?'#22c55e':'#ef4444')+';">$'+sellPrice.toFixed(2)+'</td>'+
+    '<td class="r"><span class="'+pnlClass+'">'+(pnl>=0?'+':'')+'$'+pnl.toFixed(2)+'</span></td>'+
+    '<td class="r" style="color:var(--accent);">'+balDisplay+'</td>'+
+    '<td><span class="dcid" title="Contract #'+cidNum+'">'+
+      (cidNum!=='—'?'#'+cidShort:'—')+'</span></td>';
+  const tbody=document.getElementById('tradeLogBodyPW');
+  if(tbody){tbody.appendChild(row);const tlog=tbody.closest('.tlog');if(tlog)tlog.scrollTop=tlog.scrollHeight;}
+  _pwTrades++;
+  const tc=document.getElementById('pwTradeCount');
+  if(tc) tc.textContent=_pwTrades+(_pwTrades===1?' trade':' trades');
+}
+
+// ── Power start / stop ──
+function powerStart(){
+  if(!userToken||isGuest){aiLogPW('⚠ Token required.','danger');return;}
+  if(!ws||ws.readyState!==1){aiLogPW('⚠ Not connected.','warn');return;}
+  if(AI.running||TR.running){aiLogPW('⚠ Stop other mode first.','warn');return;}
+  PW.baseStake=parseFloat(document.getElementById('pwStake').value)||1;
+  PW.mult=parseFloat(document.getElementById('pwMult').value)||3.6;
+  PW.step=0;PW.consecLoss=0;PW.direction=null;PW.sessPnl=0;PW.wins=0;PW.losses=0;
+  PW.equityPoints=[0];PW.prevMarket=null;PW.restUntil=0;PW.restSym=null;
+  PW.running=true;
+  refreshPowerLadder();updatePowerLadderUI();
+  document.getElementById('startBtn').disabled=true;
+  document.getElementById('stopBtn').disabled=false;
+  ['pwStake','pwMult','pwTP','pwSL','pwMinScore','pwIndex']
+    .forEach(id=>{const el=document.getElementById(id);if(el)el.disabled=true;});
+  setAIState('scanning');
+  document.getElementById('pwRunning').textContent='▶ RUNNING';
+  document.getElementById('pwRunning').style.color='var(--green)';
+  const maxExp=[0,1,2,3,4].reduce((s,i)=>s+calcPowerStake(i),0);
+  aiLogPW('⚡ POWER STARTED — Base:$'+PW.baseStake+' Mult:×'+PW.mult
+    +' TP:$'+(document.getElementById('pwTP').value||20)
+    +' SL:$'+(document.getElementById('pwSL').value||30),'success');
+  aiLogPW('🔍 S1: Scanning for OVER 1 / UNDER 8 cluster ≥12% on consolidating markets','info');
+  aiLogPW('⚠ Max exposure: $'+maxExp.toFixed(2),'warn');
+}
+function powerStop(){
+  if(!PW.running)return;
+  PW.running=false;
+  document.getElementById('startBtn').disabled=false;
+  document.getElementById('stopBtn').disabled=true;
+  ['pwStake','pwMult','pwTP','pwSL','pwMinScore','pwIndex']
+    .forEach(id=>{const el=document.getElementById(id);if(el)el.disabled=false;});
+  if(!AI.running&&!TR.running)setAIState('idle');
+  document.getElementById('pwRunning').textContent='⏸ IDLE';
+  document.getElementById('pwRunning').style.color='var(--dim)';
+  aiLogPW('⏹ Power stopped.','warn');
+}
+
+// ════════════════════════════════════════════
+// END POWER MODE
+// ════════════════════════════════════════════
 
 // ══ STATEMENT TABLE — DERIV STYLE ══
 let _totalTrades=0;
@@ -2424,7 +2953,8 @@ function addTradeLog(sym, type, digit, stake, profit, won, label, contractId, ti
 function startAI(){
   if(!userToken||isGuest){aiLog('⚠ Token required.','danger');return;}
   if(AI.mode==='trend'){trendStart();return;}
-  if(TR.running){aiLog('⚠ Stop other mode first.','warn');return;}
+  if(AI.mode==='power'){powerStart();return;}
+  if(TR.running||PW.running){aiLog('⚠ Stop other mode first.','warn');return;}
   AI.baseStake=parseFloat(document.getElementById('cfgStake').value)||5;
   AI.mult=parseFloat(document.getElementById('cfgMult').value)||3.6;
   AI.tp=parseFloat(document.getElementById('cfgTP').value)||15;
@@ -2444,6 +2974,7 @@ function startAI(){
 
 // FIX #5: stopAI — removed references to non-existent mode IDs (modeManual, modeScalper)
 function stopAI(){
+  if(AI.mode==='power'&&PW.running){powerStop();return;}
   if(!AI.running)return;
   AI.running=false;AI.inTrade=false;AI.pendingResult=false;
   clearTimeout(AI.tradeTimer);clearTimeout(AI.lateTimer);
@@ -2457,23 +2988,27 @@ function stopAI(){
 
 // FIX #3: resetAI — removed references to non-existent Scalper/Manual mode elements
 function resetAI(){
-  stopAI();trendStop();
+  stopAI();trendStop();powerStop();
   AI.wins=0;AI.losses=0;AI.totalPnl=0;AI.sessPnl=0;
   AI.consecLoss=0;AI.martStep=0;AI.activeCid=null;AI.equityPoints=[0];AI.sessionStart=0;
   AI.tp1Hit=false;AI.tp2Hit=false;
   AI.recoveryRestUntil=0;AI.recoveryRestSym=null;
   TR.step=0;TR.consecLoss=0;TR.lastDirection=null;TR.sessPnl=0;TR.wins=0;TR.losses=0;
   TR.equityPoints=[0];
+  PW.step=0;PW.consecLoss=0;PW.direction=null;PW.sessPnl=0;PW.wins=0;PW.losses=0;
+  PW.equityPoints=[0];PW.prevMarket=null;PW.restUntil=0;PW.restSym=null;
   clearAllErrors();
-  setAIState('idle');updateAIStats();drawEquity();drawTrendEquity();
+  setAIState('idle');updateAIStats();drawEquity();drawTrendEquity();drawPowerEquity();
   const eqS=document.getElementById('eqStats');if(eqS){eqS.textContent='Now +0.00  Peak +0.00  Low +0.00';eqS.style.color='var(--sub)';}
   const eqSTR=document.getElementById('eqStatsTR');if(eqSTR){eqSTR.textContent='Now +0.00  Peak +0.00  Low +0.00';eqSTR.style.color='var(--sub)';}
   document.getElementById('curTrade').classList.remove('active');
   document.getElementById('curTrade').style.display='none';
   const tb1=document.getElementById('tradeLogBody');if(tb1)tb1.innerHTML='';
   const tb2=document.getElementById('tradeLogBodyTR');if(tb2)tb2.innerHTML='';
-  _totalTrades=0; _runningBalance=null;
+  const tb3=document.getElementById('tradeLogBodyPW');if(tb3)tb3.innerHTML='';
+  _totalTrades=0; _runningBalance=null; _pwTrades=0;
   const tc=document.getElementById('tradeCount');if(tc)tc.textContent='0 trades';
+  const tc2=document.getElementById('pwTradeCount');if(tc2)tc2.textContent='0 trades';
   for(let i=0;i<5;i++){const e=document.getElementById('lad'+i);if(e)e.classList.remove('won','lost','active');}
   for(let i=0;i<5;i++){const e=document.getElementById('tlad'+i);if(e)e.classList.remove('won','lost','active');}
   refreshLadder();refreshTrendLadder();
@@ -2483,7 +3018,8 @@ function resetAI(){
 // ══ STATS ══
 function updateAIStats(){
   let w,l,sessPnl;
-  if(TR.running){w=TR.wins;l=TR.losses;sessPnl=TR.sessPnl;}
+  if(PW.running){w=PW.wins;l=PW.losses;sessPnl=PW.sessPnl;}
+  else if(TR.running){w=TR.wins;l=TR.losses;sessPnl=TR.sessPnl;}
   else{w=AI.wins;l=AI.losses;sessPnl=AI.sessPnl;}
   const tot=w+l;
   document.getElementById('astW').textContent=w;
@@ -2493,7 +3029,8 @@ function updateAIStats(){
   pe.textContent=(AI.totalPnl>=0?'+':'')+AI.totalPnl.toFixed(2);
   pe.style.color=AI.totalPnl>=0?'var(--green)':'var(--red)';
   document.getElementById('astCL').textContent=AI.consecLoss;
-  if(TR.running){document.getElementById('astMS').textContent='[📈] '+(TR.lastDirection||'SCAN')+' S'+(TR.step+1);document.getElementById('astNS').textContent='$'+calcTrendStake(TR.step).toFixed(2);}
+  if(PW.running){document.getElementById('astMS').textContent='[⚡] '+(PW.direction||'SCAN')+' S'+(PW.step+1);document.getElementById('astNS').textContent='$'+calcPowerStake(PW.step).toFixed(2);}
+  else if(TR.running){document.getElementById('astMS').textContent='[📈] '+(TR.lastDirection||'SCAN')+' S'+(TR.step+1);document.getElementById('astNS').textContent='$'+calcTrendStake(TR.step).toFixed(2);}
   else{document.getElementById('astMS').textContent=(AI.martStep===0?'DIFFERS':'OVER2')+' S'+(AI.martStep+1);document.getElementById('astNS').textContent='$'+calcStake(AI.martStep).toFixed(2);}
   const sp=document.getElementById('sessPnl');
   sp.textContent=(sessPnl>=0?'+':'')+sessPnl.toFixed(2);
