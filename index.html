@@ -2440,52 +2440,56 @@ const PW={
   direction:null,
   sessPnl:0, wins:0, losses:0, consecLoss:0,
   equityPoints:[0],
-  prevMarket:null,  // for 2-tick confirm on recovery direction
+  prevMarket:null,
+  s1StreakLoss:0,  // consecutive S1 losses — raises entry bar dynamically
 };
 
 // ── Power market analyser ──
-// Looks for digit CLUSTER at the extremes (0+1 for OVER, 8+9 for UNDER)
 function powerAna(sym){
   const s=ST[sym];
-  if(!s||!s.conn||s.digits.length<30) return null;
+  if(!s||!s.conn||s.digits.length<40) return null; // need more data for reliability
   const a=ana(sym);
-  if(!a.isCon) return null; // must be consolidating for S1
+  if(!a.isCon) return null; // must be consolidating
 
   const tot=a.tot||1;
   const fr=a.fr;
 
-  // Digit-based direction — same as Pioneer logic
-  // Hot digit = most frequent digit in last 100 ticks
   const hotD=a.hotD;
   const hotPct=a.hotPctRaw||((fr[hotD]||0)/tot*100);
 
-  // Direction from hot digit position (like Pioneer uses digit frequency)
-  // hotD 0 or 1 → digits are running LOW → bet OVER 1 (wins on 2-9)
-  // hotD 8 or 9 → digits are running HIGH → bet UNDER 8 (wins on 0-7)
-  // hotD 2–7   → not extreme enough, no signal
+  // Direction: hot digit must be at an extreme (0 or 1 for OVER, 8 or 9 for UNDER)
+  // Raised threshold to 16% — meaningfully above random (10%)
   let signal=null;
-  if(hotD<=1&&hotPct>=13) signal='OVER';
-  if(hotD>=8&&hotPct>=13) signal='UNDER';
+  if(hotD<=1&&hotPct>=16) signal='OVER';
+  if(hotD>=8&&hotPct>=16) signal='UNDER';
+  if(!signal) return{lowPct:0,highPct:0,recentConfirm:0,signal:null,score:a.score,isCon:a.isCon,sym,hotD,hotPct};
 
-  // Also check recent momentum — at least 2 of last 5 ticks confirm direction
-  let recentConfirm=0;
-  if(s.digits.length>=5){
-    const last5=s.digits.slice(-5);
-    if(signal==='OVER')  recentConfirm=last5.filter(d=>d<=1).length;
-    if(signal==='UNDER') recentConfirm=last5.filter(d=>d>=8).length;
+  // Recent confirmation: require 2 of last 5 AND 3 of last 10 ticks in direction
+  // This ensures the pattern is sustained, not a one-tick spike
+  let recent5=0, recent10=0;
+  if(s.digits.length>=10){
+    const last10=s.digits.slice(-10);
+    const last5=last10.slice(-5);
+    if(signal==='OVER'){
+      recent5 =last5.filter(d=>d<=1).length;
+      recent10=last10.filter(d=>d<=1).length;
+    } else {
+      recent5 =last5.filter(d=>d>=8).length;
+      recent10=last10.filter(d=>d>=8).length;
+    }
   }
-  if(recentConfirm<1) signal=null; // no recent confirmation → skip
+  // Must have at least 2 in last 5 AND 3 in last 10 — sustained momentum
+  if(recent5<2||recent10<3) signal=null;
 
-  // Low/high cluster pcts for display
-  const lowPct=((fr[0]||0)+(fr[1]||0))/tot*100;
+  const lowPct =((fr[0]||0)+(fr[1]||0))/tot*100;
   const highPct=((fr[8]||0)+(fr[9]||0))/tot*100;
 
-  return{lowPct,highPct,recentConfirm,signal,score:a.score,isCon:a.isCon,sym,hotD,hotPct};
+  return{lowPct,highPct,recentConfirm:recent5,signal,score:a.score,isCon:a.isCon,sym,hotD,hotPct,recent10};
 }
 
 // ── Find best Power market ──
-function findPowerMarket(){
-  const minScore=parseInt(document.getElementById('pwMinScore')?document.getElementById('pwMinScore').value:55)||55;
+function findPowerMarket(overrideMinScore){
+  const minScore=overrideMinScore||parseInt(document.getElementById('pwMinScore')?document.getElementById('pwMinScore').value:55)||55;
   const tgt=document.getElementById('pwIndex')?document.getElementById('pwIndex').value:'AUTO';
 
   if(tgt!=='AUTO'){
@@ -2636,8 +2640,14 @@ function powerTick(){
 
   if(PW.step===0){
     // ── S1: OVER 1 or UNDER 8 ──
-    // Scan all 10 markets every tick — pick best performing, no blocking
-    const market=findPowerMarket();
+    // Dynamic score floor: after 2+ straight S1 losses, require a stronger signal
+    const baseMinScore=parseInt(document.getElementById('pwMinScore')?document.getElementById('pwMinScore').value:55)||55;
+    const dynamicMinScore=PW.s1StreakLoss>=2 ? Math.min(85, baseMinScore+10*(PW.s1StreakLoss-1)) : baseMinScore;
+    if(dynamicMinScore>baseMinScore){
+      aiLogPW('⚠ S1 streak '+PW.s1StreakLoss+' — requiring score≥'+dynamicMinScore+' for next entry','warn');
+    }
+
+    const market=findPowerMarket(dynamicMinScore);
     if(!market){
       updatePowerSignalDisplay();
       setAIState('waiting');return;
@@ -2649,8 +2659,8 @@ function powerTick(){
     stake=calcPowerStake(0);
     const ix=IDX.find(i=>i.s===tradeSym);
     aiLogPW('⚡ S1 | '+(ix?ix.n:tradeSym)+' | '+typeLabel
-      +' | hotD:'+market.hotD+' ('+market.hotPct.toFixed(1)+'%) | $'+stake.toFixed(2)
-      +' Score:'+market.score,'info');
+      +' | hotD:'+market.hotD+' ('+market.hotPct.toFixed(1)+'%) r5:'+market.recentConfirm+'/r10:'+market.recent10
+      +' | $'+stake.toFixed(2)+' Score:'+market.score,'info');
     refreshPowerLadder();
   } else {
     // ── S2–S5: Recovery — best OVER2 or UNDER7 across all markets (like Pioneer) ──
@@ -2735,6 +2745,7 @@ function onPowerContract(poc){
   const stepEl=document.getElementById('plad'+PW.step);
   if(won){
     PW.wins++;AI.wins++;PW.consecLoss=0;AI.consecLoss=0;
+    PW.s1StreakLoss=0; // reset S1 streak on any win
     if(stepEl){stepEl.classList.remove('active');stepEl.classList.add('won');}
     aiLogPW('✅ WIN +$'+profit.toFixed(2)+' S'+(PW.step+1)+' '+AI.activeType+' | Session: $'+PW.sessPnl.toFixed(2),'success');
     aiLogPW('🔍 Scanning all markets for next best signal…','info');
@@ -2745,6 +2756,7 @@ function onPowerContract(poc){
     },1000);
   } else {
     PW.losses++;AI.losses++;PW.consecLoss++;AI.consecLoss++;
+    if(PW.step===0) PW.s1StreakLoss++; // only count consecutive S1 losses
     if(stepEl){stepEl.classList.remove('active');stepEl.classList.add('lost');}
     if(PW.step<4){
       PW.step++;
@@ -2821,7 +2833,7 @@ function powerStart(){
   PW.baseStake=parseFloat(document.getElementById('pwStake').value)||1;
   PW.mult=parseFloat(document.getElementById('pwMult').value)||3.6;
   PW.step=0;PW.consecLoss=0;PW.direction=null;PW.sessPnl=0;PW.wins=0;PW.losses=0;
-  PW.equityPoints=[0];PW.prevMarket=null;
+  PW.equityPoints=[0];PW.prevMarket=null;PW.s1StreakLoss=0;
   PW.running=true;
   refreshPowerLadder();updatePowerLadderUI();
   document.getElementById('startBtn').disabled=true;
@@ -3002,7 +3014,7 @@ function resetAI(){
   TR.step=0;TR.consecLoss=0;TR.lastDirection=null;TR.sessPnl=0;TR.wins=0;TR.losses=0;
   TR.equityPoints=[0];
   PW.step=0;PW.consecLoss=0;PW.direction=null;PW.sessPnl=0;PW.wins=0;PW.losses=0;
-  PW.equityPoints=[0];PW.prevMarket=null;
+  PW.equityPoints=[0];PW.prevMarket=null;PW.s1StreakLoss=0;
   clearAllErrors();
   setAIState('idle');updateAIStats();drawEquity();drawTrendEquity();drawPowerEquity();
   const eqS=document.getElementById('eqStats');if(eqS){eqS.textContent='Now +0.00  Peak +0.00  Low +0.00';eqS.style.color='var(--sub)';}
