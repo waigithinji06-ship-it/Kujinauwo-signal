@@ -360,37 +360,92 @@ padding:9px 11px;max-height:150px;overflow-y:auto;margin-bottom:10px;
 .ai-log-line.danger{color:var(–red);}
 .ai-log-line .ts{color:var(–dim);margin-right:6px;}
 
-/* ══ TRANSACTION LOG ══ */
+/* ══ TRANSACTION TABLE — DERIV STYLE ══ */
 .tlog{
 background:var(–card);border:1px solid var(–border);
-border-radius:10px;overflow:auto;max-height:300px;
+border-radius:12px;overflow:auto;max-height:340px;
 -webkit-overflow-scrolling:touch;
 }
 .tlog::-webkit-scrollbar{width:3px;height:3px;}
 .tlog::-webkit-scrollbar-thumb{background:var(–border2);border-radius:2px;}
-.log-entry{
-display:grid;
-grid-template-columns:46px 56px 62px 66px 54px 64px 60px;
-gap:3px;padding:9px 10px;
+
+/* table itself */
+.dtable{width:100%;border-collapse:collapse;min-width:700px;}
+
+/* header row */
+.dtable thead tr{
+background:var(–card2);
+position:sticky;top:0;z-index:3;
+}
+.dtable thead th{
+padding:9px 10px;
+font-family:‘JetBrains Mono’,monospace;font-size:8px;font-weight:700;
+color:var(–sub);letter-spacing:1px;text-transform:uppercase;
+white-space:nowrap;border-bottom:2px solid var(–border2);
+text-align:left;
+}
+.dtable thead th.r{text-align:right;}
+.dtable thead th.c{text-align:center;}
+
+/* data rows */
+.dtable tbody tr{
 border-bottom:1px solid var(–border);
-font-family:‘JetBrains Mono’,monospace;font-size:10px;align-items:center;
 transition:background .12s;
-min-width:440px;
+cursor:default;
 }
-.log-entry:last-child{border-bottom:none;}
-.log-entry:hover{background:rgba(255,255,255,.04);}
-.log-entry.win{border-left:3px solid #22c55e;background:rgba(34,197,94,.04);}
-.log-entry.loss{border-left:3px solid #ef4444;background:rgba(239,68,68,.04);}
-.log-entry.pending{border-left:3px solid var(–yellow);}
-.log-header{
-background:var(–card2);font-size:8px;font-weight:700;color:var(–sub);
-letter-spacing:.8px;text-transform:uppercase;border-bottom:2px solid var(–border2);
-position:sticky;top:0;left:0;z-index:2;
+.dtable tbody tr:last-child{border-bottom:none;}
+.dtable tbody tr:hover{background:rgba(255,255,255,.03);}
+.dtable tbody tr.drow-win {border-left:3px solid #22c55e;background:rgba(34,197,94,.03);}
+.dtable tbody tr.drow-loss{border-left:3px solid #ef4444;background:rgba(239,68,68,.03);}
+.dtable tbody tr.drow-open{border-left:3px solid #eab308;background:rgba(234,179,8,.02);}
+
+.dtable td{
+padding:9px 10px;
+font-family:‘JetBrains Mono’,monospace;font-size:9.5px;
+color:var(–text);vertical-align:middle;white-space:nowrap;
 }
-.log-header.log-entry{border-left:3px solid transparent;}
-.pnl-pos{color:#22c55e;font-weight:800;}
-.pnl-neg{color:#ef4444;font-weight:800;}
-.pnl-zero{color:var(–dim);}
+.dtable td.r{text-align:right;}
+.dtable td.c{text-align:center;}
+.dtable td.dim{color:var(–sub);}
+
+/* status dot */
+.dstatus-dot{
+display:inline-block;width:8px;height:8px;border-radius:50%;
+margin-right:5px;flex-shrink:0;vertical-align:middle;
+}
+.dstatus-dot.win {background:#22c55e;box-shadow:0 0 5px rgba(34,197,94,.6);}
+.dstatus-dot.loss{background:#ef4444;box-shadow:0 0 5px rgba(239,68,68,.5);}
+.dstatus-dot.open{background:#eab308;animation:spulse 1s infinite;}
+
+/* status badge */
+.dstatus-badge{
+display:inline-flex;align-items:center;
+padding:2px 8px;border-radius:20px;font-size:8px;font-weight:700;
+letter-spacing:.5px;white-space:nowrap;
+}
+.dstatus-badge.won {background:rgba(34,197,94,.12);color:#22c55e;border:1px solid rgba(34,197,94,.25);}
+.dstatus-badge.lost{background:rgba(239,68,68,.12);color:#ef4444;border:1px solid rgba(239,68,68,.25);}
+.dstatus-badge.open{background:rgba(234,179,8,.12);color:#eab308;border:1px solid rgba(234,179,8,.25);}
+
+/* contract type pill */
+.dtype-pill{
+display:inline-flex;align-items:center;gap:4px;
+padding:2px 7px;border-radius:5px;font-size:8px;font-weight:700;letter-spacing:.3px;
+}
+.dtype-pill.call  {background:rgba(34,197,94,.1);color:#22c55e;border:1px solid rgba(34,197,94,.2);}
+.dtype-pill.put   {background:rgba(239,68,68,.1);color:#ef4444;border:1px solid rgba(239,68,68,.2);}
+.dtype-pill.differ{background:rgba(56,189,248,.1);color:#38bdf8;border:1px solid rgba(56,189,248,.2);}
+.dtype-pill.over  {background:rgba(96,165,250,.1);color:#60a5fa;border:1px solid rgba(96,165,250,.2);}
+.dtype-pill.under {background:rgba(167,139,250,.1);color:#a78bfa;border:1px solid rgba(167,139,250,.2);}
+
+/* P&L coloring */
+.dpnl-pos{color:#22c55e;font-weight:800;}
+.dpnl-neg{color:#ef4444;font-weight:800;}
+.dpnl-zero{color:var(–dim);}
+
+/* contract ID link style */
+.dcid{color:var(–dim);font-size:8px;font-family:‘JetBrains Mono’,monospace;}
+.dcid:hover{color:var(–accent);text-decoration:underline;cursor:pointer;}
 
 /* ══ ANALYSIS PAGE ══ */
 .ana-header{display:flex;justify-content:space-between;align-items:center;padding:10px 14px 6px;flex-shrink:0;}
@@ -515,8 +570,31 @@ position:sticky;top:0;left:0;z-index:2;
 .sval{font-family:‘JetBrains Mono’,monospace;font-size:16px;font-weight:700;}
 .sval.g{color:var(–green);}.sval.r{color:var(–red);}.sval.a{color:var(–accent);}.sval.y{color:var(–yellow);}
 .sumrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:6px;margin-bottom:14px;}
-.foot{text-align:center;font-size:9px;color:var(–dim);font-family:‘JetBrains Mono’,monospace;padding:6px 0 14px;}
-</style>
+/* ══ ERROR CENTRE ══ */
+.err-row{
+display:flex;align-items:flex-start;gap:8px;
+padding:7px 12px;border-bottom:1px solid rgba(239,68,68,.1);
+font-family:‘JetBrains Mono’,monospace;font-size:9px;
+animation:slideIn .2s ease;
+}
+.err-row:last-child{border-bottom:none;}
+.err-badge{
+flex-shrink:0;padding:2px 6px;border-radius:4px;font-size:8px;font-weight:700;
+letter-spacing:.5px;white-space:nowrap;margin-top:1px;
+}
+.err-badge.ws   {background:rgba(239,68,68,.2);color:#ef4444;border:1px solid rgba(239,68,68,.3);}
+.err-badge.trade{background:rgba(249,115,22,.2);color:#f97316;border:1px solid rgba(249,115,22,.3);}
+.err-badge.bal  {background:rgba(234,179,8,.2);color:#eab308;border:1px solid rgba(234,179,8,.3);}
+.err-badge.timeout{background:rgba(168,85,247,.2);color:#a855f7;border:1px solid rgba(168,85,247,.3);}
+.err-badge.stale{background:rgba(96,165,250,.2);color:#60a5fa;border:1px solid rgba(96,165,250,.3);}
+.err-badge.barrier{background:rgba(52,211,153,.2);color:#34d399;border:1px solid rgba(52,211,153,.3);}
+.err-badge.circuit{background:rgba(239,68,68,.3);color:#fca5a5;border:1px solid rgba(239,68,68,.5);}
+.err-badge.info{background:rgba(96,165,250,.15);color:#93c5fd;border:1px solid rgba(96,165,250,.25);}
+.err-ts{color:#475569;margin-right:4px;flex-shrink:0;}
+.err-msg{color:#fca5a5;flex:1;line-height:1.5;}
+.err-msg strong{color:#fff;}
+.err-dismiss{background:none;border:none;color:#475569;cursor:pointer;font-size:12px;padding:0 2px;flex-shrink:0;}
+.err-dismiss:hover{color:#ef4444;}
 
 <body>
 
@@ -626,7 +704,21 @@ position:sticky;top:0;left:0;z-index:2;
     </div>
   </div>
 
-  <div id="ERR" style="display:none;background:rgba(255,61,90,.12);border-bottom:1px solid rgba(255,61,90,.3);padding:6px 14px;font-size:10px;color:var(--red);font-family:'Space Mono',monospace;flex-shrink:0;"></div>
+  <!-- ══ ERROR CENTRE ══ -->
+
+  <div id="errCentre" style="display:none;flex-shrink:0;z-index:100;max-height:180px;overflow-y:auto;background:#0d0d0d;border-bottom:2px solid #ef4444;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:5px 12px 3px;background:rgba(239,68,68,.12);border-bottom:1px solid rgba(239,68,68,.2);">
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span style="font-size:11px;">🚨</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;color:#ef4444;letter-spacing:1px;">ERROR LOG</span>
+        <span id="errCount" style="background:#ef4444;color:#fff;font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;padding:1px 5px;border-radius:10px;">0</span>
+      </div>
+      <button onclick="clearAllErrors()" style="background:none;border:1px solid rgba(239,68,68,.4);color:#ef4444;font-family:'JetBrains Mono',monospace;font-size:8px;padding:2px 8px;border-radius:4px;cursor:pointer;">CLEAR ALL</button>
+    </div>
+    <div id="errList"></div>
+  </div>
+  <!-- Legacy ERR bar kept for WebSocket raw errors — hidden, routed through errCentre -->
+  <div id="ERR" style="display:none;"></div>
 
   <!-- Pages container -->
 
@@ -766,12 +858,26 @@ position:sticky;top:0;left:0;z-index:2;
       <div style="font-size:9px;color:var(--sub);font-family:'Space Mono',monospace;letter-spacing:2px;margin-bottom:4px;">BOT ACTIVITY</div>
       <div id="aiLog" class="ai-log"><div class="ai-log-line info"><span class="ts">--:--:--</span>System ready. Waiting for connection…</div></div>
       <!-- Transaction log -->
-      <div style="font-size:9px;color:var(--sub);font-family:'Space Mono',monospace;letter-spacing:2px;margin:10px 0 4px;display:flex;justify-content:space-between;align-items:center;">
-        <span>📋 TRANSACTIONS</span>
+      <div style="font-size:9px;color:var(--sub);font-family:'Space Mono',monospace;letter-spacing:2px;margin:10px 0 6px;display:flex;justify-content:space-between;align-items:center;">
+        <span>📋 STATEMENT</span>
         <span id="tradeCount" style="color:var(--dim);font-size:8px;">0 trades</span>
       </div>
       <div id="tradeLog" class="tlog">
-        <div class="log-entry log-header"><div>TIME</div><div>INDEX</div><div>CONTRACT</div><div>ENTRY</div><div>STAKE</div><div>RESULT</div><div>P&amp;L</div></div>
+        <table class="dtable">
+          <thead><tr>
+            <th class="c">STATUS</th>
+            <th>DATE/TIME</th>
+            <th>MARKET</th>
+            <th>CONTRACT</th>
+            <th class="r">DURATION</th>
+            <th class="r">BUY</th>
+            <th class="r">SELL</th>
+            <th class="r">P&amp;L</th>
+            <th class="r">BALANCE</th>
+            <th>REF #</th>
+          </tr></thead>
+          <tbody id="tradeLogBody"></tbody>
+        </table>
       </div>
     </div>
 
@@ -843,9 +949,23 @@ position:sticky;top:0;left:0;z-index:2;
       </div>
       <div style="font-size:9px;color:var(--sub);font-family:'Space Mono',monospace;letter-spacing:2px;margin-bottom:6px;">AI DECISION LOG</div>
       <div id="aiLogTR" class="ai-log"></div>
-      <div style="font-size:9px;color:var(--sub);font-family:'Space Mono',monospace;letter-spacing:2px;margin:10px 0 6px;">📋 TRADE LOG</div>
+      <div style="font-size:9px;color:var(--sub);font-family:'Space Mono',monospace;letter-spacing:2px;margin:10px 0 6px;">📋 STATEMENT</div>
       <div id="tradeLogTR" class="tlog">
-        <div class="log-entry log-header"><div>TIME</div><div>INDEX</div><div>CONTRACT</div><div>ENTRY</div><div>STAKE</div><div>RESULT</div><div>P&L</div></div>
+        <table class="dtable">
+          <thead><tr>
+            <th class="c">STATUS</th>
+            <th>DATE/TIME</th>
+            <th>MARKET</th>
+            <th>CONTRACT</th>
+            <th class="r">DURATION</th>
+            <th class="r">BUY</th>
+            <th class="r">SELL</th>
+            <th class="r">P&amp;L</th>
+            <th class="r">BALANCE</th>
+            <th>REF #</th>
+          </tr></thead>
+          <tbody id="tradeLogBodyTR"></tbody>
+        </table>
       </div>
     </div>
 
@@ -1038,7 +1158,7 @@ function sendProposal(p){
 function onProposal(msg){
   if(!_trendPending) return;
   if(msg.error){
-    aiLog('⚠ Proposal err: '+(msg.error.message||msg.error.code)+' — placing with current barrier','warn');
+    pushError('barrier','Proposal rejected: '+(msg.error.message||msg.error.code), 'Symbol: '+(_trendPending?_trendPending.sym:'?')+' · Barrier: '+(_trendPending?_trendPending.barrier:'?'));
     const p=_trendPending; _trendPending=null;
     AI.inTrade=false; AI.pendingResult=false;
     placeTrade(p.sym, p.code, p.stake, p.barrier, p.typeLabel, 'trend');
@@ -1412,14 +1532,89 @@ function updConn(live){
   if(ld) ld.style.background=live?'var(--green)':'var(--red)';
   if(cd) cd.style.background=live?'var(--green)':'var(--red)';
 }
+// ══ ERROR CENTRE ══
+// Categories: 'ws' | 'trade' | 'bal' | 'timeout' | 'stale' | 'barrier' | 'circuit' | 'info'
+const _errLog=[];
+let _errIdCounter=0;
+
+const ERR_LABELS={
+  ws:      'WS',
+  trade:   'TRADE',
+  bal:     'BALANCE',
+  timeout: 'TIMEOUT',
+  stale:   'STALE FEED',
+  barrier: 'BARRIER',
+  circuit: 'CIRCUIT BRK',
+  info:    'INFO',
+};
+
+// What each category means — shown as a tooltip/hint
+const ERR_HINTS={
+  ws:      'WebSocket connection dropped or rejected',
+  trade:   'Deriv rejected the buy order',
+  bal:     'Account balance too low to place this stake',
+  timeout: 'Contract result not received within 45s',
+  stale:   'No tick received in 5s — feed may have frozen',
+  barrier: 'Barrier value rejected by Deriv API',
+  circuit: 'Circuit breaker triggered — bot stopped',
+  info:    'System information',
+};
+
+function pushError(category, message, detail){
+  const id=++_errIdCounter;
+  const now=new Date().toUTCString().slice(17,25);
+  _errLog.push({id,category,message,detail,ts:now});
+  _renderErrorCentre();
+  // Also mirror critical errors into the bot activity log
+  if(category!=='info') aiLog('🚨 ['+ERR_LABELS[category]+'] '+message,'danger');
+}
+
+function _renderErrorCentre(){
+  const centre=document.getElementById('errCentre');
+  const list=document.getElementById('errList');
+  const badge=document.getElementById('errCount');
+  if(!centre||!list||!badge) return;
+  const count=_errLog.length;
+  badge.textContent=count;
+  centre.style.display=count>0?'block':'none';
+  list.innerHTML='';
+  // Show most recent first
+  [..._errLog].reverse().forEach(e=>{
+    const row=document.createElement('div');
+    row.className='err-row';
+    const hint=ERR_HINTS[e.category]||'';
+    row.innerHTML=
+      '<span class="err-badge '+e.category+'" title="'+hint+'">'+ERR_LABELS[e.category]+'</span>'+
+      '<div style="flex:1;">'+
+        '<div><span class="err-ts">'+e.ts+'</span><span class="err-msg"><strong>'+e.message+'</strong></span></div>'+
+        (e.detail?'<div style="color:#64748b;font-size:8px;margin-top:2px;">'+e.detail+'</div>':'') +
+      '</div>'+
+      '<button class="err-dismiss" onclick="dismissError('+e.id+')" title="Dismiss">✕</button>';
+    list.appendChild(row);
+  });
+}
+
+function dismissError(id){
+  const idx=_errLog.findIndex(e=>e.id===id);
+  if(idx!==-1) _errLog.splice(idx,1);
+  _renderErrorCentre();
+}
+
+function clearAllErrors(){
+  _errLog.length=0;
+  _renderErrorCentre();
+}
+
+// ── Upgraded showErr/hideErr — now route through Error Centre ──
 function showErr(msg){
-  const e=document.getElementById('ERR');
-  if(e){e.textContent='⚠ '+msg;e.style.display='block';}
+  // Classify the raw WebSocket/API error message
+  let cat='ws';
+  if(msg.toLowerCase().includes('barrier')) cat='barrier';
+  else if(msg.toLowerCase().includes('balance')) cat='bal';
+  else if(msg.toLowerCase().includes('timeout')) cat='timeout';
+  pushError(cat, msg, 'Source: Deriv WebSocket API');
 }
-function hideErr(){
-  const e=document.getElementById('ERR');
-  if(e) e.style.display='none';
-}
+function hideErr(){/* legacy no-op — errors stay until dismissed */}
 
 function startConn(){
   try{ws=new WebSocket('wss://ws.binaryws.com/websockets/v3?app_id=1089');}
@@ -1936,7 +2131,8 @@ function placeTrade(sym,code,stake,barrier,typeLabel,source){
   if(s&&s.tickTimes&&s.tickTimes.length>0){
     const lastTick=s.tickTimes[s.tickTimes.length-1];
     if(Date.now()-lastTick>5000){
-      aiLog('⚠ '+sym+' feed stale ('+Math.round((Date.now()-lastTick)/1000)+'s) — skipping to avoid lag loss','warn');
+      pushError('stale', sym+' feed stale — skipping trade', 'No tick for '+Math.round((Date.now()-lastTick)/1000)+'s · Check connection');
+      AI.inTrade=false; AI.pendingResult=false;
       return;
     }
   }
@@ -1980,7 +2176,7 @@ function placeTrade(sym,code,stake,barrier,typeLabel,source){
       AI.lateTimer=setTimeout(()=>{
         if(AI.pendingResult&&AI.activeCid){
           const lostStake=parseFloat(document.getElementById('ctStake').textContent.replace('$',''))||0;
-          aiLog('❌ Timeout — no result after 45s. Recording as loss ($'+lostStake.toFixed(2)+')','danger');
+          pushError('timeout','No result after 45s — recorded as loss', 'Contract #'+AI.activeCid+' · Stake: $'+lostStake.toFixed(2)+' · Check Deriv account');
           AI.pendingResult=false;AI.inTrade=false;
           AI.losses++;AI.consecLoss++;
           const lostAmt=-lostStake;
@@ -1990,7 +2186,7 @@ function placeTrade(sym,code,stake,barrier,typeLabel,source){
           if(src==='trend'){TR.sessPnl=Math.round((TR.sessPnl+lostAmt)*100)/100;TR.losses++;}
           AI.equityPoints.push(AI.sessPnl);
           const stepLabel=src==='pioneer'?'S'+(AI.martStep+1)+' T/O':src==='trend'?'TR T/O':'MAN T/O';
-          addTradeLog(AI.activeSym,AI.activeType,'timeout',lostStake,lostAmt,false,stepLabel);
+          addTradeLog(AI.activeSym,AI.activeType,'timeout',lostStake,lostAmt,false,stepLabel, AI.activeCid, 1);
           AI.activeCid=null;
           if(src==='pioneer'&&AI.martStep<4) AI.martStep++;
           else if(src==='trend'&&TR.step<4) TR.step++;
@@ -2008,9 +2204,16 @@ function onBuy(msg){
   if(!AI.pendingResult)return;
   if(msg.error){
     clearTimeout(AI.tradeTimer);
-    aiLog('❌ Buy error: '+(msg.error.message||msg.error.code),'danger');
+    const errCode=msg.error.code||'UNKNOWN';
+    const errMsg=msg.error.message||errCode;
+    const isBal=errCode==='InsufficientBalance';
+    pushError(
+      isBal?'bal':'trade',
+      isBal?'Insufficient balance — bot stopped':errMsg,
+      'Code: '+errCode+' · Index: '+(AI.activeSym||'?')+' · Contract: '+(AI.activeType||'?')+' · Stake: $'+(AI.activeDigit||'?')
+    );
     AI.inTrade=false;AI.pendingResult=false;
-    if(msg.error.code==='InsufficientBalance'){aiLog('🛑 Insufficient balance.','danger');stopAI();trendStop();}
+    if(isBal){stopAI();trendStop();}
     setAIState(AI.running||TR.running?'scanning':'idle');return;
   }
   if(!msg.buy)return;
@@ -2068,13 +2271,15 @@ function onContract(poc){
         aiLog('❌ TREND LOSS S5 — circuit breaker.','danger');
       }
     }
-    addTradeLog(AI.activeSym,AI.activeType,AI.activeDigit,stake,profit,won,'TR'+(TR.step));
+    addTradeLog(AI.activeSym,AI.activeType,AI.activeDigit,stake,profit,won,'TR'+(TR.step), poc.contract_id, TR.ticks||5, poc.payout);
     updateAIStats();drawEquity();drawTrendEquity();
     setTimeout(()=>{
       const _ct2=document.getElementById('curTrade');if(_ct2){_ct2.classList.remove('active');_ct2.style.display='none';}
       if(TR.running){
-        if(TR.consecLoss>=5){setAIState('stopped');aiLog('🛑 5 losses — Trend stopped.','danger');trendStop();}
-        else{setAIState('scanning');updateTrendLadderUI();}
+        if(TR.consecLoss>=5){
+          pushError('circuit','Trend circuit breaker — 5 consecutive losses','Bot stopped · Reset to start a new session');
+          setAIState('stopped');trendStop();
+        }else{setAIState('scanning');updateTrendLadderUI();}
       }
     },600);
   } else {
@@ -2101,63 +2306,112 @@ function onContract(poc){
         aiLog('❌ LOSS S5 — circuit breaker. Market resting 60s.','danger');
       }
     }
-    addTradeLog(AI.activeSym,AI.activeType,AI.activeDigit,stake,profit,won,'S'+(AI.martStep+1)+(AI.martStep===0?' DIFF':' OV2'));
+    addTradeLog(AI.activeSym,AI.activeType,AI.activeDigit,stake,profit,won,'S'+(AI.martStep+1)+(AI.martStep===0?' DIFF':' OV2'), poc.contract_id, 1, poc.payout);
     updateAIStats();drawEquity();
     setTimeout(()=>{
       const _ct2=document.getElementById('curTrade');if(_ct2){_ct2.classList.remove('active');_ct2.style.display='none';}
-      if(AI.running){if(AI.consecLoss>=5){setAIState('stopped');aiLog('🛑 5 losses.','danger');stopAI();}else{setAIState('scanning');updateLadderUI();}}
+      if(AI.consecLoss>=5){
+        pushError('circuit','Pioneer circuit breaker — 5 consecutive losses','Bot stopped · Reset to start a new session');
+        setAIState('stopped');stopAI();
+      }else{setAIState('scanning');updateLadderUI();}
     },600);
   }
 }
 
-// ══ TRADE LOG ══
+// ══ STATEMENT TABLE — DERIV STYLE ══
 let _totalTrades=0;
-function _ensureLogHeader(logId){
-  const log=document.getElementById(logId);if(!log)return;
-  if(!log.querySelector('.log-header')){
-    const h=document.createElement('div');
-    h.className='log-entry log-header';
-    h.innerHTML='<div>TIME</div><div>INDEX</div><div>CONTRACT</div><div>ENTRY</div><div>STAKE</div><div>RESULT</div><div>P&L</div>';
-    log.insertBefore(h,log.firstChild);
-  }
+let _runningBalance=null; // tracks live balance after each trade
+
+function _ensureLogHeader(logId){/* no-op — table headers in HTML */}
+
+function _contractTypePill(type){
+  const t=(type||'').toUpperCase();
+  if(t==='CALL')   return '<span class="dtype-pill call">▲ CALL</span>';
+  if(t==='PUT')    return '<span class="dtype-pill put">▼ PUT</span>';
+  if(t==='DIFFER') return '<span class="dtype-pill differ">≠ DIFFERS</span>';
+  if(t.includes('OVER'))  return '<span class="dtype-pill over">↑ OVER 2</span>';
+  if(t.includes('UNDER')) return '<span class="dtype-pill under">↓ UNDER 7</span>';
+  return '<span class="dtype-pill differ">'+t+'</span>';
 }
-function addTradeLog(sym,type,digit,stake,profit,won,label){
+
+function addTradeLog(sym, type, digit, stake, profit, won, label, contractId, ticks, payout){
   const ix=IDX.find(i=>i.s===sym);
-  const now=new Date().toUTCString().slice(17,25);
-  const entryPrice=sym&&ST[sym]&&ST[sym].last?ST[sym].last.toFixed(2):'—';
-  // Contract display: use the actual type (CALL/PUT/DIFFERS/OVER2/UNDER7)
-  // type = AI.activeType e.g. 'CALL','PUT','DIFFER','OVER2','UNDER7'
-  // label = step label e.g. 'TR1','S2 OV2' — shown as sub-info not primary
-  const contractDisplay=type||label||'—';
-  // Color the contract cell by type
-  const cColor=
-    contractDisplay==='CALL'?'#22c55e':
-    contractDisplay==='PUT'?'#ef4444':
-    contractDisplay==='DIFFER'?'#38bdf8':
-    contractDisplay.includes('OVER')?'#60a5fa':
-    contractDisplay.includes('UNDER')?'#a78bfa':
-    'var(--accent)';
-  const entry=document.createElement('div');
-  entry.className='log-entry '+(won?'win':profit===0?'pending':'loss');
-  const pnlCls=profit>0?'pnl-pos':profit<0?'pnl-neg':'pnl-zero';
-  entry.innerHTML=
-    '<div style="color:var(--dim);font-size:9px;">'+now+'</div>'+
-    '<div style="font-weight:700;color:var(--text);">'+(ix?ix.n:(sym||'—'))+'</div>'+
-    '<div style="color:'+cColor+';font-weight:700;">'+contractDisplay+'</div>'+
-    '<div style="color:var(--sub);">'+entryPrice+'</div>'+
-    '<div style="color:var(--text);font-weight:700;">$'+parseFloat(stake||0).toFixed(2)+'</div>'+
-    '<div style="font-weight:800;color:'+(won?'#22c55e':'#ef4444')+';">'+(won?'✅WIN':'❌LOSS')+'</div>'+
-    '<div class="'+pnlCls+'">'+(profit>=0?'+':'')+'$'+parseFloat(profit||0).toFixed(2)+'</div>';
+  // Full market name like Deriv uses
+  const marketName=ix?ix.sub:(sym||'—');
+  const shortName=ix?ix.n:(sym||'—');
+
+  // Date/time — Deriv shows full UTC datetime
+  const now=new Date();
+  const dateStr=now.toUTCString().slice(5,11)+' '+now.toUTCString().slice(17,25)+' UTC';
+
+  // Buy price = stake paid
+  const buyPrice=parseFloat(stake||0);
+  // Sell price = what was received (stake + profit if won, 0 if lost)
+  const sellPrice=won?(buyPrice+parseFloat(profit||0)):0;
+  const pnl=parseFloat(profit||0);
+
+  // Running balance
+  const balVal=document.getElementById('balVal');
+  const currentBal=balVal?parseFloat(balVal.textContent)||null:null;
+  if(currentBal!==null) _runningBalance=currentBal;
+  const balDisplay=_runningBalance!==null?('$'+_runningBalance.toFixed(2)):'—';
+
+  // Duration
+  const durDisplay=(ticks||1)+(ticks===1?' tick':' ticks');
+
+  // Contract ID ref
+  const cidNum=contractId||AI.activeCid||'—';
+  const cidShort=cidNum&&cidNum!=='—'?String(cidNum).slice(-8):cidNum;
+
+  // Status
+  const statusClass=won?'won':'lost';
+  const dotClass=won?'win':'loss';
+  const statusText=won?'Won':'Lost';
+
+  // P&L class
+  const pnlClass=pnl>0?'dpnl-pos':pnl<0?'dpnl-neg':'dpnl-zero';
+
+  // digit detail for DIFFERS
+  const digitNote=type==='DIFFER'&&digit!==undefined&&digit!==null&&digit!=='timeout'
+    ? ' <span style="color:var(--dim);font-size:8px;">(d'+digit+')</span>' : '';
+
+  const row=document.createElement('tr');
+  row.className='drow-'+(won?'win':'loss');
+  row.innerHTML=
+    '<td class="c"><span class="dstatus-badge '+statusClass+'">'+
+      '<span class="dstatus-dot '+dotClass+'"></span>'+statusText+'</span></td>'+
+    '<td class="dim" style="font-size:9px;white-space:nowrap;">'+dateStr+'</td>'+
+    '<td><div style="font-weight:700;font-size:10px;">'+shortName+'</div>'+
+        '<div style="color:var(--dim);font-size:8px;">'+marketName+'</div></td>'+
+    '<td>'+_contractTypePill(type)+digitNote+'</td>'+
+    '<td class="r dim">'+durDisplay+'</td>'+
+    '<td class="r" style="color:var(--text);font-weight:600;">$'+buyPrice.toFixed(2)+'</td>'+
+    '<td class="r" style="color:'+(won?'#22c55e':'#ef4444')+';">$'+sellPrice.toFixed(2)+'</td>'+
+    '<td class="r"><span class="'+pnlClass+'">'+(pnl>=0?'+':'')+'$'+pnl.toFixed(2)+'</span></td>'+
+    '<td class="r" style="color:var(--accent);font-weight:600;">'+balDisplay+'</td>'+
+    '<td><span class="dcid" title="Contract #'+cidNum+'" onclick="navigator.clipboard&&navigator.clipboard.writeText(\''+cidNum+'\').then(()=>aiLog(\'📋 Contract ID copied\',\'info\'))">'+
+      (cidNum!=='—'?'#'+cidShort:'—')+'</span></td>';
+
+  // Append to correct tbody
   const src=AI.activeSource||'pioneer';
-  const logMap={pioneer:'tradeLog',trend:'tradeLogTR'};
-  const logId=logMap[src]||'tradeLog';
-  _ensureLogHeader(logId);
-  const log=document.getElementById(logId);
-  if(log){log.appendChild(entry);log.scrollTop=log.scrollHeight;}
-  if(logId!=='tradeLog'){
-    _ensureLogHeader('tradeLog');
-    const ml=document.getElementById('tradeLog');
-    if(ml){const e2=entry.cloneNode(true);ml.appendChild(e2);ml.scrollTop=ml.scrollHeight;}
+  const bodyMap={pioneer:'tradeLogBody',trend:'tradeLogBodyTR'};
+  const bodyId=bodyMap[src]||'tradeLogBody';
+  const tbody=document.getElementById(bodyId);
+  if(tbody){
+    tbody.appendChild(row);
+    // scroll parent tlog to bottom
+    const tlog=tbody.closest('.tlog');
+    if(tlog) tlog.scrollTop=tlog.scrollHeight;
+  }
+  // Mirror to pioneer body if source is trend
+  if(bodyId!=='tradeLogBody'){
+    const mb=document.getElementById('tradeLogBody');
+    if(mb){
+      const r2=row.cloneNode(true);
+      mb.appendChild(r2);
+      const tlog2=mb.closest('.tlog');
+      if(tlog2) tlog2.scrollTop=tlog2.scrollHeight;
+    }
   }
   _totalTrades++;
   const tc=document.getElementById('tradeCount');
@@ -2208,16 +2462,15 @@ function resetAI(){
   AI.recoveryRestUntil=0;AI.recoveryRestSym=null;
   TR.step=0;TR.consecLoss=0;TR.lastDirection=null;TR.sessPnl=0;TR.wins=0;TR.losses=0;
   TR.equityPoints=[0];
+  clearAllErrors();
   setAIState('idle');updateAIStats();drawEquity();drawTrendEquity();
   const eqS=document.getElementById('eqStats');if(eqS){eqS.textContent='Now +0.00  Peak +0.00  Low +0.00';eqS.style.color='var(--sub)';}
   const eqSTR=document.getElementById('eqStatsTR');if(eqSTR){eqSTR.textContent='Now +0.00  Peak +0.00  Low +0.00';eqSTR.style.color='var(--sub)';}
   document.getElementById('curTrade').classList.remove('active');
   document.getElementById('curTrade').style.display='none';
-  document.getElementById('tradeLog').innerHTML='';
-  document.getElementById('tradeLogTR').innerHTML='';
-  _ensureLogHeader('tradeLog');
-  _ensureLogHeader('tradeLogTR');
-  _totalTrades=0;
+  const tb1=document.getElementById('tradeLogBody');if(tb1)tb1.innerHTML='';
+  const tb2=document.getElementById('tradeLogBodyTR');if(tb2)tb2.innerHTML='';
+  _totalTrades=0; _runningBalance=null;
   const tc=document.getElementById('tradeCount');if(tc)tc.textContent='0 trades';
   for(let i=0;i<5;i++){const e=document.getElementById('lad'+i);if(e)e.classList.remove('won','lost','active');}
   for(let i=0;i<5;i++){const e=document.getElementById('tlad'+i);if(e)e.classList.remove('won','lost','active');}
