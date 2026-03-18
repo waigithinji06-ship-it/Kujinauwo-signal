@@ -2343,12 +2343,21 @@ function onContract(poc){
   const stake=parseFloat(poc.buy_price||0);
   const source=AI.activeSource||'pioneer';
   AI.pendingResult=false;AI.inTrade=false;
+
+  // ── Route Power immediately — it handles its own P&L accounting ──
+  if(source==='power'){
+    document.getElementById('ctStatus').textContent=won?'WON ✅':'LOST ❌';
+    document.getElementById('ctStatus').style.color=won?'var(--green)':'var(--red)';
+    onPowerContract(poc);return;
+  }
+
+  // ── Pioneer and Trend P&L accounting ──
+  AI.totalPnl=Math.round((AI.totalPnl+profit)*100)/100;
+  AI.sessPnl=Math.round((AI.sessPnl+profit)*100)/100;
   AI.equityPoints.push(AI.sessPnl);
   if(AI.equityPoints.length>300)AI.equityPoints.shift();
   document.getElementById('ctStatus').textContent=won?'WON ✅':'LOST ❌';
   document.getElementById('ctStatus').style.color=won?'var(--green)':'var(--red)';
-
-  if(source==='power'){onPowerContract(poc);return;}
 
   if(source==='trend'){
     const stepEl=document.getElementById('tlad'+TR.step);
