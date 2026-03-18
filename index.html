@@ -2441,34 +2441,38 @@ function powerAna(sym){
   const s=ST[sym];
   if(!s||!s.conn||s.digits.length<30) return null;
   const a=ana(sym);
-  if(!a.isCon) return null;  // must be consolidating
+  if(!a.isCon) return null; // must be consolidating for S1
 
   const tot=a.tot||1;
   const fr=a.fr;
 
-  // Low cluster: digits 0 + 1
-  const lowPct=((fr[0]||0)+(fr[1]||0))/tot*100;
-  // High cluster: digits 8 + 9
-  const highPct=((fr[8]||0)+(fr[9]||0))/tot*100;
+  // Digit-based direction — same as Pioneer logic
+  // Hot digit = most frequent digit in last 100 ticks
+  const hotD=a.hotD;
+  const hotPct=a.hotPctRaw||((fr[hotD]||0)/tot*100);
 
-  // Recent momentum — how many of last 5 ticks are in cluster
-  let recentLow=0, recentHigh=0;
+  // Direction from hot digit position (like Pioneer uses digit frequency)
+  // hotD 0 or 1 → digits are running LOW → bet OVER 1 (wins on 2-9)
+  // hotD 8 or 9 → digits are running HIGH → bet UNDER 8 (wins on 0-7)
+  // hotD 2–7   → not extreme enough, no signal
+  let signal=null;
+  if(hotD<=1&&hotPct>=13) signal='OVER';
+  if(hotD>=8&&hotPct>=13) signal='UNDER';
+
+  // Also check recent momentum — at least 2 of last 5 ticks confirm direction
+  let recentConfirm=0;
   if(s.digits.length>=5){
     const last5=s.digits.slice(-5);
-    recentLow =last5.filter(d=>d<=1).length;
-    recentHigh=last5.filter(d=>d>=8).length;
+    if(signal==='OVER')  recentConfirm=last5.filter(d=>d<=1).length;
+    if(signal==='UNDER') recentConfirm=last5.filter(d=>d>=8).length;
   }
+  if(recentConfirm<1) signal=null; // no recent confirmation → skip
 
-  // Signal: OVER1 if low cluster ≥12% AND ≥2 of last 5 ticks are low
-  // Signal: UNDER8 if high cluster ≥12% AND ≥2 of last 5 ticks are high
-  let signal=null;
-  if(lowPct>=12&&recentLow>=2)  signal='OVER';
-  if(highPct>=12&&recentHigh>=2){
-    // Pick the stronger cluster
-    if(!signal||highPct>lowPct) signal='UNDER';
-  }
+  // Low/high cluster pcts for display
+  const lowPct=((fr[0]||0)+(fr[1]||0))/tot*100;
+  const highPct=((fr[8]||0)+(fr[9]||0))/tot*100;
 
-  return{lowPct,highPct,recentLow,recentHigh,signal,score:a.score,isCon:a.isCon,sym};
+  return{lowPct,highPct,recentConfirm,signal,score:a.score,isCon:a.isCon,sym,hotD,hotPct};
 }
 
 // ── Find best Power market ──
@@ -2493,19 +2497,26 @@ function findPowerMarket(){
   return best;
 }
 
-// ── Find best Power recovery market ──
-function findPowerRecoveryMarket(direction){
-  // direction = 'OVER' → look for OVER2 (o2 ≥68%, isCon)
-  // direction = 'UNDER' → look for UNDER7 (u7 ≥68%, isCon)
+// ── Find best Power recovery market — exactly like Pioneer ──
+// Scans ALL markets, picks whichever has highest OVER2 or UNDER7 ≥65%
+// No direction lock — picks best available signal regardless of S1 direction
+function findPowerRecoveryMarket(){
   let best=null, bestPct=0;
   IDX.forEach(i=>{
     const s=ST[i.s];
-    if(!s||!s.conn||s.digits.length<25) return;
+    if(!s||!s.conn||s.digits.length<20) return;
     try{
       const a=ana(i.s);
-      if(!a.isCon) return;
-      if(direction==='OVER'&&a.o2>=68&&a.o2>bestPct){bestPct=a.o2;best={sym:i.s,a,pct:a.o2};}
-      if(direction==='UNDER'&&a.u7>=68&&a.u7>bestPct){bestPct=a.u7;best={sym:i.s,a,pct:a.u7};}
+      // OVER2: digits 3-9, ~70% base rate
+      if(a.o2>=65&&a.o2>bestPct){
+        bestPct=a.o2;
+        best={sym:i.s,a,direction:'OVER',barrier:2,pct:a.o2,contractCode:'DIGITOVER',typeLabel:'OVER 2'};
+      }
+      // UNDER7: digits 0-6, ~70% base rate
+      if(a.u7>=65&&a.u7>bestPct){
+        bestPct=a.u7;
+        best={sym:i.s,a,direction:'UNDER',barrier:7,pct:a.u7,contractCode:'DIGITUNDER',typeLabel:'UNDER 7'};
+      }
     }catch(e){}
   });
   return best;
@@ -2563,21 +2574,21 @@ function drawPowerEquity(){
   ctx.clearRect(0,0,W,70);
   const pts=PW.equityPoints||[];
   if(!pts||pts.length<2){
-    ctx.strokeStyle='rgba(250,204,21,.15)';ctx.lineWidth=1;
+    ctx.strokeStyle='rgba(34,197,94,.15)';ctx.lineWidth=1;
     ctx.beginPath();ctx.moveTo(0,35);ctx.lineTo(W,35);ctx.stroke();return;
   }
   const mn=Math.min(...pts),mx=Math.max(...pts),range=mx-mn||1;
   const toY=v=>5+(60*(1-(v-mn)/range));
-  ctx.strokeStyle='rgba(250,204,21,.12)';ctx.lineWidth=1;ctx.setLineDash([3,4]);
+  ctx.strokeStyle='rgba(34,197,94,.12)';ctx.lineWidth=1;ctx.setLineDash([3,4]);
   ctx.beginPath();ctx.moveTo(0,toY(0));ctx.lineTo(W,toY(0));ctx.stroke();ctx.setLineDash([]);
   const last=pts[pts.length-1];
   const grad=ctx.createLinearGradient(0,0,0,70);
-  if(last>=0){grad.addColorStop(0,'rgba(250,204,21,.25)');grad.addColorStop(1,'rgba(250,204,21,.02)');}
+  if(last>=0){grad.addColorStop(0,'rgba(34,197,94,.25)');grad.addColorStop(1,'rgba(34,197,94,.02)');}
   else{grad.addColorStop(0,'rgba(239,68,68,.02)');grad.addColorStop(1,'rgba(239,68,68,.2)');}
   ctx.beginPath();
   pts.forEach((v,i)=>{const x=i/(pts.length-1)*W,y=toY(v);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
   ctx.lineTo(W,70);ctx.lineTo(0,70);ctx.closePath();ctx.fillStyle=grad;ctx.fill();
-  ctx.strokeStyle=last>=0?'#facc15':'#ff3d5a';ctx.lineWidth=2;
+  ctx.strokeStyle=last>=0?'#22c55e':'#ff3d5a';ctx.lineWidth=2;
   ctx.beginPath();
   pts.forEach((v,i)=>{const x=i/(pts.length-1)*W,y=toY(v);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
   ctx.stroke();
@@ -2585,7 +2596,7 @@ function drawPowerEquity(){
   if(es){
     const peak=Math.max(...pts),trough=Math.min(...pts);
     es.textContent='Now '+(last>=0?'+':'')+last.toFixed(2)+'  Peak '+(peak>=0?'+':'')+peak.toFixed(2)+'  Low '+(trough>=0?'+':'')+trough.toFixed(2);
-    es.style.color=last>=0?'#facc15':'var(--red)';
+    es.style.color=last>=0?'var(--green)':'var(--red)';
   }
 }
 
@@ -2631,7 +2642,7 @@ function powerTick(){
       setAIState('waiting');return;
     }
     tradeSym=market.sym;
-    PW.direction=market.signal; // lock direction
+    PW.direction=market.signal; // store for display only
     if(PW.direction==='OVER'){
       contractCode='DIGITOVER'; barrier=1; typeLabel='OVER 1';
     } else {
@@ -2639,38 +2650,39 @@ function powerTick(){
     }
     stake=calcPowerStake(0);
     const ix=IDX.find(i=>i.s===tradeSym);
-    const clusterPct=PW.direction==='OVER'?market.lowPct:market.highPct;
     aiLogPW('⚡ S1 | '+(ix?ix.n:tradeSym)+' | '+typeLabel
-      +' | cluster '+clusterPct.toFixed(1)+'% | $'+stake.toFixed(2)
+      +' | hotD:'+market.hotD+' ('+market.hotPct.toFixed(1)+'%) | $'+stake.toFixed(2)
       +' Score:'+market.score,'info');
     refreshPowerLadder();
   } else {
-    // ── S2–S5: Recovery — OVER 2 or UNDER 7, same direction as S1 ──
-    const recovery=findPowerRecoveryMarket(PW.direction);
+    // ── S2–S5: Recovery — best OVER2 or UNDER7 across all markets (like Pioneer) ──
+    const recovery=findPowerRecoveryMarket();
     if(!recovery){
       PW.prevMarket=null;
-      aiLogPW('⏳ S'+(PW.step+1)+' — waiting for '+(PW.direction==='OVER'?'OVER 2':'UNDER 7')+' ≥68%…','warn');
+      aiLogPW('⏳ S'+(PW.step+1)+' — waiting for OVER 2 or UNDER 7 ≥65%…','warn');
       setAIState('waiting');return;
     }
-    // 2-tick confirmation
+    // 2-tick confirmation on direction (same as Pioneer confirms direction)
     const prev=PW.prevMarket;
-    const confirmed=prev&&prev.sym===recovery.sym;
-    PW.prevMarket={sym:recovery.sym};
+    const confirmed=prev&&prev.direction===recovery.direction;
+    PW.prevMarket={sym:recovery.sym,direction:recovery.direction};
     if(!confirmed){
       const ix=IDX.find(i=>i.s===recovery.sym);
       aiLogPW('🔍 S'+(PW.step+1)+' | '+(ix?ix.n:recovery.sym)
-        +' | '+(PW.direction==='OVER'?'OVER 2':'UNDER 7')
-        +' ('+recovery.pct.toFixed(0)+'%) — confirming…','warn');
+        +' | '+recovery.typeLabel+' ('+recovery.pct.toFixed(0)+'%) — confirming…','warn');
       setAIState('waiting');return;
     }
     tradeSym=recovery.sym;
     PW.prevMarket=null;
-    if(PW.direction==='OVER'){
-      contractCode='DIGITOVER'; barrier=2; typeLabel='OVER 2';
-    } else {
-      contractCode='DIGITUNDER'; barrier=7; typeLabel='UNDER 7';
-    }
+    contractCode=recovery.contractCode;
+    barrier=recovery.barrier;
+    typeLabel=recovery.typeLabel;
     stake=calcPowerStake(PW.step);
+    // Update ladder labels to show actual recovery direction
+    for(let i=1;i<5;i++){
+      const lt=document.getElementById('pladt'+i);
+      if(lt) lt.textContent=recovery.typeLabel;
+    }
     const ix=IDX.find(i=>i.s===tradeSym);
     aiLogPW('🔄 S'+(PW.step+1)+' | '+(ix?ix.n:tradeSym)
       +' | '+typeLabel+' ('+recovery.pct.toFixed(0)+'%) | $'+stake.toFixed(2)+' ✓','warn');
