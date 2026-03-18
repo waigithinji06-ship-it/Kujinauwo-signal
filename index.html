@@ -363,20 +363,25 @@ padding:9px 11px;max-height:150px;overflow-y:auto;margin-bottom:10px;
 /* ══ TRANSACTION LOG ══ */
 .tlog{
 background:var(–card);border:1px solid var(–border);
-border-radius:10px;overflow:hidden;max-height:280px;overflow-y:auto;
+border-radius:10px;overflow:hidden;max-height:300px;overflow-y:auto;
 }
 .tlog::-webkit-scrollbar{width:3px;}
+.tlog-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;max-height:300px;overflow-y:auto;}
+.tlog-wrap::-webkit-scrollbar{width:3px;height:3px;}
+.tlog-wrap::-webkit-scrollbar-thumb{background:var(–border2);border-radius:2px;}
 .log-entry{
-display:grid;grid-template-columns:54px 60px 58px 62px 56px 72px 66px;
-gap:3px;padding:8px 10px;
+display:grid;
+grid-template-columns:46px 54px 62px 68px 54px 66px 64px;
+gap:3px;padding:9px 10px;
 border-bottom:1px solid var(–border);
-font-family:‘JetBrains Mono’,monospace;font-size:9.5px;align-items:center;
+font-family:‘JetBrains Mono’,monospace;font-size:10px;align-items:center;
 transition:background .12s;
+min-width:430px;
 }
 .log-entry:last-child{border-bottom:none;}
-.log-entry:hover{background:rgba(255,255,255,.03);}
-.log-entry.win{border-left:3px solid var(–green);background:rgba(34,197,94,.03);}
-.log-entry.loss{border-left:3px solid var(–red);background:rgba(239,68,68,.03);}
+.log-entry:hover{background:rgba(255,255,255,.04);}
+.log-entry.win{border-left:3px solid #22c55e;background:rgba(34,197,94,.04);}
+.log-entry.loss{border-left:3px solid #ef4444;background:rgba(239,68,68,.04);}
 .log-entry.pending{border-left:3px solid var(–yellow);}
 .log-header{
 background:var(–card2);font-size:8px;font-weight:700;color:var(–sub);
@@ -384,8 +389,8 @@ letter-spacing:.8px;text-transform:uppercase;border-bottom:2px solid var(–bord
 position:sticky;top:0;z-index:1;
 }
 .log-header.log-entry{border-left:3px solid transparent;}
-.pnl-pos{color:var(–green);font-weight:800;}
-.pnl-neg{color:var(–red);font-weight:800;}
+.pnl-pos{color:#22c55e;font-weight:800;}
+.pnl-neg{color:#ef4444;font-weight:800;}
 .pnl-zero{color:var(–dim);}
 
 /* ══ ANALYSIS PAGE ══ */
@@ -766,8 +771,10 @@ position:sticky;top:0;z-index:1;
         <span>📋 TRANSACTIONS</span>
         <span id="tradeCount" style="color:var(--dim);font-size:8px;">0 trades</span>
       </div>
-      <div id="tradeLog" class="tlog">
-        <div class="log-entry log-header"><div>TIME</div><div>INDEX</div><div>TYPE</div><div>ENTRY</div><div>STAKE</div><div>RESULT</div><div>P&amp;L</div></div>
+      <div class="tlog tlog-wrap">
+        <div id="tradeLog">
+          <div class="log-entry log-header"><div>TIME</div><div>INDEX</div><div>CONTRACT</div><div>ENTRY</div><div>STAKE</div><div>RESULT</div><div>P&amp;L</div></div>
+        </div>
       </div>
     </div>
 
@@ -839,8 +846,12 @@ position:sticky;top:0;z-index:1;
       </div>
       <div style="font-size:9px;color:var(--sub);font-family:'Space Mono',monospace;letter-spacing:2px;margin-bottom:6px;">AI DECISION LOG</div>
       <div id="aiLogTR" class="ai-log"></div>
-      <div style="font-size:9px;color:var(--sub);font-family:'Space Mono',monospace;letter-spacing:2px;margin:10px 0 6px;">TRADE LOG</div>
-      <div id="tradeLogTR" class="tlog"><div class="log-entry log-header"><div>TIME</div><div>INDEX</div><div>TYPE</div><div>ENTRY</div><div>STAKE</div><div>RESULT</div><div>P&L</div></div></div>
+      <div style="font-size:9px;color:var(--sub);font-family:'Space Mono',monospace;letter-spacing:2px;margin:10px 0 6px;">📋 TRADE LOG</div>
+      <div class="tlog tlog-wrap">
+        <div id="tradeLogTR">
+          <div class="log-entry log-header"><div>TIME</div><div>INDEX</div><div>CONTRACT</div><div>ENTRY</div><div>STAKE</div><div>RESULT</div><div>P&L</div></div>
+        </div>
+      </div>
     </div>
 
   </div><!-- end mode subpages wrapper -->
@@ -2111,7 +2122,7 @@ function _ensureLogHeader(logId){
   if(!log.querySelector('.log-header')){
     const h=document.createElement('div');
     h.className='log-entry log-header';
-    h.innerHTML='<div>TIME</div><div>INDEX</div><div>TYPE</div><div>ENTRY</div><div>STAKE</div><div>RESULT</div><div>P&L</div>';
+    h.innerHTML='<div>TIME</div><div>INDEX</div><div>CONTRACT</div><div>ENTRY</div><div>STAKE</div><div>RESULT</div><div>P&L</div>';
     log.insertBefore(h,log.firstChild);
   }
 }
@@ -2119,13 +2130,25 @@ function addTradeLog(sym,type,digit,stake,profit,won,label){
   const ix=IDX.find(i=>i.s===sym);
   const now=new Date().toUTCString().slice(17,25);
   const entryPrice=sym&&ST[sym]&&ST[sym].last?ST[sym].last.toFixed(2):'—';
+  // Contract display: use the actual type (CALL/PUT/DIFFERS/OVER2/UNDER7)
+  // type = AI.activeType e.g. 'CALL','PUT','DIFFER','OVER2','UNDER7'
+  // label = step label e.g. 'TR1','S2 OV2' — shown as sub-info not primary
+  const contractDisplay=type||label||'—';
+  // Color the contract cell by type
+  const cColor=
+    contractDisplay==='CALL'?'#22c55e':
+    contractDisplay==='PUT'?'#ef4444':
+    contractDisplay==='DIFFER'?'#38bdf8':
+    contractDisplay.includes('OVER')?'#60a5fa':
+    contractDisplay.includes('UNDER')?'#a78bfa':
+    'var(--accent)';
   const entry=document.createElement('div');
   entry.className='log-entry '+(won?'win':profit===0?'pending':'loss');
   const pnlCls=profit>0?'pnl-pos':profit<0?'pnl-neg':'pnl-zero';
   entry.innerHTML=
-    '<div style="color:var(--dim);">'+now+'</div>'+
+    '<div style="color:var(--dim);font-size:9px;">'+now+'</div>'+
     '<div style="font-weight:700;color:var(--text);">'+(ix?ix.n:(sym||'—'))+'</div>'+
-    '<div style="color:var(--accent);font-weight:600;">'+label+'</div>'+
+    '<div style="color:'+cColor+';font-weight:700;">'+contractDisplay+'</div>'+
     '<div style="color:var(--sub);">'+entryPrice+'</div>'+
     '<div style="color:var(--text);font-weight:700;">$'+parseFloat(stake||0).toFixed(2)+'</div>'+
     '<div style="font-weight:800;color:'+(won?'#22c55e':'#ef4444')+';">'+(won?'✅WIN':'❌LOSS')+'</div>'+
@@ -2141,7 +2164,6 @@ function addTradeLog(sym,type,digit,stake,profit,won,label){
     const ml=document.getElementById('tradeLog');
     if(ml){const e2=entry.cloneNode(true);ml.appendChild(e2);ml.scrollTop=ml.scrollHeight;}
   }
-  // Update trade counter badge
   _totalTrades++;
   const tc=document.getElementById('tradeCount');
   if(tc) tc.textContent=_totalTrades+(_totalTrades===1?' trade':' trades');
