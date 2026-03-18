@@ -2434,14 +2434,13 @@ function onContract(poc){
 
 const PW={
   running:false,
-  step:0,            // 0=S1 (OVER1/UNDER8), 1-4=recovery (OVER2/UNDER7)
+  step:0,
   baseStake:1,
   mult:3.6,
-  direction:null,    // 'OVER' or 'UNDER' — locked at S1, held through recovery
+  direction:null,
   sessPnl:0, wins:0, losses:0, consecLoss:0,
   equityPoints:[0],
-  prevMarket:null,   // for 2-tick confirm on recovery
-  restUntil:0, restSym:null,
+  prevMarket:null,  // for 2-tick confirm on recovery direction
 };
 
 // ── Power market analyser ──
@@ -2614,9 +2613,6 @@ let _lastPowerTradeTime=0;
 function powerTick(){
   if(!PW.running||AI.inTrade||AI.pendingResult)return;
   if(Date.now()-_lastPowerTradeTime<1800)return;
-  // Cooldown check
-  if(PW.restUntil>0&&Date.now()<PW.restUntil){setAIState('waiting');return;}
-  if(PW.restUntil>0&&Date.now()>=PW.restUntil){PW.restUntil=0;PW.restSym=null;}
 
   const tp=parseFloat(document.getElementById('pwTP')?document.getElementById('pwTP').value:20)||20;
   const sl=parseFloat(document.getElementById('pwSL')?document.getElementById('pwSL').value:30)||30;
@@ -2640,23 +2636,16 @@ function powerTick(){
 
   if(PW.step===0){
     // ── S1: OVER 1 or UNDER 8 ──
+    // Scan all 10 markets every tick — pick best performing, no blocking
     const market=findPowerMarket();
     if(!market){
-      // Update signal display even when no trade
       updatePowerSignalDisplay();
       setAIState('waiting');return;
     }
-    // Rest check
-    if(PW.restSym&&market.sym===PW.restSym&&PW.restUntil>Date.now()){
-      setAIState('waiting');return;
-    }
     tradeSym=market.sym;
-    PW.direction=market.signal; // store for display only
-    if(PW.direction==='OVER'){
-      contractCode='DIGITOVER'; barrier=1; typeLabel='OVER 1';
-    } else {
-      contractCode='DIGITUNDER'; barrier=8; typeLabel='UNDER 8';
-    }
+    PW.direction=market.signal;
+    if(PW.direction==='OVER'){contractCode='DIGITOVER';barrier=1;typeLabel='OVER 1';}
+    else{contractCode='DIGITUNDER';barrier=8;typeLabel='UNDER 8';}
     stake=calcPowerStake(0);
     const ix=IDX.find(i=>i.s===tradeSym);
     aiLogPW('⚡ S1 | '+(ix?ix.n:tradeSym)+' | '+typeLabel
@@ -2747,12 +2736,8 @@ function onPowerContract(poc){
   if(won){
     PW.wins++;AI.wins++;PW.consecLoss=0;AI.consecLoss=0;
     if(stepEl){stepEl.classList.remove('active');stepEl.classList.add('won');}
-    // Rest after any win
-    const restMs=PW.step===0?30000:45000;
-    PW.restUntil=Date.now()+restMs;
-    PW.restSym=AI.activeSym;
     aiLogPW('✅ WIN +$'+profit.toFixed(2)+' S'+(PW.step+1)+' '+AI.activeType+' | Session: $'+PW.sessPnl.toFixed(2),'success');
-    aiLogPW('⏸ Resting '+(restMs/1000)+'s','info');
+    aiLogPW('🔍 Scanning all markets for next best signal…','info');
     PW.step=0;PW.direction=null;PW.prevMarket=null;
     setTimeout(()=>{
       for(let i=0;i<5;i++){const e=document.getElementById('plad'+i);if(e)e.classList.remove('won','lost','active');}
@@ -2836,7 +2821,7 @@ function powerStart(){
   PW.baseStake=parseFloat(document.getElementById('pwStake').value)||1;
   PW.mult=parseFloat(document.getElementById('pwMult').value)||3.6;
   PW.step=0;PW.consecLoss=0;PW.direction=null;PW.sessPnl=0;PW.wins=0;PW.losses=0;
-  PW.equityPoints=[0];PW.prevMarket=null;PW.restUntil=0;PW.restSym=null;
+  PW.equityPoints=[0];PW.prevMarket=null;
   PW.running=true;
   refreshPowerLadder();updatePowerLadderUI();
   document.getElementById('startBtn').disabled=true;
@@ -3017,7 +3002,7 @@ function resetAI(){
   TR.step=0;TR.consecLoss=0;TR.lastDirection=null;TR.sessPnl=0;TR.wins=0;TR.losses=0;
   TR.equityPoints=[0];
   PW.step=0;PW.consecLoss=0;PW.direction=null;PW.sessPnl=0;PW.wins=0;PW.losses=0;
-  PW.equityPoints=[0];PW.prevMarket=null;PW.restUntil=0;PW.restSym=null;
+  PW.equityPoints=[0];PW.prevMarket=null;
   clearAllErrors();
   setAIState('idle');updateAIStats();drawEquity();drawTrendEquity();drawPowerEquity();
   const eqS=document.getElementById('eqStats');if(eqS){eqS.textContent='Now +0.00  Peak +0.00  Low +0.00';eqS.style.color='var(--sub)';}
