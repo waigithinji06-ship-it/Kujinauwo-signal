@@ -1125,19 +1125,19 @@ letter-spacing:.5px;white-space:nowrap;margin-top:1px;
 <script>
 // ══ INDICES ══
 // tickScale: how many ticks per second relative to standard (1=~2s, 2=1s)
-// conThresh: sdp threshold for consolidation — higher vol needs looser threshold
+// conThresh: sdp threshold for consolidation — tighter = more selective
 // minTicks:  minimum ticks before analysis is meaningful
 const IDX=[
-  {s:'R_10',   n:'V10',      sub:'Volatility 10',    v:10,  dp:3, tickScale:1, conThresh:0.020, minTicks:60},
-  {s:'R_25',   n:'V25',      sub:'Volatility 25',    v:25,  dp:3, tickScale:1, conThresh:0.030, minTicks:60},
-  {s:'R_50',   n:'V50',      sub:'Volatility 50',    v:50,  dp:4, tickScale:1, conThresh:0.045, minTicks:60},
-  {s:'R_75',   n:'V75',      sub:'Volatility 75',    v:75,  dp:4, tickScale:1, conThresh:0.060, minTicks:60},
-  {s:'R_100',  n:'V100',     sub:'Volatility 100',   v:100, dp:2, tickScale:1, conThresh:0.080, minTicks:60},
-  {s:'1HZ10V', n:'V10 (1s)', sub:'Volatility 10 1s', v:10,  dp:3, tickScale:2, conThresh:0.012, minTicks:120},
-  {s:'1HZ25V', n:'V25 (1s)', sub:'Volatility 25 1s', v:25,  dp:3, tickScale:2, conThresh:0.018, minTicks:120},
-  {s:'1HZ50V', n:'V50 (1s)', sub:'Volatility 50 1s', v:50,  dp:4, tickScale:2, conThresh:0.028, minTicks:120},
-  {s:'1HZ75V', n:'V75 (1s)', sub:'Volatility 75 1s', v:75,  dp:4, tickScale:2, conThresh:0.038, minTicks:120},
-  {s:'1HZ100V',n:'V100 (1s)',sub:'Volatility 100 1s',v:100, dp:2, tickScale:2, conThresh:0.050, minTicks:120},
+  {s:'R_10',   n:'V10',      sub:'Volatility 10',    v:10,  dp:3, tickScale:1, conThresh:0.015, minTicks:60},
+  {s:'R_25',   n:'V25',      sub:'Volatility 25',    v:25,  dp:3, tickScale:1, conThresh:0.018, minTicks:60},
+  {s:'R_50',   n:'V50',      sub:'Volatility 50',    v:50,  dp:4, tickScale:1, conThresh:0.022, minTicks:60},
+  {s:'R_75',   n:'V75',      sub:'Volatility 75',    v:75,  dp:4, tickScale:1, conThresh:0.028, minTicks:60},
+  {s:'R_100',  n:'V100',     sub:'Volatility 100',   v:100, dp:2, tickScale:1, conThresh:0.035, minTicks:60},
+  {s:'1HZ10V', n:'V10 (1s)', sub:'Volatility 10 1s', v:10,  dp:3, tickScale:2, conThresh:0.010, minTicks:120},
+  {s:'1HZ25V', n:'V25 (1s)', sub:'Volatility 25 1s', v:25,  dp:3, tickScale:2, conThresh:0.012, minTicks:120},
+  {s:'1HZ50V', n:'V50 (1s)', sub:'Volatility 50 1s', v:50,  dp:4, tickScale:2, conThresh:0.015, minTicks:120},
+  {s:'1HZ75V', n:'V75 (1s)', sub:'Volatility 75 1s', v:75,  dp:4, tickScale:2, conThresh:0.018, minTicks:120},
+  {s:'1HZ100V',n:'V100 (1s)',sub:'Volatility 100 1s',v:100, dp:2, tickScale:2, conThresh:0.022, minTicks:120},
 ];
 
 // ══ MARKET STATE ══
@@ -1939,10 +1939,10 @@ function findBestRecoveryMarket(){
   let best=null, bestPct=0;
   IDX.forEach(i=>{
     const s=ST[i.s];
-    if(!s||!s.conn||s.digits.length<25) return;
+    const minT=i.minTicks||60;
+    if(!s||!s.conn||s.digits.length<minT) return;
     try{
       const a=ana(i.s);
-      // Require consolidating market AND higher threshold (68%) for recovery
       if(!a.isCon) return;
       if(a.o2>=68&&a.o2>bestPct){bestPct=a.o2;best={sym:i.s,a,direction:'OVER',barrier:2,pct:a.o2};}
       if(a.u7>=68&&a.u7>bestPct){bestPct=a.u7;best={sym:i.s,a,direction:'UNDER',barrier:7,pct:a.u7};}
@@ -1955,7 +1955,10 @@ function findBestMarket(){
   const minScore=parseInt(document.getElementById('cfgMinScore')?document.getElementById('cfgMinScore').value:45)||45;
   const tgt=document.getElementById('cfgIndex').value;
   if(tgt!=='AUTO'){
-    const s=ST[tgt];if(!s||!s.conn||s.digits.length<30)return null;
+    const s=ST[tgt];
+    const ix=IDX.find(i=>i.s===tgt);
+    const minT=ix?ix.minTicks:60;
+    if(!s||!s.conn||s.digits.length<minT)return null;
     try{
       const a=ana(tgt);
       if(a.marketGrade==='SKIP'||a.marketGrade==='C') return null;
@@ -1963,14 +1966,14 @@ function findBestMarket(){
       return{sym:tgt,a};
     }catch(e){return null;}
   }
-  // AUTO: rank all markets, require Grade A or B + score >= minScore
   let best=null,bestScore=0;
   IDX.forEach(i=>{
-    const s=ST[i.s];if(!s||!s.conn||s.digits.length<30)return;
+    const s=ST[i.s];
+    const minT=i.minTicks||60;
+    if(!s||!s.conn||s.digits.length<minT)return;
     try{
       const a=ana(i.s);
       if(a.marketGrade==='SKIP'||a.marketGrade==='C') return;
-      // Grade A markets get a significant boost in ranking
       const gradeBoost=a.marketGrade==='A'?20:0;
       const eff=a.score+gradeBoost+(a.hotRecent?8:0);
       if(eff>bestScore){bestScore=eff;best={sym:i.s,a};}
