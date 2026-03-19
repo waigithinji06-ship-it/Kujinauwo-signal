@@ -1124,22 +1124,31 @@ letter-spacing:.5px;white-space:nowrap;margin-top:1px;
 
 <script>
 // ══ INDICES ══
+// tickScale: how many ticks per second relative to standard (1=~2s, 2=1s)
+// conThresh: sdp threshold for consolidation — higher vol needs looser threshold
+// minTicks:  minimum ticks before analysis is meaningful
 const IDX=[
-  {s:'R_10',   n:'V10',      sub:'Volatility 10',    v:10,  dp:3},
-  {s:'R_25',   n:'V25',      sub:'Volatility 25',    v:25,  dp:3},
-  {s:'R_50',   n:'V50',      sub:'Volatility 50',    v:50,  dp:4},
-  {s:'R_75',   n:'V75',      sub:'Volatility 75',    v:75,  dp:4},
-  {s:'R_100',  n:'V100',     sub:'Volatility 100',   v:100, dp:2},
-  {s:'1HZ10V', n:'V10 (1s)', sub:'Volatility 10 1s', v:10,  dp:3},
-  {s:'1HZ25V', n:'V25 (1s)', sub:'Volatility 25 1s', v:25,  dp:3},
-  {s:'1HZ50V', n:'V50 (1s)', sub:'Volatility 50 1s', v:50,  dp:4},
-  {s:'1HZ75V', n:'V75 (1s)', sub:'Volatility 75 1s', v:75,  dp:4},
-  {s:'1HZ100V',n:'V100 (1s)',sub:'Volatility 100 1s',v:100, dp:2},
+  {s:'R_10',   n:'V10',      sub:'Volatility 10',    v:10,  dp:3, tickScale:1, conThresh:0.020, minTicks:60},
+  {s:'R_25',   n:'V25',      sub:'Volatility 25',    v:25,  dp:3, tickScale:1, conThresh:0.030, minTicks:60},
+  {s:'R_50',   n:'V50',      sub:'Volatility 50',    v:50,  dp:4, tickScale:1, conThresh:0.045, minTicks:60},
+  {s:'R_75',   n:'V75',      sub:'Volatility 75',    v:75,  dp:4, tickScale:1, conThresh:0.060, minTicks:60},
+  {s:'R_100',  n:'V100',     sub:'Volatility 100',   v:100, dp:2, tickScale:1, conThresh:0.080, minTicks:60},
+  {s:'1HZ10V', n:'V10 (1s)', sub:'Volatility 10 1s', v:10,  dp:3, tickScale:2, conThresh:0.012, minTicks:120},
+  {s:'1HZ25V', n:'V25 (1s)', sub:'Volatility 25 1s', v:25,  dp:3, tickScale:2, conThresh:0.018, minTicks:120},
+  {s:'1HZ50V', n:'V50 (1s)', sub:'Volatility 50 1s', v:50,  dp:4, tickScale:2, conThresh:0.028, minTicks:120},
+  {s:'1HZ75V', n:'V75 (1s)', sub:'Volatility 75 1s', v:75,  dp:4, tickScale:2, conThresh:0.038, minTicks:120},
+  {s:'1HZ100V',n:'V100 (1s)',sub:'Volatility 100 1s',v:100, dp:2, tickScale:2, conThresh:0.050, minTicks:120},
 ];
 
 // ══ MARKET STATE ══
 const ST={};
-IDX.forEach(i=>{ST[i.s]={prices:[],digits:[],freq:new Array(10).fill(0),last:null,conn:false,ticks:0,tickTimes:[]};});
+IDX.forEach(i=>{
+  // 1s indices tick twice as fast — double the buffer so history covers same real time
+  const digitBuf=i.tickScale===2?200:100;
+  const priceBuf=i.tickScale===2?400:200;
+  ST[i.s]={prices:[],digits:[],freq:new Array(10).fill(0),last:null,conn:false,
+    ticks:0,tickTimes:[],digitBuf,priceBuf};
+});
 let total=0,ws=null,rtimer=null,userToken=null,isGuest=false,lastTradeTime=0,lastTrendTradeTime=0;
 
 // ══ AI STATE ══
@@ -1561,7 +1570,11 @@ function doLogout(){
   if(ws){ws.onclose=null;ws.close();}
   clearTimeout(rtimer);
   userToken=null;isGuest=false;
-  IDX.forEach(i=>{ST[i.s]={prices:[],digits:[],freq:new Array(10).fill(0),last:null,conn:false,ticks:0,tickTimes:[]};});
+  IDX.forEach(i=>{
+    const digitBuf=i.tickScale===2?200:100;
+    const priceBuf=i.tickScale===2?400:200;
+    ST[i.s]={prices:[],digits:[],freq:new Array(10).fill(0),last:null,conn:false,ticks:0,tickTimes:[],digitBuf,priceBuf};
+  });
   total=0;
   document.getElementById('tokenInput').value='';
   try{sessionStorage.removeItem('ds_token');sessionStorage.removeItem('ds_expiry');}catch(e){}
@@ -1758,9 +1771,9 @@ function onTick(tk){
   if(s.tickTimes.length>=2)
     s.tickSpeed=Math.round((s.tickTimes[s.tickTimes.length-1]-s.tickTimes[0])/(s.tickTimes.length-1));
   s.last=p;s.prices.push(p);
-  if(s.prices.length>200)s.prices.shift();
+  if(s.prices.length>s.priceBuf)s.prices.shift();
   s.digits.push(d);
-  if(s.digits.length>100){const r=s.digits.shift();s.freq[r]=Math.max(0,s.freq[r]-1);}
+  if(s.digits.length>s.digitBuf){const r=s.digits.shift();s.freq[r]=Math.max(0,s.freq[r]-1);}
   s.freq[d]++;s.ticks++;s.conn=true;
   total++;
   const onAnalysisPage=document.getElementById('pgAnalysis').classList.contains('active');
@@ -1787,23 +1800,45 @@ const _anaCache={};
 function ana(sym){
   const s=ST[sym];
   if(_anaCache[sym]&&_anaCache[sym].tick===s.ticks) return _anaCache[sym].result;
+  const ix=IDX.find(i=>i.s===sym);
   const pr=s.prices,fr=s.freq,n=s.digits.length;
+
+  // ── Index-calibrated parameters ──
+  const ts=ix?ix.tickScale:1;          // 1=standard, 2=1s
+  const conThresh=ix?ix.conThresh:0.020; // per-index consolidation threshold
+  const minTicks=ix?ix.minTicks:60;      // minimum ticks for reliable analysis
+  // Recency windows scale with tickScale so they cover same real time
+  const recWindow20 =20*ts;   // 20 real-time equivalent ticks
+  const recWindow50 =50*ts;   // 50 real-time equivalent ticks (score maturity)
+  const recWindow5  =5*ts;    // 5 real-time equivalent ticks (momentum)
+  const recWindow10 =10*ts;   // 10 real-time equivalent ticks
+
   let isCon=false,vl=0,ms='LOADING';
   if(pr.length>=20){
+    // Use last 20 prices for volatility calc
     const r=pr.slice(-20),mn=r.reduce((a,b)=>a+b,0)/r.length;
     const sd=Math.sqrt(r.reduce((a,b)=>a+(b-mn)**2,0)/r.length);
     const sdp=(sd/mn)*100;
-    const ix=IDX.find(i=>i.s===sym);
-    const esd=ix?(ix.v/100)*mn*0.02:mn*0.01;
+
+    // Expected SD calibrated per index: 1s indices have smaller per-tick moves
+    // so we use a tighter expected SD proportional to tickScale
+    const esdMult=0.02/ts; // standard=0.02, 1s=0.01
+    const esd=ix?(ix.v/100)*mn*esdMult:mn*0.01;
     vl=Math.min(100,Math.round((sd/esd)*50));
-    isCon=sdp<0.015;
-    if(pr.length>=10){
-      const l5=Math.max(...pr.slice(-5))-Math.min(...pr.slice(-5));
-      const p5=Math.max(...pr.slice(-10,-5))-Math.min(...pr.slice(-10,-5));
-      if(l5<p5*0.7)isCon=true;
+
+    // Consolidation: use per-index threshold
+    isCon=sdp<conThresh;
+
+    // Secondary check: recent range compression (scaled window)
+    if(pr.length>=recWindow10){
+      const wHalf=Math.max(5,Math.round(recWindow10/2));
+      const l5=Math.max(...pr.slice(-wHalf))-Math.min(...pr.slice(-wHalf));
+      const p5=Math.max(...pr.slice(-recWindow10,-wHalf))-Math.min(...pr.slice(-recWindow10,-wHalf));
+      if(l5<p5*0.7) isCon=true;
     }
     ms=isCon?'CONSOLIDATING':(vl>65?'EXPANDING':'TRENDING');
   }
+
   const tot=fr.reduce((a,b)=>a+b,0)||1;
   const eC=[0,2,4,6,8].reduce((a,d)=>a+(fr[d]||0),0);
   const ep=eC/tot*100,op=100-ep;
@@ -1811,55 +1846,58 @@ function ana(sym){
   const o2=[3,4,5,6,7,8,9].reduce((a,d)=>a+(fr[d]||0),0)/tot*100,u7=100-o2;
   const mxF=Math.max(...fr),mnF=Math.min(...fr.filter(f=>f>0))||0;
   const hotD=fr.indexOf(mxF),coldD=fr.indexOf(mnF);
-  // ── SCORE: how favourable is this market right now ──
+
+  // ── SCORE — index-calibrated ──
   let score=0;
   if(isCon) score+=30;
-  if(n>=30) score+=10;
+  // Maturity: require minTicks/2 for half points, minTicks for full
+  if(n>=minTicks)        score+=10;
+  else if(n>=minTicks/2) score+=5;
   if((mxF/tot*100)>13) score+=20;
   if(vl<50) score+=15;
   const diffBias=Math.abs(ep-50);
   if(diffBias>6) score+=10;
 
-  // Digit entropy bonus: lower entropy = more skewed = more edge
+  // Entropy bonus
   let entropy=0;
   fr.forEach(f=>{if(f>0){const p2=f/tot;entropy-=p2*Math.log2(p2);}});
   const maxEntropy=Math.log2(10);
   const entropyBonus=Math.max(0,Math.round((1-entropy/maxEntropy)*25));
   score=Math.min(100,score+entropyBonus);
 
-  // ── MARKET GRADE — controls whether bot should enter ──
-  // Grade A: best conditions — consolidating + strong hot digit + good score
-  // Grade B: acceptable — consolidating + moderate hot digit
-  // Grade C: borderline — some signal, wait for better
-  // SKIP:    expanding or not enough data — never trade
+  // ── MARKET GRADE ──
   const hotPctRaw=mxF/tot*100;
-  // Recent digit activity — how many times hot digit appeared in last 10 ticks
+  // Recent hot count — scaled window
   let recentHotCount=0;
-  if(s.digits.length>=10){
-    const last10=s.digits.slice(-10);
-    recentHotCount=last10.filter(d=>d===hotD).length;
+  const rWin=Math.min(s.digits.length,recWindow10);
+  if(s.digits.length>=rWin){
+    recentHotCount=s.digits.slice(-rWin).filter(d=>d===hotD).length;
   }
   let marketGrade='SKIP';
   if(isCon&&hotPctRaw>15&&score>=65&&recentHotCount>=1) marketGrade='A';
-  else if(isCon&&hotPctRaw>12&&score>=50) marketGrade='B';
-  else if(score>=40&&n>=20) marketGrade='C';
-  // Suppress to B if hot digit absent in last 5 ticks (momentum fading)
-  if(s.digits.length>=5){
-    const last5=s.digits.slice(-5);
-    if(last5.filter(d=>d===hotD).length===0&&marketGrade==='A') marketGrade='B';
+  else if(isCon&&hotPctRaw>12&&score>=50)               marketGrade='B';
+  else if(score>=40&&n>=minTicks/2)                     marketGrade='C';
+  // Suppress to B if hot digit cooling in recent window
+  const rWin5=Math.min(s.digits.length,recWindow5);
+  if(s.digits.length>=rWin5){
+    if(s.digits.slice(-rWin5).filter(d=>d===hotD).length===0&&marketGrade==='A') marketGrade='B';
   }
+
   const eoR=()=>{if(!isCon)return{l:'AVOID',c:'av',t:'Expanding'};const b=Math.abs(ep-50);if(b>8)return{l:(ep>50?'EVEN':'ODD')+' ▲',c:'sb',t:Math.round(Math.max(ep,op))+'%'};if(b>4)return{l:ep>50?'EVEN':'ODD',c:'by',t:Math.round(Math.max(ep,op))+'%'};return{l:'NEUTRAL',c:'nt',t:'~50%'};};
   const o4R=()=>{if(!isCon)return{l:'AVOID',c:'av',t:''};const b=Math.abs(o4-50);if(b>8)return{l:(o4>50?'OVER4':'UNDER5')+' ▲',c:'sb',t:Math.round(Math.max(o4,u5))+'%'};if(b>3)return{l:o4>50?'OVER4':'UNDER5',c:'by',t:Math.round(Math.max(o4,u5))+'%'};return{l:'NEUTRAL',c:'nt',t:'~50%'};};
-  const o2R=()=>{if(n<20)return{l:'LOADING',c:'wt',t:''};if(isCon)return{l:(o2>=u7?'OVER2':'UNDER7')+' ★',c:'sb',t:'~70% base'};return{l:o2>=u7?'OVER2':'UNDER7',c:'by',t:'70%'};};
-  const difR=()=>{if(n<15)return{l:'LOADING',c:'wt',t:''};const hp=(mxF/tot*100);if(hp>15)return{l:'DIFF '+hotD+' ★',c:'sb',t:'d'+hotD+' at '+Math.round(hp)+'%'};return{l:'DIFF '+hotD,c:'by',t:'90% base'};};
-  const matR=()=>{if(n<30)return{l:'LOADING',c:'wt',t:''};if((mnF/tot*100)<5&&isCon)return{l:'MATCH '+coldD,c:'wt',t:'cold digit'};return{l:'AVOID',c:'av',t:'10% only'};};
+  const o2R=()=>{if(n<minTicks/3)return{l:'LOADING',c:'wt',t:''};if(isCon)return{l:(o2>=u7?'OVER2':'UNDER7')+' ★',c:'sb',t:'~70% base'};return{l:o2>=u7?'OVER2':'UNDER7',c:'by',t:'70%'};};
+  const difR=()=>{if(n<minTicks/4)return{l:'LOADING',c:'wt',t:''};const hp=hotPctRaw;if(hp>15)return{l:'DIFF '+hotD+' ★',c:'sb',t:'d'+hotD+' at '+Math.round(hp)+'%'};return{l:'DIFF '+hotD,c:'by',t:'90% base'};};
+  const matR=()=>{if(n<minTicks/2)return{l:'LOADING',c:'wt',t:''};if((mnF/tot*100)<5&&isCon)return{l:'MATCH '+coldD,c:'wt',t:'cold digit'};return{l:'AVOID',c:'av',t:'10% only'};};
+
+  // hotRecent — scaled to recWindow20
   let hotRecent=false,hotRecentPct=0;
-  if(s.digits.length>=20){
-    const rec20=s.digits.slice(-20);
-    const rc=rec20.filter(d=>d===hotD).length;
-    hotRecentPct=Math.round(rc/20*100);
+  const rWin20=Math.min(s.digits.length,recWindow20);
+  if(s.digits.length>=rWin20){
+    const rc=s.digits.slice(-rWin20).filter(d=>d===hotD).length;
+    hotRecentPct=Math.round(rc/rWin20*100);
     hotRecent=hotRecentPct>=13;
   }
+
   const result={isCon,ms,vl,ep,op,o4,u5,o2,u7,hotD,coldD,fr,tot,score,
     hotRecent,hotRecentPct,recentHotCount,marketGrade,hotPctRaw,
     eo:eoR(),o4r:o4R(),o2r:o2R(),dif:difR(),mat:matR()};
