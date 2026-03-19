@@ -2022,20 +2022,65 @@ function setAIState(state){
 }
 
 // ══ MARKET FINDER ══
-function findBestRecoveryMarket(){
-  let best=null, bestPct=0;
-  IDX.forEach(i=>{
-    const s=ST[i.s];
-    const minT=i.minTicks||60;
-    if(!s||!s.conn||s.digits.length<minT) return;
-    try{
-      const a=ana(i.s);
-      if(!a.isCon) return;
-      if(a.o2>=68&&a.o2>bestPct){bestPct=a.o2;best={sym:i.s,a,direction:'OVER',barrier:2,pct:a.o2};}
-      if(a.u7>=68&&a.u7>bestPct){bestPct=a.u7;best={sym:i.s,a,direction:'UNDER',barrier:7,pct:a.u7};}
-    }catch(e){}
-  });
-  return best;
+function findBestRecoveryMarket(excludeSym){
+  // excludeSym: market that just lost S1 — skip it on first pass
+  // Only use it as fallback if no other market qualifies
+  const step=AI.martStep||1;
+  const threshold   =Math.min(82, 75+Math.floor(step/2));
+  const momThreshold=Math.min(80, 72+Math.floor(step/2));
+
+  const _scan=(skipSym)=>{
+    let best=null, bestScore=0;
+    IDX.forEach(i=>{
+      if(skipSym&&i.s===skipSym) return; // skip excluded market
+      const s=ST[i.s];
+      const recMinT=i.tickScale===2?100:50;
+      if(!s||!s.conn||s.digits.length<recMinT) return;
+      try{
+        const a=ana(i.s);
+        const rec50=s.digits.slice(-50);
+        const recTot=rec50.length||1;
+        const recO2=rec50.filter(d=>d>=3).length/recTot*100;
+        const recU7=rec50.filter(d=>d<=6).length/recTot*100;
+        const last10=s.digits.slice(-10);
+        const last10Tot=last10.length||1;
+        const momO2=last10.filter(d=>d>=3).length/last10Tot*100;
+        const momU7=last10.filter(d=>d<=6).length/last10Tot*100;
+        const conBonus=a.isCon?2:0;
+
+        if(recO2>=threshold&&momO2>=momThreshold){
+          const sc=recO2+conBonus+(momO2>threshold?1:0);
+          if(sc>bestScore){bestScore=sc;
+            best={sym:i.s,a,direction:'OVER',barrier:2,
+              pct:Math.round(recO2*10)/10,momPct:Math.round(momO2*10)/10,
+              threshold,momThreshold};}
+        }
+        if(recU7>=threshold&&momU7>=momThreshold){
+          const sc=recU7+conBonus+(momU7>threshold?1:0);
+          if(sc>bestScore){bestScore=sc;
+            best={sym:i.s,a,direction:'UNDER',barrier:7,
+              pct:Math.round(recU7*10)/10,momPct:Math.round(momU7*10)/10,
+              threshold,momThreshold};}
+        }
+      }catch(e){}
+    });
+    return best;
+  };
+
+  // First pass: exclude the market that just lost
+  const best=_scan(excludeSym);
+  if(best) return best;
+
+  // Fallback: if no alternative exists, allow the excluded market
+  // but only if it genuinely qualifies — log clearly that it's a fallback
+  if(excludeSym){
+    const fallback=_scan(null);
+    if(fallback&&fallback.sym===excludeSym){
+      fallback.isFallback=true;
+      return fallback;
+    }
+  }
+  return null;
 }
 
 function findBestMarket(){
@@ -2200,22 +2245,29 @@ function aiTick(sym){
       +' ('+hotPct+'%) | $'+stake.toFixed(2)
       +' Score:'+a.score+' Grade:'+a.marketGrade+' Conf:'+conf.toFixed(2)+'x','info');
   } else {
-    const recovery=findBestRecoveryMarket();
+    // Pass the market that just lost S1 — recovery will skip it and scan all others first
+    const recovery=findBestRecoveryMarket(AI.martStep===1?AI.activeSym:null);
     if(!recovery){
       setAIState('waiting');
       AI.prevRecovery=null;
-      aiLog('⏳ S'+(AI.martStep+1)+' — waiting for OVER2 or UNDER7 >=65%…','warn');
+      const thr=Math.min(82,75+Math.floor((AI.martStep||1)/2));
+      const momThr=Math.min(80,72+Math.floor((AI.martStep||1)/2));
+      aiLog('⏳ S'+(AI.martStep+1)+' — scanning all markets OVER2/U7 ≥'+thr+'% (50tk) + mom ≥'+momThr+'% (10tk)…','warn');
       return;
     }
     const _prev=AI.prevRecovery;
-    const _confirmed=_prev&&_prev.direction===recovery.direction;
+    const _confirmed=_prev
+      && _prev.direction===recovery.direction
+      && recovery.pct>=(_prev.pct-2);
     AI.prevRecovery={sym:recovery.sym,direction:recovery.direction,pct:recovery.pct};
     if(!_confirmed){
       setAIState('waiting');
       const _rx=IDX.find(i=>i.s===recovery.sym);
       aiLog('🔍 S'+(AI.martStep+1)+' | '+(_rx?_rx.n:recovery.sym)
         +' | '+(recovery.direction==='UNDER'?'UNDER7':'OVER2')
-        +' ('+recovery.pct.toFixed(0)+'%) — confirming…','warn');
+        +' r50:'+recovery.pct.toFixed(0)+'% m10:'+recovery.momPct.toFixed(0)+'%'
+        +(recovery.isFallback?' [fallback]':'')
+        +' — confirming…','warn');
       return;
     }
     tradeSym=recovery.sym; a=recovery.a;
@@ -2227,7 +2279,10 @@ function aiTick(sym){
     typeLabel=isUnder?'UNDER7':'OVER2';
     AI.prevRecovery=null;
     aiLog('🔄 S'+(AI.martStep+1)+' | '+ix.n
-      +' | '+typeLabel+' ('+recovery.pct.toFixed(0)+'%) | $'+stake.toFixed(2)+' ✓','warn');
+      +' | '+typeLabel
+      +' r50:'+recovery.pct.toFixed(0)+'% m10:'+recovery.momPct.toFixed(0)+'%'
+      +(recovery.isFallback?' ⚠ same market fallback':'')
+      +' | $'+stake.toFixed(2)+' ✓','warn');
   }
 
   lastTradeTime=Date.now();
