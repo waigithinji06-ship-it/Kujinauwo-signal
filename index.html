@@ -2441,71 +2441,147 @@ const PW={
   sessPnl:0, wins:0, losses:0, consecLoss:0,
   equityPoints:[0],
   prevMarket:null,
-  s1StreakLoss:0,  // consecutive S1 losses — raises entry bar dynamically
+  s1StreakLoss:0,   // consecutive S1 losses — raises entry bar dynamically
+  lastLostSym:null, // P4: market that just lost S1 — skipped on next scan
 };
 
 // ── Power market analyser ──
-function powerAna(sym){
+// Implements all 4 loss-cap fixes:
+// P1: Triple timeframe agreement — 100, 50, and 20 tick windows must all show same signal
+// P2: Transition guard — reject market if volatility score is rising (about to expand)
+// P3: Volatility-tiered thresholds — V75/V100 require stronger signal
+// P4: Handled in findPowerMarket — always picks best, skips last-lost market
+function powerAna(sym, lastLostSym){
   const s=ST[sym];
-  if(!s||!s.conn||s.digits.length<40) return null; // need more data for reliability
+  if(!s||!s.conn||s.digits.length<100) return null; // need full 100 ticks for triple check
   const a=ana(sym);
   if(!a.isCon) return null; // must be consolidating
 
+  const ix=IDX.find(i=>i.s===sym);
+  const isHighVol=(sym==='R_75'||sym==='R_100'||sym==='1HZ75V'||sym==='1HZ100V');
+  const isMidVol =(sym==='R_50'||sym==='1HZ50V');
+
+  // ── P2: Transition guard ──
+  // Check if volatility score is rising — early warning of market about to expand
+  // We compare vl from last 20 ticks vs last 40 ticks using price slices
+  // If recent vl is higher than older vl — market is expanding, skip
+  const pr=s.prices;
+  let vlRecent=0, vlOlder=0;
+  if(pr.length>=40){
+    const r20=pr.slice(-20), mn20=r20.reduce((a,b)=>a+b,0)/r20.length;
+    const sd20=Math.sqrt(r20.reduce((a,b)=>a+(b-mn20)**2,0)/r20.length);
+    const r40=pr.slice(-40,-20), mn40=r40.reduce((a,b)=>a+b,0)/r40.length;
+    const sd40=Math.sqrt(r40.reduce((a,b)=>a+(b-mn40)**2,0)/r40.length);
+    vlRecent=sd20; vlOlder=sd40;
+  }
+  // If recent volatility is more than 20% higher than older — transitioning, skip
+  if(vlOlder>0&&vlRecent>vlOlder*1.20) return null;
+
   const tot=a.tot||1;
   const fr=a.fr;
-
   const hotD=a.hotD;
   const hotPct=a.hotPctRaw||((fr[hotD]||0)/tot*100);
 
-  // Direction: hot digit must be at an extreme (0 or 1 for OVER, 8 or 9 for UNDER)
-  // Raised threshold to 16% — meaningfully above random (10%)
-  let signal=null;
-  if(hotD<=1&&hotPct>=16) signal='OVER';
-  if(hotD>=8&&hotPct>=16) signal='UNDER';
-  if(!signal) return{lowPct:0,highPct:0,recentConfirm:0,signal:null,score:a.score,isCon:a.isCon,sym,hotD,hotPct};
+  // ── P3: Volatility-tiered frequency threshold ──
+  const freqThreshold = isHighVol ? 20 : isMidVol ? 18 : 16;
 
-  // Recent confirmation: require 2 of last 5 AND 3 of last 10 ticks in direction
-  // This ensures the pattern is sustained, not a one-tick spike
-  let recent5=0, recent10=0;
-  if(s.digits.length>=10){
-    const last10=s.digits.slice(-10);
-    const last5=last10.slice(-5);
-    if(signal==='OVER'){
-      recent5 =last5.filter(d=>d<=1).length;
-      recent10=last10.filter(d=>d<=1).length;
-    } else {
-      recent5 =last5.filter(d=>d>=8).length;
-      recent10=last10.filter(d=>d>=8).length;
-    }
+  // Hot digit must be at an extreme
+  let signal=null;
+  if(hotD<=1&&hotPct>=freqThreshold) signal='OVER';
+  if(hotD>=8&&hotPct>=freqThreshold) signal='UNDER';
+  if(!signal) return{lowPct:0,highPct:0,recentConfirm:0,signal:null,score:a.score,isCon:true,sym,hotD,hotPct,tframe100:0,tframe50:0,tframe20:0};
+
+  // ── P1: Triple timeframe agreement ──
+  // All three windows — last 100, last 50, last 20 ticks — must show the same dominant digit direction
+  const digits=s.digits; // last 100 ticks (capped at 100 in ST)
+
+  // Helper: get hot digit direction in a window
+  function windowSignal(digs){
+    if(!digs||digs.length<10) return null;
+    const wTot=digs.length;
+    const freq=new Array(10).fill(0);
+    digs.forEach(d=>freq[d]++);
+    const wHotD=freq.indexOf(Math.max(...freq));
+    const wHotPct=freq[wHotD]/wTot*100;
+    if(wHotD<=1&&wHotPct>=(freqThreshold-2)) return 'OVER';  // slight tolerance for shorter windows
+    if(wHotD>=8&&wHotPct>=(freqThreshold-2)) return 'UNDER';
+    return null;
   }
-  // Must have at least 2 in last 5 AND 3 in last 10 — sustained momentum
-  if(recent5<2||recent10<3) signal=null;
+
+  const win100=digits;                          // all 100 ticks
+  const win50 =digits.slice(-50);               // last 50
+  const win20 =digits.slice(-20);               // last 20
+
+  const sig100=windowSignal(win100);
+  const sig50 =windowSignal(win50);
+  const sig20 =windowSignal(win20);
+
+  // All three must agree on the same direction
+  if(sig100!==signal||sig50!==signal||sig20!==signal) return null;
+
+  // Count how many of the extreme digits appear in each window (for logging)
+  const count=d=>(signal==='OVER'?d<=1:d>=8);
+  const tframe100=Math.round(win100.filter(count).length/win100.length*100);
+  const tframe50 =Math.round(win50.filter(count).length/win50.length*100);
+  const tframe20 =Math.round(win20.filter(count).length/win20.length*100);
+
+  // ── Recent momentum ── 2 of last 5 AND 3 of last 10
+  const last10=digits.slice(-10);
+  const last5 =digits.slice(-5);
+  const recent5 =last5.filter(count).length;
+  const recent10=last10.filter(count).length;
+  if(recent5<2||recent10<3) return null;
 
   const lowPct =((fr[0]||0)+(fr[1]||0))/tot*100;
   const highPct=((fr[8]||0)+(fr[9]||0))/tot*100;
 
-  return{lowPct,highPct,recentConfirm:recent5,signal,score:a.score,isCon:a.isCon,sym,hotD,hotPct,recent10};
+  return{lowPct,highPct,recentConfirm:recent5,signal,score:a.score,isCon:true,sym,
+    hotD,hotPct,recent10,tframe100,tframe50,tframe20,freqThreshold,isHighVol,isMidVol};
 }
 
 // ── Find best Power market ──
+// P4: Always picks the best market from all 10 — skips the market that just lost S1
+// so the bot cannot re-enter the same market that just failed
 function findPowerMarket(overrideMinScore){
   const minScore=overrideMinScore||parseInt(document.getElementById('pwMinScore')?document.getElementById('pwMinScore').value:55)||55;
   const tgt=document.getElementById('pwIndex')?document.getElementById('pwIndex').value:'AUTO';
 
   if(tgt!=='AUTO'){
+    // Manual index — use it but still apply all filters
+    if(tgt===PW.lastLostSym){
+      aiLogPW('⏭ Skipping '+tgt+' (last S1 loss) — scanning for alternative','warn');
+      return null; // force wait if only one market and it just lost
+    }
     const p=powerAna(tgt);
     if(!p||!p.signal||p.score<minScore) return null;
     return p;
   }
+
+  // AUTO: rank all 10 markets, skip lastLostSym, pick best by signal strength
   let best=null, bestStrength=0;
   IDX.forEach(i=>{
+    // P4: never re-enter the market that just lost S1
+    if(i.s===PW.lastLostSym) return;
     try{
       const p=powerAna(i.s);
       if(!p||!p.signal||p.score<minScore) return;
-      const strength=p.signal==='OVER'?p.lowPct:p.highPct;
+      // Rank by the strength of the cluster in the extreme window (tframe20 = most current)
+      // Weight: 50% tframe20 (most current) + 30% tframe50 + 20% tframe100
+      const strength=(p.tframe20*0.5)+(p.tframe50*0.3)+(p.tframe100*0.2);
       if(strength>bestStrength){bestStrength=strength;best=p;}
     }catch(e){}
   });
+
+  // If no market found excluding lastLostSym, try the last-lost market again
+  // but only if it passes ALL filters — this prevents infinite lockout
+  if(!best&&PW.lastLostSym){
+    const p=powerAna(PW.lastLostSym);
+    if(p&&p.signal&&p.score>=minScore){
+      best=p;
+      aiLogPW('↩ No alternative found — returning to '+PW.lastLostSym+' (signal strengthened)','info');
+    }
+  }
+
   return best;
 }
 
@@ -2659,7 +2735,8 @@ function powerTick(){
     stake=calcPowerStake(0);
     const ix=IDX.find(i=>i.s===tradeSym);
     aiLogPW('⚡ S1 | '+(ix?ix.n:tradeSym)+' | '+typeLabel
-      +' | hotD:'+market.hotD+' ('+market.hotPct.toFixed(1)+'%) r5:'+market.recentConfirm+'/r10:'+market.recent10
+      +' | hotD:'+market.hotD+' | 100tk:'+market.tframe100+'% 50tk:'+market.tframe50+'% 20tk:'+market.tframe20+'%'
+      +' | r5:'+market.recentConfirm+'/r10:'+market.recent10
       +' | $'+stake.toFixed(2)+' Score:'+market.score,'info');
     refreshPowerLadder();
   } else {
@@ -2746,6 +2823,7 @@ function onPowerContract(poc){
   if(won){
     PW.wins++;AI.wins++;PW.consecLoss=0;AI.consecLoss=0;
     PW.s1StreakLoss=0; // reset S1 streak on any win
+    PW.lastLostSym=null; // clear last-lost market on win
     if(stepEl){stepEl.classList.remove('active');stepEl.classList.add('won');}
     aiLogPW('✅ WIN +$'+profit.toFixed(2)+' S'+(PW.step+1)+' '+AI.activeType+' | Session: $'+PW.sessPnl.toFixed(2),'success');
     aiLogPW('🔍 Scanning all markets for next best signal…','info');
@@ -2756,7 +2834,10 @@ function onPowerContract(poc){
     },1000);
   } else {
     PW.losses++;AI.losses++;PW.consecLoss++;AI.consecLoss++;
-    if(PW.step===0) PW.s1StreakLoss++; // only count consecutive S1 losses
+    if(PW.step===0){
+      PW.s1StreakLoss++;
+      PW.lastLostSym=AI.activeSym; // P4: remember which market just lost S1
+    }
     if(stepEl){stepEl.classList.remove('active');stepEl.classList.add('lost');}
     if(PW.step<4){
       PW.step++;
@@ -2833,7 +2914,7 @@ function powerStart(){
   PW.baseStake=parseFloat(document.getElementById('pwStake').value)||1;
   PW.mult=parseFloat(document.getElementById('pwMult').value)||3.6;
   PW.step=0;PW.consecLoss=0;PW.direction=null;PW.sessPnl=0;PW.wins=0;PW.losses=0;
-  PW.equityPoints=[0];PW.prevMarket=null;PW.s1StreakLoss=0;
+  PW.equityPoints=[0];PW.prevMarket=null;PW.s1StreakLoss=0;PW.lastLostSym=null;
   PW.running=true;
   refreshPowerLadder();updatePowerLadderUI();
   document.getElementById('startBtn').disabled=true;
@@ -3014,7 +3095,7 @@ function resetAI(){
   TR.step=0;TR.consecLoss=0;TR.lastDirection=null;TR.sessPnl=0;TR.wins=0;TR.losses=0;
   TR.equityPoints=[0];
   PW.step=0;PW.consecLoss=0;PW.direction=null;PW.sessPnl=0;PW.wins=0;PW.losses=0;
-  PW.equityPoints=[0];PW.prevMarket=null;PW.s1StreakLoss=0;
+  PW.equityPoints=[0];PW.prevMarket=null;PW.s1StreakLoss=0;PW.lastLostSym=null;
   clearAllErrors();
   setAIState('idle');updateAIStats();drawEquity();drawTrendEquity();drawPowerEquity();
   const eqS=document.getElementById('eqStats');if(eqS){eqS.textContent='Now +0.00  Peak +0.00  Low +0.00';eqS.style.color='var(--sub)';}
