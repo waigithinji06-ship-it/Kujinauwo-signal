@@ -360,92 +360,33 @@ padding:9px 11px;max-height:150px;overflow-y:auto;margin-bottom:10px;
 .ai-log-line.danger{color:var(–red);}
 .ai-log-line .ts{color:var(–dim);margin-right:6px;}
 
-/* ══ TRANSACTION TABLE — DERIV STYLE ══ */
+/* ══ TRANSACTION LOG ══ */
 .tlog{
 background:var(–card);border:1px solid var(–border);
-border-radius:12px;overflow:auto;max-height:340px;
--webkit-overflow-scrolling:touch;
+border-radius:10px;overflow:hidden;max-height:280px;overflow-y:auto;
 }
-.tlog::-webkit-scrollbar{width:3px;height:3px;}
-.tlog::-webkit-scrollbar-thumb{background:var(–border2);border-radius:2px;}
-
-/* table itself */
-.dtable{width:100%;border-collapse:collapse;min-width:700px;}
-
-/* header row */
-.dtable thead tr{
-background:var(–card2);
-position:sticky;top:0;z-index:3;
-}
-.dtable thead th{
-padding:9px 10px;
-font-family:‘JetBrains Mono’,monospace;font-size:8px;font-weight:700;
-color:var(–sub);letter-spacing:1px;text-transform:uppercase;
-white-space:nowrap;border-bottom:2px solid var(–border2);
-text-align:left;
-}
-.dtable thead th.r{text-align:right;}
-.dtable thead th.c{text-align:center;}
-
-/* data rows */
-.dtable tbody tr{
+.tlog::-webkit-scrollbar{width:3px;}
+.log-entry{
+display:grid;grid-template-columns:54px 60px 58px 62px 56px 72px 66px;
+gap:3px;padding:8px 10px;
 border-bottom:1px solid var(–border);
+font-family:‘JetBrains Mono’,monospace;font-size:9.5px;align-items:center;
 transition:background .12s;
-cursor:default;
 }
-.dtable tbody tr:last-child{border-bottom:none;}
-.dtable tbody tr:hover{background:rgba(255,255,255,.03);}
-.dtable tbody tr.drow-win {border-left:3px solid #22c55e;background:rgba(34,197,94,.03);}
-.dtable tbody tr.drow-loss{border-left:3px solid #ef4444;background:rgba(239,68,68,.03);}
-.dtable tbody tr.drow-open{border-left:3px solid #eab308;background:rgba(234,179,8,.02);}
-
-.dtable td{
-padding:9px 10px;
-font-family:‘JetBrains Mono’,monospace;font-size:9.5px;
-color:var(–text);vertical-align:middle;white-space:nowrap;
+.log-entry:last-child{border-bottom:none;}
+.log-entry:hover{background:rgba(255,255,255,.03);}
+.log-entry.win{border-left:3px solid var(–green);background:rgba(34,197,94,.03);}
+.log-entry.loss{border-left:3px solid var(–red);background:rgba(239,68,68,.03);}
+.log-entry.pending{border-left:3px solid var(–yellow);}
+.log-header{
+background:var(–card2);font-size:8px;font-weight:700;color:var(–sub);
+letter-spacing:.8px;text-transform:uppercase;border-bottom:2px solid var(–border2);
+position:sticky;top:0;z-index:1;
 }
-.dtable td.r{text-align:right;}
-.dtable td.c{text-align:center;}
-.dtable td.dim{color:var(–sub);}
-
-/* status dot */
-.dstatus-dot{
-display:inline-block;width:8px;height:8px;border-radius:50%;
-margin-right:5px;flex-shrink:0;vertical-align:middle;
-}
-.dstatus-dot.win {background:#22c55e;box-shadow:0 0 5px rgba(34,197,94,.6);}
-.dstatus-dot.loss{background:#ef4444;box-shadow:0 0 5px rgba(239,68,68,.5);}
-.dstatus-dot.open{background:#eab308;animation:spulse 1s infinite;}
-
-/* status badge */
-.dstatus-badge{
-display:inline-flex;align-items:center;
-padding:2px 8px;border-radius:20px;font-size:8px;font-weight:700;
-letter-spacing:.5px;white-space:nowrap;
-}
-.dstatus-badge.won {background:rgba(34,197,94,.12);color:#22c55e;border:1px solid rgba(34,197,94,.25);}
-.dstatus-badge.lost{background:rgba(239,68,68,.12);color:#ef4444;border:1px solid rgba(239,68,68,.25);}
-.dstatus-badge.open{background:rgba(234,179,8,.12);color:#eab308;border:1px solid rgba(234,179,8,.25);}
-
-/* contract type pill */
-.dtype-pill{
-display:inline-flex;align-items:center;gap:4px;
-padding:2px 7px;border-radius:5px;font-size:8px;font-weight:700;letter-spacing:.3px;
-}
-.dtype-pill.call  {background:rgba(34,197,94,.1);color:#22c55e;border:1px solid rgba(34,197,94,.2);}
-.dtype-pill.put   {background:rgba(239,68,68,.1);color:#ef4444;border:1px solid rgba(239,68,68,.2);}
-.dtype-pill.differ{background:rgba(56,189,248,.1);color:#38bdf8;border:1px solid rgba(56,189,248,.2);}
-.dtype-pill.over  {background:rgba(96,165,250,.1);color:#60a5fa;border:1px solid rgba(96,165,250,.2);}
-.dtype-pill.under {background:rgba(167,139,250,.1);color:#a78bfa;border:1px solid rgba(167,139,250,.2);}
-
-/* P&L coloring */
-.dpnl-pos{color:#22c55e;font-weight:800;}
-.dpnl-neg{color:#ef4444;font-weight:800;}
-.dpnl-zero{color:var(–dim);}
-
-/* contract ID link style */
-.dcid{color:var(–dim);font-size:8px;font-family:‘JetBrains Mono’,monospace;}
-.dcid:hover{color:var(–accent);text-decoration:underline;cursor:pointer;}
+.log-header.log-entry{border-left:3px solid transparent;}
+.pnl-pos{color:var(–green);font-weight:800;}
+.pnl-neg{color:var(–red);font-weight:800;}
+.pnl-zero{color:var(–dim);}
 
 /* ══ ANALYSIS PAGE ══ */
 .ana-header{display:flex;justify-content:space-between;align-items:center;padding:10px 14px 6px;flex-shrink:0;}
@@ -570,32 +511,7 @@ padding:2px 7px;border-radius:5px;font-size:8px;font-weight:700;letter-spacing:.
 .sval{font-family:‘JetBrains Mono’,monospace;font-size:16px;font-weight:700;}
 .sval.g{color:var(–green);}.sval.r{color:var(–red);}.sval.a{color:var(–accent);}.sval.y{color:var(–yellow);}
 .sumrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:6px;margin-bottom:14px;}
-/* ══ ERROR CENTRE ══ */
-.err-row{
-display:flex;align-items:flex-start;gap:8px;
-padding:7px 12px;border-bottom:1px solid rgba(239,68,68,.1);
-font-family:‘JetBrains Mono’,monospace;font-size:9px;
-animation:slideIn .2s ease;
-}
-.err-row:last-child{border-bottom:none;}
-.err-badge{
-flex-shrink:0;padding:2px 6px;border-radius:4px;font-size:8px;font-weight:700;
-letter-spacing:.5px;white-space:nowrap;margin-top:1px;
-}
-.err-badge.ws   {background:rgba(239,68,68,.2);color:#ef4444;border:1px solid rgba(239,68,68,.3);}
-.err-badge.trade{background:rgba(249,115,22,.2);color:#f97316;border:1px solid rgba(249,115,22,.3);}
-.err-badge.bal  {background:rgba(234,179,8,.2);color:#eab308;border:1px solid rgba(234,179,8,.3);}
-.err-badge.timeout{background:rgba(168,85,247,.2);color:#a855f7;border:1px solid rgba(168,85,247,.3);}
-.err-badge.stale{background:rgba(96,165,250,.2);color:#60a5fa;border:1px solid rgba(96,165,250,.3);}
-.err-badge.barrier{background:rgba(52,211,153,.2);color:#34d399;border:1px solid rgba(52,211,153,.3);}
-.err-badge.circuit{background:rgba(239,68,68,.3);color:#fca5a5;border:1px solid rgba(239,68,68,.5);}
-.err-badge.info{background:rgba(96,165,250,.15);color:#93c5fd;border:1px solid rgba(96,165,250,.25);}
-.err-ts{color:#475569;margin-right:4px;flex-shrink:0;}
-.err-msg{color:#fca5a5;flex:1;line-height:1.5;}
-.err-msg strong{color:#fff;}
-.err-dismiss{background:none;border:none;color:#475569;cursor:pointer;font-size:12px;padding:0 2px;flex-shrink:0;}
-.err-dismiss:hover{color:#ef4444;}
-
+.foot{text-align:center;font-size:9px;color:var(–dim);font-family:‘JetBrains Mono’,monospace;padding:6px 0 14px;}
 </style>
 
 <body>
@@ -706,21 +622,7 @@ letter-spacing:.5px;white-space:nowrap;margin-top:1px;
     </div>
   </div>
 
-  <!-- ══ ERROR CENTRE ══ -->
-
-  <div id="errCentre" style="display:none;flex-shrink:0;z-index:100;max-height:180px;overflow-y:auto;background:#0d0d0d;border-bottom:2px solid #ef4444;">
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:5px 12px 3px;background:rgba(239,68,68,.12);border-bottom:1px solid rgba(239,68,68,.2);">
-      <div style="display:flex;align-items:center;gap:6px;">
-        <span style="font-size:11px;">🚨</span>
-        <span style="font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;color:#ef4444;letter-spacing:1px;">ERROR LOG</span>
-        <span id="errCount" style="background:#ef4444;color:#fff;font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;padding:1px 5px;border-radius:10px;">0</span>
-      </div>
-      <button onclick="clearAllErrors()" style="background:none;border:1px solid rgba(239,68,68,.4);color:#ef4444;font-family:'JetBrains Mono',monospace;font-size:8px;padding:2px 8px;border-radius:4px;cursor:pointer;">CLEAR ALL</button>
-    </div>
-    <div id="errList"></div>
-  </div>
-  <!-- Legacy ERR bar kept for WebSocket raw errors — hidden, routed through errCentre -->
-  <div id="ERR" style="display:none;"></div>
+  <div id="ERR" style="display:none;background:rgba(255,61,90,.12);border-bottom:1px solid rgba(255,61,90,.3);padding:6px 14px;font-size:10px;color:var(--red);font-family:'Space Mono',monospace;flex-shrink:0;"></div>
 
   <!-- Pages container -->
 
@@ -751,7 +653,7 @@ letter-spacing:.5px;white-space:nowrap;margin-top:1px;
       <table id="TB" class="tbl"></table>
     </div>
     <!-- Digit frequency -->
-    <div style="font-size:9px;color:var(--sub);font-family:'Space Mono',monospace;letter-spacing:2px;margin-bottom:8px;">DIGIT FREQUENCY — LAST <span id="digitBufLabel">100</span> TICKS (LIVE)</div>
+    <div style="font-size:9px;color:var(--sub);font-family:'Space Mono',monospace;letter-spacing:2px;margin-bottom:8px;">DIGIT FREQUENCY (LAST 100 TICKS)</div>
     <div id="DC" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:14px;"></div>
     <div style="font-size:8px;color:var(--dim);font-family:'Space Mono',monospace;text-align:center;padding-bottom:14px;">Live via Deriv WebSocket API · Educational &amp; demo use recommended</div>
   </div>
@@ -797,7 +699,6 @@ letter-spacing:.5px;white-space:nowrap;margin-top:1px;
   <div class="mode-row">
     <div class="mchip active" id="chipPioneer" onclick="setMode('pioneer')"><span class="mci">🚀</span>PIONEER</div>
     <div class="mchip" id="chipTrend"    onclick="setMode('trend')"><span class="mci">📈</span>TREND</div>
-    <div class="mchip" id="chipPower"    onclick="setMode('power')"><span class="mci">⚡</span>POWER</div>
   </div>
 
   <!-- Mode subpages -->
@@ -861,26 +762,12 @@ letter-spacing:.5px;white-space:nowrap;margin-top:1px;
       <div style="font-size:9px;color:var(--sub);font-family:'Space Mono',monospace;letter-spacing:2px;margin-bottom:4px;">BOT ACTIVITY</div>
       <div id="aiLog" class="ai-log"><div class="ai-log-line info"><span class="ts">--:--:--</span>System ready. Waiting for connection…</div></div>
       <!-- Transaction log -->
-      <div style="font-size:9px;color:var(--sub);font-family:'Space Mono',monospace;letter-spacing:2px;margin:10px 0 6px;display:flex;justify-content:space-between;align-items:center;">
-        <span>📋 STATEMENT</span>
+      <div style="font-size:9px;color:var(--sub);font-family:'Space Mono',monospace;letter-spacing:2px;margin:10px 0 4px;display:flex;justify-content:space-between;align-items:center;">
+        <span>📋 TRANSACTIONS</span>
         <span id="tradeCount" style="color:var(--dim);font-size:8px;">0 trades</span>
       </div>
       <div id="tradeLog" class="tlog">
-        <table class="dtable">
-          <thead><tr>
-            <th class="c">STATUS</th>
-            <th>DATE/TIME</th>
-            <th>MARKET</th>
-            <th>CONTRACT</th>
-            <th class="r">DURATION</th>
-            <th class="r">BUY</th>
-            <th class="r">SELL</th>
-            <th class="r">P&amp;L</th>
-            <th class="r">BALANCE</th>
-            <th>REF #</th>
-          </tr></thead>
-          <tbody id="tradeLogBody"></tbody>
-        </table>
+        <div class="log-entry log-header"><div>TIME</div><div>INDEX</div><div>TYPE</div><div>ENTRY</div><div>STAKE</div><div>RESULT</div><div>P&amp;L</div></div>
       </div>
     </div>
 
@@ -952,119 +839,8 @@ letter-spacing:.5px;white-space:nowrap;margin-top:1px;
       </div>
       <div style="font-size:9px;color:var(--sub);font-family:'Space Mono',monospace;letter-spacing:2px;margin-bottom:6px;">AI DECISION LOG</div>
       <div id="aiLogTR" class="ai-log"></div>
-      <div style="font-size:9px;color:var(--sub);font-family:'Space Mono',monospace;letter-spacing:2px;margin:10px 0 6px;">📋 STATEMENT</div>
-      <div id="tradeLogTR" class="tlog">
-        <table class="dtable">
-          <thead><tr>
-            <th class="c">STATUS</th>
-            <th>DATE/TIME</th>
-            <th>MARKET</th>
-            <th>CONTRACT</th>
-            <th class="r">DURATION</th>
-            <th class="r">BUY</th>
-            <th class="r">SELL</th>
-            <th class="r">P&amp;L</th>
-            <th class="r">BALANCE</th>
-            <th>REF #</th>
-          </tr></thead>
-          <tbody id="tradeLogBodyTR"></tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- ⚡ POWER -->
-    <div id="mpPower" class="mpage">
-      <!-- Equity curve -->
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:8px;margin-bottom:10px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-          <div style="font-size:7px;color:var(--sub);font-family:'Space Mono',monospace;letter-spacing:2px;">⚡ POWER · EQUITY</div>
-          <div style="font-size:8px;font-family:'Space Mono',monospace;" id="eqStatsPW">Now +0.00  Peak +0.00  Low +0.00</div>
-        </div>
-        <canvas id="eqCanvasPW" style="width:100%;height:70px;display:block;min-height:70px;"></canvas>
-      </div>
-
-      <!-- Strategy info bar -->
-      <div style="background:rgba(250,204,21,.06);border:1px solid rgba(250,204,21,.2);border-radius:8px;padding:8px 12px;margin-bottom:10px;font-family:'Space Mono',monospace;font-size:9px;color:var(--yellow);line-height:1.8;">
-        S1: <strong style="color:#fff;">OVER 1</strong> or <strong style="color:#fff;">UNDER 8</strong> (80% win) &nbsp;·&nbsp;
-        S2–S5: <strong style="color:#fff;">OVER 2</strong> or <strong style="color:#fff;">UNDER 7</strong> recovery ×3.6
-      </div>
-
-      <!-- Config collapsible -->
-      <div style="margin-bottom:8px;">
-        <div onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'grid':'none'"
-          style="font-size:9px;color:var(--sub);font-family:'Space Mono',monospace;letter-spacing:2px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:var(--surface);border:1px solid var(--border);border-radius:8px;">
-          <span>⚙ CONFIG</span><span>▼</span>
-        </div>
-        <div style="display:none;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-top:8px;">
-          <div class="cfg-block"><div class="cfg-label">BASE STAKE ($)</div><input class="cfg-input" id="pwStake" type="number" value="1" min="0.35" step="0.25"/></div>
-          <div class="cfg-block"><div class="cfg-label">MULT ×</div><input class="cfg-input" id="pwMult" type="number" value="3.6" min="1.5" max="10" step="0.1" oninput="refreshPowerLadder()"/></div>
-          <div class="cfg-block"><div class="cfg-label">TAKE PROFIT ($)</div><input class="cfg-input" id="pwTP" type="number" value="20" min="1" step="1"/></div>
-          <div class="cfg-block"><div class="cfg-label">STOP LOSS ($)</div><input class="cfg-input" id="pwSL" type="number" value="30" min="1" step="1"/></div>
-          <div class="cfg-block"><div class="cfg-label">MIN SCORE</div><input class="cfg-input" id="pwMinScore" type="number" value="55" min="30" max="85" step="5"/><div style="font-size:8px;color:var(--sub);margin-top:3px;">55=default</div></div>
-          <div class="cfg-block" style="grid-column:1/-1;"><div class="cfg-label">INDEX</div>
-            <select class="cfg-select" id="pwIndex">
-              <option value="AUTO">AUTO (AI picks best)</option>
-              <option value="R_10">V10</option><option value="R_25">V25</option>
-              <option value="R_50">V50</option><option value="R_75">V75</option>
-              <option value="R_100">V100</option><option value="1HZ10V">V10 1s</option>
-              <option value="1HZ25V">V25 1s</option><option value="1HZ50V">V50 1s</option>
-              <option value="1HZ75V">V75 1s</option><option value="1HZ100V">V100 1s</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      <!-- Ladder -->
-      <div style="margin-bottom:8px;">
-        <div style="font-size:9px;color:var(--sub);font-family:'Space Mono',monospace;letter-spacing:2px;margin-bottom:6px;display:flex;justify-content:space-between;">
-          <span>POWER LADDER</span><span id="pwExposure" style="color:var(--red);"></span>
-        </div>
-        <div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">
-          <div class="lad-step" style="border-color:rgba(250,204,21,.35);" id="plad0"><div class="lad-num">S1</div><div class="lad-type" style="color:#facc15;">OVER 1</div><div class="lad-stake" id="plads0">$1.00</div></div>
-          <div class="lad-arrow">→</div>
-          <div class="lad-step over" id="plad1"><div class="lad-num">S2</div><div class="lad-type" id="pladt1">OVER 2</div><div class="lad-stake" id="plads1">$3.60</div></div>
-          <div class="lad-arrow">→</div>
-          <div class="lad-step over" id="plad2"><div class="lad-num">S3</div><div class="lad-type" id="pladt2">OVER 2</div><div class="lad-stake" id="plads2">$12.96</div></div>
-          <div class="lad-arrow">→</div>
-          <div class="lad-step over" id="plad3"><div class="lad-num">S4</div><div class="lad-type" id="pladt3">OVER 2</div><div class="lad-stake" id="plads3">$46.66</div></div>
-          <div class="lad-arrow">→</div>
-          <div class="lad-step over final" id="plad4"><div class="lad-num">S5</div><div class="lad-type" id="pladt4">OVER 2</div><div class="lad-stake" id="plads4">$167.98</div></div>
-        </div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;">
-          <div class="cstat"><div class="cstat-l">STEP</div><div class="cstat-v" id="pwStep">S1</div></div>
-          <div class="cstat"><div class="cstat-l">DIRECTION</div><div class="cstat-v" id="pwDir" style="color:var(--yellow);">—</div></div>
-          <div class="cstat"><div class="cstat-l">NEXT STAKE</div><div class="cstat-v" style="color:var(--accent);" id="pwNS">$1.00</div></div>
-          <div class="cstat"><div class="cstat-l">STREAK</div><div class="cstat-v" id="pwStreak">0</div></div>
-        </div>
-      </div>
-
-      <!-- Signal bar showing digit cluster -->
-      <div id="pwSignalBar" style="background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;margin-bottom:8px;font-family:'Space Mono',monospace;font-size:9px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;">
-        <span style="color:var(--sub);">LOW CLUSTER (0+1) <span id="pwLow" style="color:var(--green);font-weight:700;">—</span></span>
-        <span style="color:var(--sub);">HIGH CLUSTER (8+9) <span id="pwHigh" style="color:var(--blue);font-weight:700;">—</span></span>
-        <span style="color:var(--sub);">SIGNAL <span id="pwSignal" style="color:var(--yellow);font-weight:700;">WAIT</span></span>
-        <span id="pwRunning" style="color:var(--dim);">⏸ IDLE</span>
-      </div>
-
-      <!-- Bot log -->
-      <div style="font-size:9px;color:var(--sub);font-family:'Space Mono',monospace;letter-spacing:2px;margin-bottom:4px;">BOT ACTIVITY</div>
-      <div id="aiLogPW" class="ai-log"></div>
-
-      <!-- Statement table -->
-      <div style="font-size:9px;color:var(--sub);font-family:'Space Mono',monospace;letter-spacing:2px;margin:10px 0 6px;display:flex;justify-content:space-between;align-items:center;">
-        <span>📋 STATEMENT</span>
-        <span id="pwTradeCount" style="color:var(--dim);font-size:8px;">0 trades</span>
-      </div>
-      <div id="tradeLogPW" class="tlog">
-        <table class="dtable">
-          <thead><tr>
-            <th class="c">STATUS</th><th>DATE/TIME</th><th>MARKET</th><th>CONTRACT</th>
-            <th class="r">DURATION</th><th class="r">BUY</th><th class="r">SELL</th>
-            <th class="r">P&amp;L</th><th class="r">BALANCE</th><th>REF #</th>
-          </tr></thead>
-          <tbody id="tradeLogBodyPW"></tbody>
-        </table>
-      </div>
+      <div style="font-size:9px;color:var(--sub);font-family:'Space Mono',monospace;letter-spacing:2px;margin:10px 0 6px;">TRADE LOG</div>
+      <div id="tradeLogTR" class="tlog"><div class="log-entry log-header"><div>TIME</div><div>INDEX</div><div>TYPE</div><div>ENTRY</div><div>STAKE</div><div>RESULT</div><div>P&L</div></div></div>
     </div>
 
   </div><!-- end mode subpages wrapper -->
@@ -1124,31 +900,22 @@ letter-spacing:.5px;white-space:nowrap;margin-top:1px;
 
 <script>
 // ══ INDICES ══
-// tickScale: how many ticks per second relative to standard (1=~2s, 2=1s)
-// conThresh: sdp threshold for consolidation — tighter = more selective
-// minTicks:  minimum ticks before analysis is meaningful
 const IDX=[
-  {s:'R_10',   n:'V10',      sub:'Volatility 10',    v:10,  dp:3, tickScale:1, conThresh:0.015, minTicks:60},
-  {s:'R_25',   n:'V25',      sub:'Volatility 25',    v:25,  dp:3, tickScale:1, conThresh:0.018, minTicks:60},
-  {s:'R_50',   n:'V50',      sub:'Volatility 50',    v:50,  dp:4, tickScale:1, conThresh:0.022, minTicks:60},
-  {s:'R_75',   n:'V75',      sub:'Volatility 75',    v:75,  dp:4, tickScale:1, conThresh:0.028, minTicks:60},
-  {s:'R_100',  n:'V100',     sub:'Volatility 100',   v:100, dp:2, tickScale:1, conThresh:0.035, minTicks:60},
-  {s:'1HZ10V', n:'V10 (1s)', sub:'Volatility 10 1s', v:10,  dp:3, tickScale:2, conThresh:0.010, minTicks:120},
-  {s:'1HZ25V', n:'V25 (1s)', sub:'Volatility 25 1s', v:25,  dp:3, tickScale:2, conThresh:0.012, minTicks:120},
-  {s:'1HZ50V', n:'V50 (1s)', sub:'Volatility 50 1s', v:50,  dp:4, tickScale:2, conThresh:0.015, minTicks:120},
-  {s:'1HZ75V', n:'V75 (1s)', sub:'Volatility 75 1s', v:75,  dp:4, tickScale:2, conThresh:0.018, minTicks:120},
-  {s:'1HZ100V',n:'V100 (1s)',sub:'Volatility 100 1s',v:100, dp:2, tickScale:2, conThresh:0.022, minTicks:120},
+  {s:'R_10',   n:'V10',      sub:'Volatility 10',    v:10,  dp:3},
+  {s:'R_25',   n:'V25',      sub:'Volatility 25',    v:25,  dp:3},
+  {s:'R_50',   n:'V50',      sub:'Volatility 50',    v:50,  dp:4},
+  {s:'R_75',   n:'V75',      sub:'Volatility 75',    v:75,  dp:4},
+  {s:'R_100',  n:'V100',     sub:'Volatility 100',   v:100, dp:2},
+  {s:'1HZ10V', n:'V10 (1s)', sub:'Volatility 10 1s', v:10,  dp:3},
+  {s:'1HZ25V', n:'V25 (1s)', sub:'Volatility 25 1s', v:25,  dp:3},
+  {s:'1HZ50V', n:'V50 (1s)', sub:'Volatility 50 1s', v:50,  dp:4},
+  {s:'1HZ75V', n:'V75 (1s)', sub:'Volatility 75 1s', v:75,  dp:4},
+  {s:'1HZ100V',n:'V100 (1s)',sub:'Volatility 100 1s',v:100, dp:2},
 ];
 
 // ══ MARKET STATE ══
 const ST={};
-IDX.forEach(i=>{
-  // 1s indices tick twice as fast — double the buffer so history covers same real time
-  const digitBuf=i.tickScale===2?200:100;
-  const priceBuf=i.tickScale===2?400:200;
-  ST[i.s]={prices:[],digits:[],freq:new Array(10).fill(0),last:null,conn:false,
-    ticks:0,tickTimes:[],digitBuf,priceBuf};
-});
+IDX.forEach(i=>{ST[i.s]={prices:[],digits:[],freq:new Array(10).fill(0),last:null,conn:false,ticks:0,tickTimes:[]};});
 let total=0,ws=null,rtimer=null,userToken=null,isGuest=false,lastTradeTime=0,lastTrendTradeTime=0;
 
 // ══ AI STATE ══
@@ -1265,7 +1032,7 @@ function sendProposal(p){
 function onProposal(msg){
   if(!_trendPending) return;
   if(msg.error){
-    pushError('barrier','Proposal rejected: '+(msg.error.message||msg.error.code), 'Symbol: '+(_trendPending?_trendPending.sym:'?')+' · Barrier: '+(_trendPending?_trendPending.barrier:'?'));
+    aiLog('⚠ Proposal err: '+(msg.error.message||msg.error.code)+' — placing with current barrier','warn');
     const p=_trendPending; _trendPending=null;
     AI.inTrade=false; AI.pendingResult=false;
     placeTrade(p.sym, p.code, p.stake, p.barrier, p.typeLabel, 'trend');
@@ -1483,20 +1250,19 @@ function navTo(page){
 // ══ MODE ══
 // FIX #4: Only iterate chips that actually exist in the DOM
 function setMode(m){
-  if(AI.running||TR.running||PW.running)return;
+  if(AI.running||TR.running)return;
   AI.mode=m;
-  ['pioneer','trend','power'].forEach(x=>{
+  ['pioneer','trend'].forEach(x=>{
     const el=document.getElementById('chip'+x.charAt(0).toUpperCase()+x.slice(1));
     if(el) el.classList.toggle('active',x===m);
   });
-  const mpMap={pioneer:'mpPioneer',trend:'mpTrend',power:'mpPower'};
+  const mpMap={pioneer:'mpPioneer',trend:'mpTrend'};
   Object.values(mpMap).forEach(id=>{const el=document.getElementById(id);if(el)el.classList.remove('active');});
   const active=document.getElementById(mpMap[m]);
   if(active)active.classList.add('active');
   if(m==='pioneer') refreshLadder();
   if(m==='trend')   refreshTrendLadder();
-  if(m==='power')   refreshPowerLadder();
-  aiLog('🔄 Mode: '+(m==='pioneer'?'Pioneer':m==='trend'?'Trend':'Power'),'info');
+  aiLog('🔄 Mode: '+(m==='pioneer'?'Pioneer':'Trend'),'info');
 }
 
 // ══ PIONEER LADDER ══
@@ -1570,11 +1336,7 @@ function doLogout(){
   if(ws){ws.onclose=null;ws.close();}
   clearTimeout(rtimer);
   userToken=null;isGuest=false;
-  IDX.forEach(i=>{
-    const digitBuf=i.tickScale===2?200:100;
-    const priceBuf=i.tickScale===2?400:200;
-    ST[i.s]={prices:[],digits:[],freq:new Array(10).fill(0),last:null,conn:false,ticks:0,tickTimes:[],digitBuf,priceBuf};
-  });
+  IDX.forEach(i=>{ST[i.s]={prices:[],digits:[],freq:new Array(10).fill(0),last:null,conn:false,ticks:0,tickTimes:[]};});
   total=0;
   document.getElementById('tokenInput').value='';
   try{sessionStorage.removeItem('ds_token');sessionStorage.removeItem('ds_expiry');}catch(e){}
@@ -1644,89 +1406,14 @@ function updConn(live){
   if(ld) ld.style.background=live?'var(--green)':'var(--red)';
   if(cd) cd.style.background=live?'var(--green)':'var(--red)';
 }
-// ══ ERROR CENTRE ══
-// Categories: 'ws' | 'trade' | 'bal' | 'timeout' | 'stale' | 'barrier' | 'circuit' | 'info'
-const _errLog=[];
-let _errIdCounter=0;
-
-const ERR_LABELS={
-  ws:      'WS',
-  trade:   'TRADE',
-  bal:     'BALANCE',
-  timeout: 'TIMEOUT',
-  stale:   'STALE FEED',
-  barrier: 'BARRIER',
-  circuit: 'CIRCUIT BRK',
-  info:    'INFO',
-};
-
-// What each category means — shown as a tooltip/hint
-const ERR_HINTS={
-  ws:      'WebSocket connection dropped or rejected',
-  trade:   'Deriv rejected the buy order',
-  bal:     'Account balance too low to place this stake',
-  timeout: 'Contract result not received within 45s',
-  stale:   'No tick received in 5s — feed may have frozen',
-  barrier: 'Barrier value rejected by Deriv API',
-  circuit: 'Circuit breaker triggered — bot stopped',
-  info:    'System information',
-};
-
-function pushError(category, message, detail){
-  const id=++_errIdCounter;
-  const now=new Date().toUTCString().slice(17,25);
-  _errLog.push({id,category,message,detail,ts:now});
-  _renderErrorCentre();
-  // Also mirror critical errors into the bot activity log
-  if(category!=='info') aiLog('🚨 ['+ERR_LABELS[category]+'] '+message,'danger');
-}
-
-function _renderErrorCentre(){
-  const centre=document.getElementById('errCentre');
-  const list=document.getElementById('errList');
-  const badge=document.getElementById('errCount');
-  if(!centre||!list||!badge) return;
-  const count=_errLog.length;
-  badge.textContent=count;
-  centre.style.display=count>0?'block':'none';
-  list.innerHTML='';
-  // Show most recent first
-  [..._errLog].reverse().forEach(e=>{
-    const row=document.createElement('div');
-    row.className='err-row';
-    const hint=ERR_HINTS[e.category]||'';
-    row.innerHTML=
-      '<span class="err-badge '+e.category+'" title="'+hint+'">'+ERR_LABELS[e.category]+'</span>'+
-      '<div style="flex:1;">'+
-        '<div><span class="err-ts">'+e.ts+'</span><span class="err-msg"><strong>'+e.message+'</strong></span></div>'+
-        (e.detail?'<div style="color:#64748b;font-size:8px;margin-top:2px;">'+e.detail+'</div>':'') +
-      '</div>'+
-      '<button class="err-dismiss" onclick="dismissError('+e.id+')" title="Dismiss">✕</button>';
-    list.appendChild(row);
-  });
-}
-
-function dismissError(id){
-  const idx=_errLog.findIndex(e=>e.id===id);
-  if(idx!==-1) _errLog.splice(idx,1);
-  _renderErrorCentre();
-}
-
-function clearAllErrors(){
-  _errLog.length=0;
-  _renderErrorCentre();
-}
-
-// ── Upgraded showErr/hideErr — now route through Error Centre ──
 function showErr(msg){
-  // Classify the raw WebSocket/API error message
-  let cat='ws';
-  if(msg.toLowerCase().includes('barrier')) cat='barrier';
-  else if(msg.toLowerCase().includes('balance')) cat='bal';
-  else if(msg.toLowerCase().includes('timeout')) cat='timeout';
-  pushError(cat, msg, 'Source: Deriv WebSocket API');
+  const e=document.getElementById('ERR');
+  if(e){e.textContent='⚠ '+msg;e.style.display='block';}
 }
-function hideErr(){/* legacy no-op — errors stay until dismissed */}
+function hideErr(){
+  const e=document.getElementById('ERR');
+  if(e) e.style.display='none';
+}
 
 function startConn(){
   try{ws=new WebSocket('wss://ws.binaryws.com/websockets/v3?app_id=1089');}
@@ -1771,9 +1458,9 @@ function onTick(tk){
   if(s.tickTimes.length>=2)
     s.tickSpeed=Math.round((s.tickTimes[s.tickTimes.length-1]-s.tickTimes[0])/(s.tickTimes.length-1));
   s.last=p;s.prices.push(p);
-  if(s.prices.length>s.priceBuf)s.prices.shift();
+  if(s.prices.length>200)s.prices.shift();
   s.digits.push(d);
-  if(s.digits.length>s.digitBuf){const r=s.digits.shift();s.freq[r]=Math.max(0,s.freq[r]-1);}
+  if(s.digits.length>100){const r=s.digits.shift();s.freq[r]=Math.max(0,s.freq[r]-1);}
   s.freq[d]++;s.ticks++;s.conn=true;
   total++;
   const onAnalysisPage=document.getElementById('pgAnalysis').classList.contains('active');
@@ -1790,9 +1477,7 @@ function onTick(tk){
   }
   if(AI.running&&AI.mode==='pioneer') aiTick(tk.symbol);
   if(TR.running&&AI.mode==='trend'&&!AI.inTrade&&!AI.pendingResult&&Date.now()-lastTrendTradeTime>400) trendTick();
-  if(PW.running&&AI.mode==='power'&&!AI.inTrade&&!AI.pendingResult) powerTick();
   if(AI.mode==='trend'&&total%3===0) updateTrendDisplay(tk.symbol);
-  if(AI.mode==='power'&&total%5===0) updatePowerSignalDisplay();
 }
 
 // ══ ANALYSIS ══
@@ -1800,47 +1485,23 @@ const _anaCache={};
 function ana(sym){
   const s=ST[sym];
   if(_anaCache[sym]&&_anaCache[sym].tick===s.ticks) return _anaCache[sym].result;
-  const ix=IDX.find(i=>i.s===sym);
   const pr=s.prices,fr=s.freq,n=s.digits.length;
-
-  // ── Index-calibrated parameters ──
-  const ts=ix?ix.tickScale:1;          // 1=standard, 2=1s
-  const conThresh=ix?ix.conThresh:0.020; // per-index consolidation threshold
-  const minTicks=ix?ix.minTicks:60;      // minimum ticks for reliable analysis
-  // Recency windows scale with tickScale so they cover same real time
-  const recWindow20 =20*ts;   // 20 real-time equivalent ticks
-  const recWindow50 =50*ts;   // 50 real-time equivalent ticks (score maturity)
-  const recWindow5  =5*ts;    // 5 real-time equivalent ticks (momentum)
-  const recWindow10 =10*ts;   // 10 real-time equivalent ticks
-
   let isCon=false,vl=0,ms='LOADING';
   if(pr.length>=20){
-    // Use last 20 prices for volatility calc
     const r=pr.slice(-20),mn=r.reduce((a,b)=>a+b,0)/r.length;
     const sd=Math.sqrt(r.reduce((a,b)=>a+(b-mn)**2,0)/r.length);
     const sdp=(sd/mn)*100;
-
-    // Expected SD calibrated per index: 1s indices have smaller per-tick moves
-    // so we use a tighter expected SD proportional to tickScale
-    const esdMult=0.02/ts; // standard=0.02, 1s=0.01
-    const esd=ix?(ix.v/100)*mn*esdMult:mn*0.01;
+    const ix=IDX.find(i=>i.s===sym);
+    const esd=ix?(ix.v/100)*mn*0.02:mn*0.01;
     vl=Math.min(100,Math.round((sd/esd)*50));
-
-    // Consolidation: primary check — sdp vs per-index threshold
-    isCon=sdp<conThresh;
-
-    // Secondary check: strong range compression confirms consolidation
-    // Only applies if sdp is also below 2× threshold (prevents false positives on volatile markets)
-    // Ratio tightened to 0.5 — recent range must be HALF the previous range to qualify
-    if(!isCon && sdp<conThresh*2 && pr.length>=recWindow10){
-      const wHalf=Math.max(5,Math.round(recWindow10/2));
-      const l5=Math.max(...pr.slice(-wHalf))-Math.min(...pr.slice(-wHalf));
-      const p5=Math.max(...pr.slice(-recWindow10,-wHalf))-Math.min(...pr.slice(-recWindow10,-wHalf));
-      if(p5>0&&l5<p5*0.5) isCon=true;
+    isCon=sdp<0.015;
+    if(pr.length>=10){
+      const l5=Math.max(...pr.slice(-5))-Math.min(...pr.slice(-5));
+      const p5=Math.max(...pr.slice(-10,-5))-Math.min(...pr.slice(-10,-5));
+      if(l5<p5*0.7)isCon=true;
     }
     ms=isCon?'CONSOLIDATING':(vl>65?'EXPANDING':'TRENDING');
   }
-
   const tot=fr.reduce((a,b)=>a+b,0)||1;
   const eC=[0,2,4,6,8].reduce((a,d)=>a+(fr[d]||0),0);
   const ep=eC/tot*100,op=100-ep;
@@ -1848,58 +1509,55 @@ function ana(sym){
   const o2=[3,4,5,6,7,8,9].reduce((a,d)=>a+(fr[d]||0),0)/tot*100,u7=100-o2;
   const mxF=Math.max(...fr),mnF=Math.min(...fr.filter(f=>f>0))||0;
   const hotD=fr.indexOf(mxF),coldD=fr.indexOf(mnF);
-
-  // ── SCORE — index-calibrated ──
+  // ── SCORE: how favourable is this market right now ──
   let score=0;
   if(isCon) score+=30;
-  // Maturity: require minTicks/2 for half points, minTicks for full
-  if(n>=minTicks)        score+=10;
-  else if(n>=minTicks/2) score+=5;
+  if(n>=30) score+=10;
   if((mxF/tot*100)>13) score+=20;
   if(vl<50) score+=15;
   const diffBias=Math.abs(ep-50);
   if(diffBias>6) score+=10;
 
-  // Entropy bonus
+  // Digit entropy bonus: lower entropy = more skewed = more edge
   let entropy=0;
   fr.forEach(f=>{if(f>0){const p2=f/tot;entropy-=p2*Math.log2(p2);}});
   const maxEntropy=Math.log2(10);
   const entropyBonus=Math.max(0,Math.round((1-entropy/maxEntropy)*25));
   score=Math.min(100,score+entropyBonus);
 
-  // ── MARKET GRADE ──
+  // ── MARKET GRADE — controls whether bot should enter ──
+  // Grade A: best conditions — consolidating + strong hot digit + good score
+  // Grade B: acceptable — consolidating + moderate hot digit
+  // Grade C: borderline — some signal, wait for better
+  // SKIP:    expanding or not enough data — never trade
   const hotPctRaw=mxF/tot*100;
-  // Recent hot count — scaled window
+  // Recent digit activity — how many times hot digit appeared in last 10 ticks
   let recentHotCount=0;
-  const rWin=Math.min(s.digits.length,recWindow10);
-  if(s.digits.length>=rWin){
-    recentHotCount=s.digits.slice(-rWin).filter(d=>d===hotD).length;
+  if(s.digits.length>=10){
+    const last10=s.digits.slice(-10);
+    recentHotCount=last10.filter(d=>d===hotD).length;
   }
   let marketGrade='SKIP';
   if(isCon&&hotPctRaw>15&&score>=65&&recentHotCount>=1) marketGrade='A';
-  else if(isCon&&hotPctRaw>12&&score>=50)               marketGrade='B';
-  else if(score>=40&&n>=minTicks/2)                     marketGrade='C';
-  // Suppress to B if hot digit cooling in recent window
-  const rWin5=Math.min(s.digits.length,recWindow5);
-  if(s.digits.length>=rWin5){
-    if(s.digits.slice(-rWin5).filter(d=>d===hotD).length===0&&marketGrade==='A') marketGrade='B';
+  else if(isCon&&hotPctRaw>12&&score>=50) marketGrade='B';
+  else if(score>=40&&n>=20) marketGrade='C';
+  // Suppress to B if hot digit absent in last 5 ticks (momentum fading)
+  if(s.digits.length>=5){
+    const last5=s.digits.slice(-5);
+    if(last5.filter(d=>d===hotD).length===0&&marketGrade==='A') marketGrade='B';
   }
-
   const eoR=()=>{if(!isCon)return{l:'AVOID',c:'av',t:'Expanding'};const b=Math.abs(ep-50);if(b>8)return{l:(ep>50?'EVEN':'ODD')+' ▲',c:'sb',t:Math.round(Math.max(ep,op))+'%'};if(b>4)return{l:ep>50?'EVEN':'ODD',c:'by',t:Math.round(Math.max(ep,op))+'%'};return{l:'NEUTRAL',c:'nt',t:'~50%'};};
   const o4R=()=>{if(!isCon)return{l:'AVOID',c:'av',t:''};const b=Math.abs(o4-50);if(b>8)return{l:(o4>50?'OVER4':'UNDER5')+' ▲',c:'sb',t:Math.round(Math.max(o4,u5))+'%'};if(b>3)return{l:o4>50?'OVER4':'UNDER5',c:'by',t:Math.round(Math.max(o4,u5))+'%'};return{l:'NEUTRAL',c:'nt',t:'~50%'};};
-  const o2R=()=>{if(n<minTicks/3)return{l:'LOADING',c:'wt',t:''};if(isCon)return{l:(o2>=u7?'OVER2':'UNDER7')+' ★',c:'sb',t:'~70% base'};return{l:o2>=u7?'OVER2':'UNDER7',c:'by',t:'70%'};};
-  const difR=()=>{if(n<minTicks/4)return{l:'LOADING',c:'wt',t:''};const hp=hotPctRaw;if(hp>15)return{l:'DIFF '+hotD+' ★',c:'sb',t:'d'+hotD+' at '+Math.round(hp)+'%'};return{l:'DIFF '+hotD,c:'by',t:'90% base'};};
-  const matR=()=>{if(n<minTicks/2)return{l:'LOADING',c:'wt',t:''};if((mnF/tot*100)<5&&isCon)return{l:'MATCH '+coldD,c:'wt',t:'cold digit'};return{l:'AVOID',c:'av',t:'10% only'};};
-
-  // hotRecent — scaled to recWindow20
+  const o2R=()=>{if(n<20)return{l:'LOADING',c:'wt',t:''};if(isCon)return{l:(o2>=u7?'OVER2':'UNDER7')+' ★',c:'sb',t:'~70% base'};return{l:o2>=u7?'OVER2':'UNDER7',c:'by',t:'70%'};};
+  const difR=()=>{if(n<15)return{l:'LOADING',c:'wt',t:''};const hp=(mxF/tot*100);if(hp>15)return{l:'DIFF '+hotD+' ★',c:'sb',t:'d'+hotD+' at '+Math.round(hp)+'%'};return{l:'DIFF '+hotD,c:'by',t:'90% base'};};
+  const matR=()=>{if(n<30)return{l:'LOADING',c:'wt',t:''};if((mnF/tot*100)<5&&isCon)return{l:'MATCH '+coldD,c:'wt',t:'cold digit'};return{l:'AVOID',c:'av',t:'10% only'};};
   let hotRecent=false,hotRecentPct=0;
-  const rWin20=Math.min(s.digits.length,recWindow20);
-  if(s.digits.length>=rWin20){
-    const rc=s.digits.slice(-rWin20).filter(d=>d===hotD).length;
-    hotRecentPct=Math.round(rc/rWin20*100);
+  if(s.digits.length>=20){
+    const rec20=s.digits.slice(-20);
+    const rc=rec20.filter(d=>d===hotD).length;
+    hotRecentPct=Math.round(rc/20*100);
     hotRecent=hotRecentPct>=13;
   }
-
   const result={isCon,ms,vl,ep,op,o4,u5,o2,u7,hotD,coldD,fr,tot,score,
     hotRecent,hotRecentPct,recentHotCount,marketGrade,hotPctRaw,
     eo:eoR(),o4r:o4R(),o2r:o2R(),dif:difR(),mat:matR()};
@@ -1941,10 +1599,10 @@ function findBestRecoveryMarket(){
   let best=null, bestPct=0;
   IDX.forEach(i=>{
     const s=ST[i.s];
-    const minT=i.minTicks||60;
-    if(!s||!s.conn||s.digits.length<minT) return;
+    if(!s||!s.conn||s.digits.length<25) return;
     try{
       const a=ana(i.s);
+      // Require consolidating market AND higher threshold (68%) for recovery
       if(!a.isCon) return;
       if(a.o2>=68&&a.o2>bestPct){bestPct=a.o2;best={sym:i.s,a,direction:'OVER',barrier:2,pct:a.o2};}
       if(a.u7>=68&&a.u7>bestPct){bestPct=a.u7;best={sym:i.s,a,direction:'UNDER',barrier:7,pct:a.u7};}
@@ -1957,10 +1615,7 @@ function findBestMarket(){
   const minScore=parseInt(document.getElementById('cfgMinScore')?document.getElementById('cfgMinScore').value:45)||45;
   const tgt=document.getElementById('cfgIndex').value;
   if(tgt!=='AUTO'){
-    const s=ST[tgt];
-    const ix=IDX.find(i=>i.s===tgt);
-    const minT=ix?ix.minTicks:60;
-    if(!s||!s.conn||s.digits.length<minT)return null;
+    const s=ST[tgt];if(!s||!s.conn||s.digits.length<30)return null;
     try{
       const a=ana(tgt);
       if(a.marketGrade==='SKIP'||a.marketGrade==='C') return null;
@@ -1968,14 +1623,14 @@ function findBestMarket(){
       return{sym:tgt,a};
     }catch(e){return null;}
   }
+  // AUTO: rank all markets, require Grade A or B + score >= minScore
   let best=null,bestScore=0;
   IDX.forEach(i=>{
-    const s=ST[i.s];
-    const minT=i.minTicks||60;
-    if(!s||!s.conn||s.digits.length<minT)return;
+    const s=ST[i.s];if(!s||!s.conn||s.digits.length<30)return;
     try{
       const a=ana(i.s);
       if(a.marketGrade==='SKIP'||a.marketGrade==='C') return;
+      // Grade A markets get a significant boost in ranking
       const gradeBoost=a.marketGrade==='A'?20:0;
       const eff=a.score+gradeBoost+(a.hotRecent?8:0);
       if(eff>bestScore){bestScore=eff;best={sym:i.s,a};}
@@ -2275,8 +1930,7 @@ function placeTrade(sym,code,stake,barrier,typeLabel,source){
   if(s&&s.tickTimes&&s.tickTimes.length>0){
     const lastTick=s.tickTimes[s.tickTimes.length-1];
     if(Date.now()-lastTick>5000){
-      pushError('stale', sym+' feed stale — skipping trade', 'No tick for '+Math.round((Date.now()-lastTick)/1000)+'s · Check connection');
-      AI.inTrade=false; AI.pendingResult=false;
+      aiLog('⚠ '+sym+' feed stale ('+Math.round((Date.now()-lastTick)/1000)+'s) — skipping to avoid lag loss','warn');
       return;
     }
   }
@@ -2320,7 +1974,7 @@ function placeTrade(sym,code,stake,barrier,typeLabel,source){
       AI.lateTimer=setTimeout(()=>{
         if(AI.pendingResult&&AI.activeCid){
           const lostStake=parseFloat(document.getElementById('ctStake').textContent.replace('$',''))||0;
-          pushError('timeout','No result after 45s — recorded as loss', 'Contract #'+AI.activeCid+' · Stake: $'+lostStake.toFixed(2)+' · Check Deriv account');
+          aiLog('❌ Timeout — no result after 45s. Recording as loss ($'+lostStake.toFixed(2)+')','danger');
           AI.pendingResult=false;AI.inTrade=false;
           AI.losses++;AI.consecLoss++;
           const lostAmt=-lostStake;
@@ -2330,7 +1984,7 @@ function placeTrade(sym,code,stake,barrier,typeLabel,source){
           if(src==='trend'){TR.sessPnl=Math.round((TR.sessPnl+lostAmt)*100)/100;TR.losses++;}
           AI.equityPoints.push(AI.sessPnl);
           const stepLabel=src==='pioneer'?'S'+(AI.martStep+1)+' T/O':src==='trend'?'TR T/O':'MAN T/O';
-          addTradeLog(AI.activeSym,AI.activeType,'timeout',lostStake,lostAmt,false,stepLabel, AI.activeCid, 1);
+          addTradeLog(AI.activeSym,AI.activeType,'timeout',lostStake,lostAmt,false,stepLabel);
           AI.activeCid=null;
           if(src==='pioneer'&&AI.martStep<4) AI.martStep++;
           else if(src==='trend'&&TR.step<4) TR.step++;
@@ -2348,16 +2002,9 @@ function onBuy(msg){
   if(!AI.pendingResult)return;
   if(msg.error){
     clearTimeout(AI.tradeTimer);
-    const errCode=msg.error.code||'UNKNOWN';
-    const errMsg=msg.error.message||errCode;
-    const isBal=errCode==='InsufficientBalance';
-    pushError(
-      isBal?'bal':'trade',
-      isBal?'Insufficient balance — bot stopped':errMsg,
-      'Code: '+errCode+' · Index: '+(AI.activeSym||'?')+' · Contract: '+(AI.activeType||'?')+' · Stake: $'+(AI.activeDigit||'?')
-    );
+    aiLog('❌ Buy error: '+(msg.error.message||msg.error.code),'danger');
     AI.inTrade=false;AI.pendingResult=false;
-    if(isBal){stopAI();trendStop();}
+    if(msg.error.code==='InsufficientBalance'){aiLog('🛑 Insufficient balance.','danger');stopAI();trendStop();}
     setAIState(AI.running||TR.running?'scanning':'idle');return;
   }
   if(!msg.buy)return;
@@ -2386,15 +2033,6 @@ function onContract(poc){
   const stake=parseFloat(poc.buy_price||0);
   const source=AI.activeSource||'pioneer';
   AI.pendingResult=false;AI.inTrade=false;
-
-  // ── Route Power immediately — it handles its own P&L accounting ──
-  if(source==='power'){
-    document.getElementById('ctStatus').textContent=won?'WON ✅':'LOST ❌';
-    document.getElementById('ctStatus').style.color=won?'var(--green)':'var(--red)';
-    onPowerContract(poc);return;
-  }
-
-  // ── Pioneer and Trend P&L accounting ──
   AI.totalPnl=Math.round((AI.totalPnl+profit)*100)/100;
   AI.sessPnl=Math.round((AI.sessPnl+profit)*100)/100;
   AI.equityPoints.push(AI.sessPnl);
@@ -2424,15 +2062,13 @@ function onContract(poc){
         aiLog('❌ TREND LOSS S5 — circuit breaker.','danger');
       }
     }
-    addTradeLog(AI.activeSym,AI.activeType,AI.activeDigit,stake,profit,won,'TR'+(TR.step), poc.contract_id, TR.ticks||5, poc.payout);
+    addTradeLog(AI.activeSym,AI.activeType,AI.activeDigit,stake,profit,won,'TR'+(TR.step));
     updateAIStats();drawEquity();drawTrendEquity();
     setTimeout(()=>{
       const _ct2=document.getElementById('curTrade');if(_ct2){_ct2.classList.remove('active');_ct2.style.display='none';}
       if(TR.running){
-        if(TR.consecLoss>=5){
-          pushError('circuit','Trend circuit breaker — 5 consecutive losses','Bot stopped · Reset to start a new session');
-          setAIState('stopped');trendStop();
-        }else{setAIState('scanning');updateTrendLadderUI();}
+        if(TR.consecLoss>=5){setAIState('stopped');aiLog('🛑 5 losses — Trend stopped.','danger');trendStop();}
+        else{setAIState('scanning');updateTrendLadderUI();}
       }
     },600);
   } else {
@@ -2459,633 +2095,53 @@ function onContract(poc){
         aiLog('❌ LOSS S5 — circuit breaker. Market resting 60s.','danger');
       }
     }
-    addTradeLog(AI.activeSym,AI.activeType,AI.activeDigit,stake,profit,won,'S'+(AI.martStep+1)+(AI.martStep===0?' DIFF':' OV2'), poc.contract_id, 1, poc.payout);
+    addTradeLog(AI.activeSym,AI.activeType,AI.activeDigit,stake,profit,won,'S'+(AI.martStep+1)+(AI.martStep===0?' DIFF':' OV2'));
     updateAIStats();drawEquity();
     setTimeout(()=>{
       const _ct2=document.getElementById('curTrade');if(_ct2){_ct2.classList.remove('active');_ct2.style.display='none';}
-      if(AI.consecLoss>=5){
-        pushError('circuit','Pioneer circuit breaker — 5 consecutive losses','Bot stopped · Reset to start a new session');
-        setAIState('stopped');stopAI();
-      }else{setAIState('scanning');updateLadderUI();}
+      if(AI.running){if(AI.consecLoss>=5){setAIState('stopped');aiLog('🛑 5 losses.','danger');stopAI();}else{setAIState('scanning');updateLadderUI();}}
     },600);
   }
 }
 
-// ════════════════════════════════════════════
-// ⚡ POWER MODE
-// ════════════════════════════════════════════
-
-const PW={
-  running:false,
-  step:0,
-  baseStake:1,
-  mult:3.6,
-  direction:null,
-  sessPnl:0, wins:0, losses:0, consecLoss:0,
-  equityPoints:[0],
-  prevMarket:null,
-  s1StreakLoss:0,   // consecutive S1 losses — raises entry bar dynamically
-  lastLostSym:null, // P4: market that just lost S1 — skipped on next scan
-};
-
-// ── Power market analyser ──
-// Implements all 4 loss-cap fixes:
-// P1: Triple timeframe agreement — 100, 50, and 20 tick windows must all show same signal
-// P2: Transition guard — reject market if volatility score is rising (about to expand)
-// P3: Volatility-tiered thresholds — V75/V100 require stronger signal
-// P4: Handled in findPowerMarket — always picks best, skips last-lost market
-function powerAna(sym, lastLostSym){
-  const s=ST[sym];
-  if(!s||!s.conn||s.digits.length<100) return null; // need full 100 ticks for triple check
-  const a=ana(sym);
-  if(!a.isCon) return null; // must be consolidating
-
-  const ix=IDX.find(i=>i.s===sym);
-  const isHighVol=(sym==='R_75'||sym==='R_100'||sym==='1HZ75V'||sym==='1HZ100V');
-  const isMidVol =(sym==='R_50'||sym==='1HZ50V');
-
-  // ── P2: Transition guard ──
-  // Check if volatility score is rising — early warning of market about to expand
-  // We compare vl from last 20 ticks vs last 40 ticks using price slices
-  // If recent vl is higher than older vl — market is expanding, skip
-  const pr=s.prices;
-  let vlRecent=0, vlOlder=0;
-  if(pr.length>=40){
-    const r20=pr.slice(-20), mn20=r20.reduce((a,b)=>a+b,0)/r20.length;
-    const sd20=Math.sqrt(r20.reduce((a,b)=>a+(b-mn20)**2,0)/r20.length);
-    const r40=pr.slice(-40,-20), mn40=r40.reduce((a,b)=>a+b,0)/r40.length;
-    const sd40=Math.sqrt(r40.reduce((a,b)=>a+(b-mn40)**2,0)/r40.length);
-    vlRecent=sd20; vlOlder=sd40;
-  }
-  // If recent volatility is more than 20% higher than older — transitioning, skip
-  if(vlOlder>0&&vlRecent>vlOlder*1.20) return null;
-
-  const tot=a.tot||1;
-  const fr=a.fr;
-  const hotD=a.hotD;
-  const hotPct=a.hotPctRaw||((fr[hotD]||0)/tot*100);
-
-  // ── P3: Volatility-tiered frequency threshold ──
-  const freqThreshold = isHighVol ? 20 : isMidVol ? 18 : 16;
-
-  // Hot digit must be at an extreme
-  let signal=null;
-  if(hotD<=1&&hotPct>=freqThreshold) signal='OVER';
-  if(hotD>=8&&hotPct>=freqThreshold) signal='UNDER';
-  if(!signal) return{lowPct:0,highPct:0,recentConfirm:0,signal:null,score:a.score,isCon:true,sym,hotD,hotPct,tframe100:0,tframe50:0,tframe20:0};
-
-  // ── P1: Triple timeframe agreement ──
-  // All three windows — last 100, last 50, last 20 ticks — must show the same dominant digit direction
-  const digits=s.digits; // last 100 ticks (capped at 100 in ST)
-
-  // Helper: get hot digit direction in a window
-  function windowSignal(digs){
-    if(!digs||digs.length<10) return null;
-    const wTot=digs.length;
-    const freq=new Array(10).fill(0);
-    digs.forEach(d=>freq[d]++);
-    const wHotD=freq.indexOf(Math.max(...freq));
-    const wHotPct=freq[wHotD]/wTot*100;
-    if(wHotD<=1&&wHotPct>=(freqThreshold-2)) return 'OVER';  // slight tolerance for shorter windows
-    if(wHotD>=8&&wHotPct>=(freqThreshold-2)) return 'UNDER';
-    return null;
-  }
-
-  const win100=digits;                          // all 100 ticks
-  const win50 =digits.slice(-50);               // last 50
-  const win20 =digits.slice(-20);               // last 20
-
-  const sig100=windowSignal(win100);
-  const sig50 =windowSignal(win50);
-  const sig20 =windowSignal(win20);
-
-  // All three must agree on the same direction
-  if(sig100!==signal||sig50!==signal||sig20!==signal) return null;
-
-  // Count how many of the extreme digits appear in each window (for logging)
-  const count=d=>(signal==='OVER'?d<=1:d>=8);
-  const tframe100=Math.round(win100.filter(count).length/win100.length*100);
-  const tframe50 =Math.round(win50.filter(count).length/win50.length*100);
-  const tframe20 =Math.round(win20.filter(count).length/win20.length*100);
-
-  // ── Recent momentum ── 2 of last 5 AND 3 of last 10
-  const last10=digits.slice(-10);
-  const last5 =digits.slice(-5);
-  const recent5 =last5.filter(count).length;
-  const recent10=last10.filter(count).length;
-  if(recent5<2||recent10<3) return null;
-
-  const lowPct =((fr[0]||0)+(fr[1]||0))/tot*100;
-  const highPct=((fr[8]||0)+(fr[9]||0))/tot*100;
-
-  return{lowPct,highPct,recentConfirm:recent5,signal,score:a.score,isCon:true,sym,
-    hotD,hotPct,recent10,tframe100,tframe50,tframe20,freqThreshold,isHighVol,isMidVol};
-}
-
-// ── Find best Power market ──
-// P4: Always picks the best market from all 10 — skips the market that just lost S1
-// so the bot cannot re-enter the same market that just failed
-function findPowerMarket(overrideMinScore){
-  const minScore=overrideMinScore||parseInt(document.getElementById('pwMinScore')?document.getElementById('pwMinScore').value:55)||55;
-  const tgt=document.getElementById('pwIndex')?document.getElementById('pwIndex').value:'AUTO';
-
-  if(tgt!=='AUTO'){
-    // Manual index — use it but still apply all filters
-    if(tgt===PW.lastLostSym){
-      aiLogPW('⏭ Skipping '+tgt+' (last S1 loss) — scanning for alternative','warn');
-      return null; // force wait if only one market and it just lost
-    }
-    const p=powerAna(tgt);
-    if(!p||!p.signal||p.score<minScore) return null;
-    return p;
-  }
-
-  // AUTO: rank all 10 markets, skip lastLostSym, pick best by signal strength
-  let best=null, bestStrength=0;
-  IDX.forEach(i=>{
-    // P4: never re-enter the market that just lost S1
-    if(i.s===PW.lastLostSym) return;
-    try{
-      const p=powerAna(i.s);
-      if(!p||!p.signal||p.score<minScore) return;
-      // Rank by the strength of the cluster in the extreme window (tframe20 = most current)
-      // Weight: 50% tframe20 (most current) + 30% tframe50 + 20% tframe100
-      const strength=(p.tframe20*0.5)+(p.tframe50*0.3)+(p.tframe100*0.2);
-      if(strength>bestStrength){bestStrength=strength;best=p;}
-    }catch(e){}
-  });
-
-  // If no market found excluding lastLostSym, try the last-lost market again
-  // but only if it passes ALL filters — this prevents infinite lockout
-  if(!best&&PW.lastLostSym){
-    const p=powerAna(PW.lastLostSym);
-    if(p&&p.signal&&p.score>=minScore){
-      best=p;
-      aiLogPW('↩ No alternative found — returning to '+PW.lastLostSym+' (signal strengthened)','info');
-    }
-  }
-
-  return best;
-}
-
-// ── Find best Power recovery market — exactly like Pioneer ──
-// Scans ALL markets, picks whichever has highest OVER2 or UNDER7 ≥65%
-// No direction lock — picks best available signal regardless of S1 direction
-function findPowerRecoveryMarket(){
-  let best=null, bestPct=0;
-  IDX.forEach(i=>{
-    const s=ST[i.s];
-    if(!s||!s.conn||s.digits.length<20) return;
-    try{
-      const a=ana(i.s);
-      // OVER2: digits 3-9, ~70% base rate
-      if(a.o2>=65&&a.o2>bestPct){
-        bestPct=a.o2;
-        best={sym:i.s,a,direction:'OVER',barrier:2,pct:a.o2,contractCode:'DIGITOVER',typeLabel:'OVER 2'};
-      }
-      // UNDER7: digits 0-6, ~70% base rate
-      if(a.u7>=65&&a.u7>bestPct){
-        bestPct=a.u7;
-        best={sym:i.s,a,direction:'UNDER',barrier:7,pct:a.u7,contractCode:'DIGITUNDER',typeLabel:'UNDER 7'};
-      }
-    }catch(e){}
-  });
-  return best;
-}
-
-// ── Power ladder ──
-function calcPowerStake(step){
-  const base=parseFloat(document.getElementById('pwStake')?document.getElementById('pwStake').value:1)||1;
-  let s=base;
-  for(let i=0;i<step;i++) s=Math.round(s*PW.mult*100)/100;
-  return s;
-}
-function refreshPowerLadder(){
-  PW.mult=parseFloat(document.getElementById('pwMult')?document.getElementById('pwMult').value:3.6)||3.6;
-  let totalExp=0;
-  for(let i=0;i<5;i++){
-    const stake=calcPowerStake(i); totalExp+=stake;
-    const se=document.getElementById('plads'+i);
-    if(se) se.textContent='$'+stake.toFixed(2);
-    // Update label based on locked direction if running
-    const lt=document.getElementById('pladt'+i);
-    if(lt&&i>0){
-      if(PW.direction==='OVER') lt.textContent='OVER 2';
-      else if(PW.direction==='UNDER') lt.textContent='UNDER 7';
-    }
-  }
-  const exp=document.getElementById('pwExposure');
-  if(exp) exp.textContent='Max: $'+totalExp.toFixed(2);
-}
-function updatePowerLadderUI(){
-  for(let i=0;i<5;i++){
-    const el=document.getElementById('plad'+i);if(!el)continue;
-    el.classList.remove('active','won','lost');
-    if(i<PW.step) el.classList.add('lost');
-    else if(i===PW.step&&PW.running) el.classList.add('active');
-  }
-  const sd=document.getElementById('pwStep');
-  if(sd) sd.textContent='S'+(PW.step+1);
-  const nd=document.getElementById('pwNS');
-  if(nd) nd.textContent='$'+calcPowerStake(PW.step).toFixed(2);
-  const dEl=document.getElementById('pwDir');
-  if(dEl){
-    dEl.textContent=PW.direction||'—';
-    dEl.style.color=PW.direction==='OVER'?'var(--green)':PW.direction==='UNDER'?'var(--blue)':'var(--yellow)';
-  }
-  const str=document.getElementById('pwStreak');
-  if(str) str.textContent=PW.consecLoss;
-}
-
-// ── Power equity curve ──
-function drawPowerEquity(){
-  const canvas=document.getElementById('eqCanvasPW');if(!canvas)return;
-  const ctx=canvas.getContext('2d');
-  const W=canvas.offsetWidth||500;canvas.width=W;canvas.height=70;
-  ctx.clearRect(0,0,W,70);
-  const pts=PW.equityPoints||[];
-  if(!pts||pts.length<2){
-    ctx.strokeStyle='rgba(34,197,94,.15)';ctx.lineWidth=1;
-    ctx.beginPath();ctx.moveTo(0,35);ctx.lineTo(W,35);ctx.stroke();return;
-  }
-  const mn=Math.min(...pts),mx=Math.max(...pts),range=mx-mn||1;
-  const toY=v=>5+(60*(1-(v-mn)/range));
-  ctx.strokeStyle='rgba(34,197,94,.12)';ctx.lineWidth=1;ctx.setLineDash([3,4]);
-  ctx.beginPath();ctx.moveTo(0,toY(0));ctx.lineTo(W,toY(0));ctx.stroke();ctx.setLineDash([]);
-  const last=pts[pts.length-1];
-  const grad=ctx.createLinearGradient(0,0,0,70);
-  if(last>=0){grad.addColorStop(0,'rgba(34,197,94,.25)');grad.addColorStop(1,'rgba(34,197,94,.02)');}
-  else{grad.addColorStop(0,'rgba(239,68,68,.02)');grad.addColorStop(1,'rgba(239,68,68,.2)');}
-  ctx.beginPath();
-  pts.forEach((v,i)=>{const x=i/(pts.length-1)*W,y=toY(v);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
-  ctx.lineTo(W,70);ctx.lineTo(0,70);ctx.closePath();ctx.fillStyle=grad;ctx.fill();
-  ctx.strokeStyle=last>=0?'#22c55e':'#ff3d5a';ctx.lineWidth=2;
-  ctx.beginPath();
-  pts.forEach((v,i)=>{const x=i/(pts.length-1)*W,y=toY(v);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
-  ctx.stroke();
-  const es=document.getElementById('eqStatsPW');
-  if(es){
-    const peak=Math.max(...pts),trough=Math.min(...pts);
-    es.textContent='Now '+(last>=0?'+':'')+last.toFixed(2)+'  Peak '+(peak>=0?'+':'')+peak.toFixed(2)+'  Low '+(trough>=0?'+':'')+trough.toFixed(2);
-    es.style.color=last>=0?'var(--green)':'var(--red)';
-  }
-}
-
-// ── Power tick handler ──
-let _lastPowerTradeTime=0;
-function powerTick(){
-  if(!PW.running||AI.inTrade||AI.pendingResult)return;
-  if(Date.now()-_lastPowerTradeTime<1800)return;
-
-  const tp=parseFloat(document.getElementById('pwTP')?document.getElementById('pwTP').value:20)||20;
-  const sl=parseFloat(document.getElementById('pwSL')?document.getElementById('pwSL').value:30)||30;
-
-  if(PW.sessPnl>=tp){
-    aiLogPW('🎯 TP +$'+PW.sessPnl.toFixed(2)+' — Power stopped.','success');
-    powerStop();return;
-  }
-  if(PW.sessPnl<=-Math.abs(sl)){
-    aiLogPW('🛑 SL -$'+Math.abs(PW.sessPnl).toFixed(2)+' — Power stopped.','danger');
-    powerStop();return;
-  }
-  if(PW.consecLoss>=5){
-    pushError('circuit','Power circuit breaker — 5 consecutive losses','Reset to start a new session');
-    setAIState('stopped');powerStop();return;
-  }
-
-  setAIState('scanning');
-
-  let tradeSym, contractCode, barrier, typeLabel, stake;
-
-  if(PW.step===0){
-    // ── S1: OVER 1 or UNDER 8 ──
-    // Dynamic score floor: after 2+ straight S1 losses, require a stronger signal
-    const baseMinScore=parseInt(document.getElementById('pwMinScore')?document.getElementById('pwMinScore').value:55)||55;
-    const dynamicMinScore=PW.s1StreakLoss>=2 ? Math.min(85, baseMinScore+10*(PW.s1StreakLoss-1)) : baseMinScore;
-    if(dynamicMinScore>baseMinScore){
-      aiLogPW('⚠ S1 streak '+PW.s1StreakLoss+' — requiring score≥'+dynamicMinScore+' for next entry','warn');
-    }
-
-    const market=findPowerMarket(dynamicMinScore);
-    if(!market){
-      updatePowerSignalDisplay();
-      setAIState('waiting');return;
-    }
-    tradeSym=market.sym;
-    PW.direction=market.signal;
-    if(PW.direction==='OVER'){contractCode='DIGITOVER';barrier=1;typeLabel='OVER 1';}
-    else{contractCode='DIGITUNDER';barrier=8;typeLabel='UNDER 8';}
-    stake=calcPowerStake(0);
-    const ix=IDX.find(i=>i.s===tradeSym);
-    aiLogPW('⚡ S1 | '+(ix?ix.n:tradeSym)+' | '+typeLabel
-      +' | hotD:'+market.hotD+' | 100tk:'+market.tframe100+'% 50tk:'+market.tframe50+'% 20tk:'+market.tframe20+'%'
-      +' | r5:'+market.recentConfirm+'/r10:'+market.recent10
-      +' | $'+stake.toFixed(2)+' Score:'+market.score,'info');
-    refreshPowerLadder();
-  } else {
-    // ── S2–S5: Recovery — best OVER2 or UNDER7 across all markets (like Pioneer) ──
-    const recovery=findPowerRecoveryMarket();
-    if(!recovery){
-      PW.prevMarket=null;
-      aiLogPW('⏳ S'+(PW.step+1)+' — waiting for OVER 2 or UNDER 7 ≥65%…','warn');
-      setAIState('waiting');return;
-    }
-    // 2-tick confirmation on direction (same as Pioneer confirms direction)
-    const prev=PW.prevMarket;
-    const confirmed=prev&&prev.direction===recovery.direction;
-    PW.prevMarket={sym:recovery.sym,direction:recovery.direction};
-    if(!confirmed){
-      const ix=IDX.find(i=>i.s===recovery.sym);
-      aiLogPW('🔍 S'+(PW.step+1)+' | '+(ix?ix.n:recovery.sym)
-        +' | '+recovery.typeLabel+' ('+recovery.pct.toFixed(0)+'%) — confirming…','warn');
-      setAIState('waiting');return;
-    }
-    tradeSym=recovery.sym;
-    PW.prevMarket=null;
-    contractCode=recovery.contractCode;
-    barrier=recovery.barrier;
-    typeLabel=recovery.typeLabel;
-    stake=calcPowerStake(PW.step);
-    // Update ladder labels to show actual recovery direction
-    for(let i=1;i<5;i++){
-      const lt=document.getElementById('pladt'+i);
-      if(lt) lt.textContent=recovery.typeLabel;
-    }
-    const ix=IDX.find(i=>i.s===tradeSym);
-    aiLogPW('🔄 S'+(PW.step+1)+' | '+(ix?ix.n:tradeSym)
-      +' | '+typeLabel+' ('+recovery.pct.toFixed(0)+'%) | $'+stake.toFixed(2)+' ✓','warn');
-  }
-
-  updatePowerLadderUI();
-  _lastPowerTradeTime=Date.now();
-  placeTrade(tradeSym,contractCode,stake,barrier,typeLabel,'power');
-}
-
-// ── Power signal display ──
-function updatePowerSignalDisplay(){
-  if(AI.mode!=='power') return;
-  let bestLow=0,bestHigh=0,bestSig='WAIT';
-  IDX.forEach(i=>{
-    try{
-      const s=ST[i.s];if(!s||!s.conn||s.digits.length<30)return;
-      const a=ana(i.s);if(!a.isCon)return;
-      const lp=((a.fr[0]||0)+(a.fr[1]||0))/a.tot*100;
-      const hp=((a.fr[8]||0)+(a.fr[9]||0))/a.tot*100;
-      if(lp>bestLow){bestLow=lp;bestSig='OVER 1';}
-      if(hp>bestHigh){bestHigh=hp;bestSig='UNDER 8';}
-    }catch(e){}
-  });
-  const lEl=document.getElementById('pwLow');if(lEl)lEl.textContent=bestLow.toFixed(1)+'%';
-  const hEl=document.getElementById('pwHigh');if(hEl)hEl.textContent=bestHigh.toFixed(1)+'%';
-  const sEl=document.getElementById('pwSignal');
-  if(sEl){
-    sEl.textContent=bestSig;
-    sEl.style.color=bestSig==='OVER 1'?'var(--green)':bestSig==='UNDER 8'?'var(--blue)':'var(--yellow)';
-  }
-}
-
-// ── Power log helper ──
-function aiLogPW(msg,cls){
-  aiLogTo('aiLogPW',msg,cls);
-  aiLogTo('aiLog',msg,cls); // mirror to master log
-}
-
-// ── Power onContract handler — called from onContract() ──
-function onPowerContract(poc){
-  const won=poc.is_sold&&poc.profit>0;
-  const profit=parseFloat(poc.profit||0);
-  const stake=parseFloat(poc.buy_price||0);
-  PW.sessPnl=Math.round((PW.sessPnl+profit)*100)/100;
-  PW.equityPoints.push(PW.sessPnl);
-  if(PW.equityPoints.length>300)PW.equityPoints.shift();
-  AI.totalPnl=Math.round((AI.totalPnl+profit)*100)/100;
-  AI.sessPnl=Math.round((AI.sessPnl+profit)*100)/100;
-  AI.equityPoints.push(AI.sessPnl);
-
-  const stepEl=document.getElementById('plad'+PW.step);
-  if(won){
-    PW.wins++;AI.wins++;PW.consecLoss=0;AI.consecLoss=0;
-    PW.s1StreakLoss=0; // reset S1 streak on any win
-    PW.lastLostSym=null; // clear last-lost market on win
-    if(stepEl){stepEl.classList.remove('active');stepEl.classList.add('won');}
-    aiLogPW('✅ WIN +$'+profit.toFixed(2)+' S'+(PW.step+1)+' '+AI.activeType+' | Session: $'+PW.sessPnl.toFixed(2),'success');
-    aiLogPW('🔍 Scanning all markets for next best signal…','info');
-    PW.step=0;PW.direction=null;PW.prevMarket=null;
-    setTimeout(()=>{
-      for(let i=0;i<5;i++){const e=document.getElementById('plad'+i);if(e)e.classList.remove('won','lost','active');}
-      updatePowerLadderUI();
-    },1000);
-  } else {
-    PW.losses++;AI.losses++;PW.consecLoss++;AI.consecLoss++;
-    if(PW.step===0){
-      PW.s1StreakLoss++;
-      PW.lastLostSym=AI.activeSym; // P4: remember which market just lost S1
-    }
-    if(stepEl){stepEl.classList.remove('active');stepEl.classList.add('lost');}
-    if(PW.step<4){
-      PW.step++;
-      aiLogPW('❌ LOSS S'+PW.step+' | Next: '+typeLabel_for_step(PW.step)+' $'+calcPowerStake(PW.step).toFixed(2),'danger');
-    } else {
-      aiLogPW('❌ LOSS S5 — circuit breaker.','danger');
-    }
-  }
-  // Add to Power statement table
-  addPowerTradeLog(AI.activeSym,AI.activeType,stake,profit,won,poc.contract_id);
-  updateAIStats();drawEquity();drawPowerEquity();
-  setTimeout(()=>{
-    const _ct=document.getElementById('curTrade');if(_ct){_ct.classList.remove('active');_ct.style.display='none';}
-    if(PW.running){
-      if(PW.consecLoss>=5){
-        pushError('circuit','Power circuit breaker — 5 consecutive losses','Reset to start a new session');
-        setAIState('stopped');powerStop();
-      } else {
-        setAIState('scanning');updatePowerLadderUI();
-      }
-    }
-  },600);
-}
-
-function typeLabel_for_step(step){
-  if(step===0) return PW.direction==='OVER'?'OVER 1':'UNDER 8';
-  return PW.direction==='OVER'?'OVER 2':'UNDER 7';
-}
-
-// ── Power trade log ──
-let _pwTrades=0;
-function addPowerTradeLog(sym,type,stake,profit,won,contractId){
-  const ix=IDX.find(i=>i.s===sym);
-  const now=new Date();
-  const dateStr=now.toUTCString().slice(5,11)+' '+now.toUTCString().slice(17,25)+' UTC';
-  const buyPrice=parseFloat(stake||0);
-  const sellPrice=won?(buyPrice+parseFloat(profit||0)):0;
-  const pnl=parseFloat(profit||0);
-  const balVal=document.getElementById('balVal');
-  const bal=balVal?parseFloat(balVal.textContent)||null:null;
-  if(bal!==null)_runningBalance=bal;
-  const balDisplay=_runningBalance!==null?('$'+_runningBalance.toFixed(2)):'—';
-  const cidNum=contractId||AI.activeCid||'—';
-  const cidShort=cidNum&&cidNum!=='—'?String(cidNum).slice(-8):cidNum;
-  const pnlClass=pnl>0?'dpnl-pos':pnl<0?'dpnl-neg':'dpnl-zero';
-  const row=document.createElement('tr');
-  row.className='drow-'+(won?'win':'loss');
-  row.innerHTML=
-    '<td class="c"><span class="dstatus-badge '+(won?'won':'lost')+'">'+
-      '<span class="dstatus-dot '+(won?'win':'loss')+'"></span>'+(won?'Won':'Lost')+'</span></td>'+
-    '<td class="dim" style="font-size:9px;">'+dateStr+'</td>'+
-    '<td><div style="font-weight:700;font-size:10px;">'+(ix?ix.n:(sym||'—'))+'</div>'+
-        '<div style="color:var(--dim);font-size:8px;">'+(ix?ix.sub:(sym||'—'))+'</div></td>'+
-    '<td>'+_contractTypePill(type)+'</td>'+
-    '<td class="r dim">1 tick</td>'+
-    '<td class="r" style="color:var(--text);font-weight:600;">$'+buyPrice.toFixed(2)+'</td>'+
-    '<td class="r" style="color:'+(won?'#22c55e':'#ef4444')+';">$'+sellPrice.toFixed(2)+'</td>'+
-    '<td class="r"><span class="'+pnlClass+'">'+(pnl>=0?'+':'')+'$'+pnl.toFixed(2)+'</span></td>'+
-    '<td class="r" style="color:var(--accent);">'+balDisplay+'</td>'+
-    '<td><span class="dcid" title="Contract #'+cidNum+'">'+
-      (cidNum!=='—'?'#'+cidShort:'—')+'</span></td>';
-  const tbody=document.getElementById('tradeLogBodyPW');
-  if(tbody){tbody.appendChild(row);const tlog=tbody.closest('.tlog');if(tlog)tlog.scrollTop=tlog.scrollHeight;}
-  _pwTrades++;
-  const tc=document.getElementById('pwTradeCount');
-  if(tc) tc.textContent=_pwTrades+(_pwTrades===1?' trade':' trades');
-}
-
-// ── Power start / stop ──
-function powerStart(){
-  if(!userToken||isGuest){aiLogPW('⚠ Token required.','danger');return;}
-  if(!ws||ws.readyState!==1){aiLogPW('⚠ Not connected.','warn');return;}
-  if(AI.running||TR.running){aiLogPW('⚠ Stop other mode first.','warn');return;}
-  PW.baseStake=parseFloat(document.getElementById('pwStake').value)||1;
-  PW.mult=parseFloat(document.getElementById('pwMult').value)||3.6;
-  PW.step=0;PW.consecLoss=0;PW.direction=null;PW.sessPnl=0;PW.wins=0;PW.losses=0;
-  PW.equityPoints=[0];PW.prevMarket=null;PW.s1StreakLoss=0;PW.lastLostSym=null;
-  PW.running=true;
-  refreshPowerLadder();updatePowerLadderUI();
-  document.getElementById('startBtn').disabled=true;
-  document.getElementById('stopBtn').disabled=false;
-  ['pwStake','pwMult','pwTP','pwSL','pwMinScore','pwIndex']
-    .forEach(id=>{const el=document.getElementById(id);if(el)el.disabled=true;});
-  setAIState('scanning');
-  document.getElementById('pwRunning').textContent='▶ RUNNING';
-  document.getElementById('pwRunning').style.color='var(--green)';
-  const maxExp=[0,1,2,3,4].reduce((s,i)=>s+calcPowerStake(i),0);
-  aiLogPW('⚡ POWER STARTED — Base:$'+PW.baseStake+' Mult:×'+PW.mult
-    +' TP:$'+(document.getElementById('pwTP').value||20)
-    +' SL:$'+(document.getElementById('pwSL').value||30),'success');
-  aiLogPW('🔍 S1: Scanning for OVER 1 / UNDER 8 cluster ≥12% on consolidating markets','info');
-  aiLogPW('⚠ Max exposure: $'+maxExp.toFixed(2),'warn');
-}
-function powerStop(){
-  if(!PW.running)return;
-  PW.running=false;
-  document.getElementById('startBtn').disabled=false;
-  document.getElementById('stopBtn').disabled=true;
-  ['pwStake','pwMult','pwTP','pwSL','pwMinScore','pwIndex']
-    .forEach(id=>{const el=document.getElementById(id);if(el)el.disabled=false;});
-  if(!AI.running&&!TR.running)setAIState('idle');
-  document.getElementById('pwRunning').textContent='⏸ IDLE';
-  document.getElementById('pwRunning').style.color='var(--dim)';
-  aiLogPW('⏹ Power stopped.','warn');
-}
-
-// ════════════════════════════════════════════
-// END POWER MODE
-// ════════════════════════════════════════════
-
-// ══ STATEMENT TABLE — DERIV STYLE ══
+// ══ TRADE LOG ══
 let _totalTrades=0;
-let _runningBalance=null; // tracks live balance after each trade
-
-function _ensureLogHeader(logId){/* no-op — table headers in HTML */}
-
-function _contractTypePill(type){
-  const t=(type||'').toUpperCase();
-  if(t==='CALL')   return '<span class="dtype-pill call">▲ CALL</span>';
-  if(t==='PUT')    return '<span class="dtype-pill put">▼ PUT</span>';
-  if(t==='DIFFER') return '<span class="dtype-pill differ">≠ DIFFERS</span>';
-  if(t.includes('OVER'))  return '<span class="dtype-pill over">↑ OVER 2</span>';
-  if(t.includes('UNDER')) return '<span class="dtype-pill under">↓ UNDER 7</span>';
-  return '<span class="dtype-pill differ">'+t+'</span>';
+function _ensureLogHeader(logId){
+  const log=document.getElementById(logId);if(!log)return;
+  if(!log.querySelector('.log-header')){
+    const h=document.createElement('div');
+    h.className='log-entry log-header';
+    h.innerHTML='<div>TIME</div><div>INDEX</div><div>TYPE</div><div>ENTRY</div><div>STAKE</div><div>RESULT</div><div>P&L</div>';
+    log.insertBefore(h,log.firstChild);
+  }
 }
-
-function addTradeLog(sym, type, digit, stake, profit, won, label, contractId, ticks, payout){
+function addTradeLog(sym,type,digit,stake,profit,won,label){
   const ix=IDX.find(i=>i.s===sym);
-  // Full market name like Deriv uses
-  const marketName=ix?ix.sub:(sym||'—');
-  const shortName=ix?ix.n:(sym||'—');
-
-  // Date/time — Deriv shows full UTC datetime
-  const now=new Date();
-  const dateStr=now.toUTCString().slice(5,11)+' '+now.toUTCString().slice(17,25)+' UTC';
-
-  // Buy price = stake paid
-  const buyPrice=parseFloat(stake||0);
-  // Sell price = what was received (stake + profit if won, 0 if lost)
-  const sellPrice=won?(buyPrice+parseFloat(profit||0)):0;
-  const pnl=parseFloat(profit||0);
-
-  // Running balance
-  const balVal=document.getElementById('balVal');
-  const currentBal=balVal?parseFloat(balVal.textContent)||null:null;
-  if(currentBal!==null) _runningBalance=currentBal;
-  const balDisplay=_runningBalance!==null?('$'+_runningBalance.toFixed(2)):'—';
-
-  // Duration
-  const durDisplay=(ticks||1)+(ticks===1?' tick':' ticks');
-
-  // Contract ID ref
-  const cidNum=contractId||AI.activeCid||'—';
-  const cidShort=cidNum&&cidNum!=='—'?String(cidNum).slice(-8):cidNum;
-
-  // Status
-  const statusClass=won?'won':'lost';
-  const dotClass=won?'win':'loss';
-  const statusText=won?'Won':'Lost';
-
-  // P&L class
-  const pnlClass=pnl>0?'dpnl-pos':pnl<0?'dpnl-neg':'dpnl-zero';
-
-  // digit detail for DIFFERS
-  const digitNote=type==='DIFFER'&&digit!==undefined&&digit!==null&&digit!=='timeout'
-    ? ' <span style="color:var(--dim);font-size:8px;">(d'+digit+')</span>' : '';
-
-  const row=document.createElement('tr');
-  row.className='drow-'+(won?'win':'loss');
-  row.innerHTML=
-    '<td class="c"><span class="dstatus-badge '+statusClass+'">'+
-      '<span class="dstatus-dot '+dotClass+'"></span>'+statusText+'</span></td>'+
-    '<td class="dim" style="font-size:9px;white-space:nowrap;">'+dateStr+'</td>'+
-    '<td><div style="font-weight:700;font-size:10px;">'+shortName+'</div>'+
-        '<div style="color:var(--dim);font-size:8px;">'+marketName+'</div></td>'+
-    '<td>'+_contractTypePill(type)+digitNote+'</td>'+
-    '<td class="r dim">'+durDisplay+'</td>'+
-    '<td class="r" style="color:var(--text);font-weight:600;">$'+buyPrice.toFixed(2)+'</td>'+
-    '<td class="r" style="color:'+(won?'#22c55e':'#ef4444')+';">$'+sellPrice.toFixed(2)+'</td>'+
-    '<td class="r"><span class="'+pnlClass+'">'+(pnl>=0?'+':'')+'$'+pnl.toFixed(2)+'</span></td>'+
-    '<td class="r" style="color:var(--accent);font-weight:600;">'+balDisplay+'</td>'+
-    '<td><span class="dcid" title="Contract #'+cidNum+'" onclick="navigator.clipboard&&navigator.clipboard.writeText(\''+cidNum+'\').then(()=>aiLog(\'📋 Contract ID copied\',\'info\'))">'+
-      (cidNum!=='—'?'#'+cidShort:'—')+'</span></td>';
-
-  // Append to correct tbody
+  const now=new Date().toUTCString().slice(17,25);
+  const entryPrice=sym&&ST[sym]&&ST[sym].last?ST[sym].last.toFixed(2):'—';
+  const entry=document.createElement('div');
+  entry.className='log-entry '+(won?'win':profit===0?'pending':'loss');
+  const pnlCls=profit>0?'pnl-pos':profit<0?'pnl-neg':'pnl-zero';
+  entry.innerHTML=
+    '<div style="color:var(--dim);">'+now+'</div>'+
+    '<div style="font-weight:700;color:var(--text);">'+(ix?ix.n:(sym||'—'))+'</div>'+
+    '<div style="color:var(--accent);font-weight:600;">'+label+'</div>'+
+    '<div style="color:var(--sub);">'+entryPrice+'</div>'+
+    '<div style="color:var(--text);font-weight:700;">$'+parseFloat(stake||0).toFixed(2)+'</div>'+
+    '<div style="font-weight:800;color:'+(won?'#22c55e':'#ef4444')+';">'+(won?'✅WIN':'❌LOSS')+'</div>'+
+    '<div class="'+pnlCls+'">'+(profit>=0?'+':'')+'$'+parseFloat(profit||0).toFixed(2)+'</div>';
   const src=AI.activeSource||'pioneer';
-  const bodyMap={pioneer:'tradeLogBody',trend:'tradeLogBodyTR'};
-  const bodyId=bodyMap[src]||'tradeLogBody';
-  const tbody=document.getElementById(bodyId);
-  if(tbody){
-    tbody.appendChild(row);
-    // scroll parent tlog to bottom
-    const tlog=tbody.closest('.tlog');
-    if(tlog) tlog.scrollTop=tlog.scrollHeight;
+  const logMap={pioneer:'tradeLog',trend:'tradeLogTR'};
+  const logId=logMap[src]||'tradeLog';
+  _ensureLogHeader(logId);
+  const log=document.getElementById(logId);
+  if(log){log.appendChild(entry);log.scrollTop=log.scrollHeight;}
+  if(logId!=='tradeLog'){
+    _ensureLogHeader('tradeLog');
+    const ml=document.getElementById('tradeLog');
+    if(ml){const e2=entry.cloneNode(true);ml.appendChild(e2);ml.scrollTop=ml.scrollHeight;}
   }
-  // Mirror to pioneer body if source is trend
-  if(bodyId!=='tradeLogBody'){
-    const mb=document.getElementById('tradeLogBody');
-    if(mb){
-      const r2=row.cloneNode(true);
-      mb.appendChild(r2);
-      const tlog2=mb.closest('.tlog');
-      if(tlog2) tlog2.scrollTop=tlog2.scrollHeight;
-    }
-  }
+  // Update trade counter badge
   _totalTrades++;
   const tc=document.getElementById('tradeCount');
   if(tc) tc.textContent=_totalTrades+(_totalTrades===1?' trade':' trades');
@@ -3095,8 +2151,7 @@ function addTradeLog(sym, type, digit, stake, profit, won, label, contractId, ti
 function startAI(){
   if(!userToken||isGuest){aiLog('⚠ Token required.','danger');return;}
   if(AI.mode==='trend'){trendStart();return;}
-  if(AI.mode==='power'){powerStart();return;}
-  if(TR.running||PW.running){aiLog('⚠ Stop other mode first.','warn');return;}
+  if(TR.running){aiLog('⚠ Stop other mode first.','warn');return;}
   AI.baseStake=parseFloat(document.getElementById('cfgStake').value)||5;
   AI.mult=parseFloat(document.getElementById('cfgMult').value)||3.6;
   AI.tp=parseFloat(document.getElementById('cfgTP').value)||15;
@@ -3116,7 +2171,6 @@ function startAI(){
 
 // FIX #5: stopAI — removed references to non-existent mode IDs (modeManual, modeScalper)
 function stopAI(){
-  if(AI.mode==='power'&&PW.running){powerStop();return;}
   if(!AI.running)return;
   AI.running=false;AI.inTrade=false;AI.pendingResult=false;
   clearTimeout(AI.tradeTimer);clearTimeout(AI.lateTimer);
@@ -3130,27 +2184,24 @@ function stopAI(){
 
 // FIX #3: resetAI — removed references to non-existent Scalper/Manual mode elements
 function resetAI(){
-  stopAI();trendStop();powerStop();
+  stopAI();trendStop();
   AI.wins=0;AI.losses=0;AI.totalPnl=0;AI.sessPnl=0;
   AI.consecLoss=0;AI.martStep=0;AI.activeCid=null;AI.equityPoints=[0];AI.sessionStart=0;
   AI.tp1Hit=false;AI.tp2Hit=false;
   AI.recoveryRestUntil=0;AI.recoveryRestSym=null;
   TR.step=0;TR.consecLoss=0;TR.lastDirection=null;TR.sessPnl=0;TR.wins=0;TR.losses=0;
   TR.equityPoints=[0];
-  PW.step=0;PW.consecLoss=0;PW.direction=null;PW.sessPnl=0;PW.wins=0;PW.losses=0;
-  PW.equityPoints=[0];PW.prevMarket=null;PW.s1StreakLoss=0;PW.lastLostSym=null;
-  clearAllErrors();
-  setAIState('idle');updateAIStats();drawEquity();drawTrendEquity();drawPowerEquity();
+  setAIState('idle');updateAIStats();drawEquity();drawTrendEquity();
   const eqS=document.getElementById('eqStats');if(eqS){eqS.textContent='Now +0.00  Peak +0.00  Low +0.00';eqS.style.color='var(--sub)';}
   const eqSTR=document.getElementById('eqStatsTR');if(eqSTR){eqSTR.textContent='Now +0.00  Peak +0.00  Low +0.00';eqSTR.style.color='var(--sub)';}
   document.getElementById('curTrade').classList.remove('active');
   document.getElementById('curTrade').style.display='none';
-  const tb1=document.getElementById('tradeLogBody');if(tb1)tb1.innerHTML='';
-  const tb2=document.getElementById('tradeLogBodyTR');if(tb2)tb2.innerHTML='';
-  const tb3=document.getElementById('tradeLogBodyPW');if(tb3)tb3.innerHTML='';
-  _totalTrades=0; _runningBalance=null; _pwTrades=0;
+  document.getElementById('tradeLog').innerHTML='';
+  document.getElementById('tradeLogTR').innerHTML='';
+  _ensureLogHeader('tradeLog');
+  _ensureLogHeader('tradeLogTR');
+  _totalTrades=0;
   const tc=document.getElementById('tradeCount');if(tc)tc.textContent='0 trades';
-  const tc2=document.getElementById('pwTradeCount');if(tc2)tc2.textContent='0 trades';
   for(let i=0;i<5;i++){const e=document.getElementById('lad'+i);if(e)e.classList.remove('won','lost','active');}
   for(let i=0;i<5;i++){const e=document.getElementById('tlad'+i);if(e)e.classList.remove('won','lost','active');}
   refreshLadder();refreshTrendLadder();
@@ -3160,8 +2211,7 @@ function resetAI(){
 // ══ STATS ══
 function updateAIStats(){
   let w,l,sessPnl;
-  if(PW.running){w=PW.wins;l=PW.losses;sessPnl=PW.sessPnl;}
-  else if(TR.running){w=TR.wins;l=TR.losses;sessPnl=TR.sessPnl;}
+  if(TR.running){w=TR.wins;l=TR.losses;sessPnl=TR.sessPnl;}
   else{w=AI.wins;l=AI.losses;sessPnl=AI.sessPnl;}
   const tot=w+l;
   document.getElementById('astW').textContent=w;
@@ -3171,8 +2221,7 @@ function updateAIStats(){
   pe.textContent=(AI.totalPnl>=0?'+':'')+AI.totalPnl.toFixed(2);
   pe.style.color=AI.totalPnl>=0?'var(--green)':'var(--red)';
   document.getElementById('astCL').textContent=AI.consecLoss;
-  if(PW.running){document.getElementById('astMS').textContent='[⚡] '+(PW.direction||'SCAN')+' S'+(PW.step+1);document.getElementById('astNS').textContent='$'+calcPowerStake(PW.step).toFixed(2);}
-  else if(TR.running){document.getElementById('astMS').textContent='[📈] '+(TR.lastDirection||'SCAN')+' S'+(TR.step+1);document.getElementById('astNS').textContent='$'+calcTrendStake(TR.step).toFixed(2);}
+  if(TR.running){document.getElementById('astMS').textContent='[📈] '+(TR.lastDirection||'SCAN')+' S'+(TR.step+1);document.getElementById('astNS').textContent='$'+calcTrendStake(TR.step).toFixed(2);}
   else{document.getElementById('astMS').textContent=(AI.martStep===0?'DIFFERS':'OVER2')+' S'+(AI.martStep+1);document.getElementById('astNS').textContent='$'+calcStake(AI.martStep).toFixed(2);}
   const sp=document.getElementById('sessPnl');
   sp.textContent=(sessPnl>=0?'+':'')+sessPnl.toFixed(2);
@@ -3195,20 +2244,7 @@ function updateAIStats(){
 
 // ══ RENDER ══
 function bdg(r){return '<span class="b '+r.c+'" title="'+r.t+'">'+r.l+'</span>';}
-
-function initTable(){
-  // Build table with proper thead column headers
-  document.getElementById('TB').innerHTML=
-    '<thead><tr style="background:var(--card2);position:sticky;top:0;z-index:2;">'+
-    '<th class="L" style="padding:8px 12px;font-family:\'JetBrains Mono\',monospace;font-size:8px;font-weight:700;color:var(--sub);letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">MARKET</th>'+
-    '<th style="padding:8px 7px;font-family:\'JetBrains Mono\',monospace;font-size:8px;font-weight:700;color:var(--sub);letter-spacing:1px;text-transform:uppercase;">PRICE</th>'+
-    '<th style="padding:8px 7px;font-family:\'JetBrains Mono\',monospace;font-size:8px;font-weight:700;color:var(--sub);letter-spacing:1px;text-transform:uppercase;">STATE</th>'+
-    '<th style="padding:8px 7px;font-family:\'JetBrains Mono\',monospace;font-size:8px;font-weight:700;color:var(--sub);letter-spacing:1px;text-transform:uppercase;">SCORE</th>'+
-    '<th style="padding:8px 7px;font-family:\'JetBrains Mono\',monospace;font-size:8px;font-weight:700;color:var(--sub);letter-spacing:1px;text-transform:uppercase;">DIFFERS</th>'+
-    '<th style="padding:8px 7px;font-family:\'JetBrains Mono\',monospace;font-size:8px;font-weight:700;color:var(--sub);letter-spacing:1px;text-transform:uppercase;">OVER2/U7</th>'+
-    '</tr></thead>'+
-    '<tbody>'+IDX.map(i=>'<tr id="R-'+i.s+'"></tr>').join('')+'</tbody>';
-}
+function initTable(){document.getElementById('TB').innerHTML=IDX.map(i=>'<tr id="R-'+i.s+'"></tr>').join('');}
 
 function updateRow(sym){
   const row=document.getElementById('R-'+sym);if(!row)return;
@@ -3220,53 +2256,28 @@ function updateRow(sym){
   const ix=IDX.find(i=>i.s===sym);
   const isActive=AI.activeSym===sym&&AI.inTrade;
   row.style.background=isActive?'rgba(176,106,255,.06)':'';
-
   const cells=row.querySelectorAll('td');
-
   if(!cells.length||!row.dataset.rendered){
-    // First render — build all 6 cells
     row.dataset.rendered='1';
     let spdBadge='';
-    if(s.tickSpeed){
-      const sc=s.tickSpeed<1200?'fast':s.tickSpeed<3500?'med':'slow';
-      spdBadge='<span class="tick-speed '+sc+'">'+s.tickSpeed+'ms</span>';
-    }
+    if(s.tickSpeed){const sc=s.tickSpeed<1200?'fast':s.tickSpeed<3500?'med':'slow';spdBadge='<span class="tick-speed '+sc+'">'+s.tickSpeed+'ms</span>';}
     const msCls=a.isCon?'cy':a.ms==='EXPANDING'?'cn':'cw';
     const msIcon=a.isCon?'🟢':a.ms==='EXPANDING'?'🔴':'🟡';
     const _tc=s.ticks||0;
     const _tcCol=_tc<500?'var(--red)':_tc<1000?'var(--yellow)':'var(--green)';
     const _tcBadge='<span style="font-family:\'Space Mono\',monospace;font-size:7px;color:'+_tcCol+';margin-left:4px;">'+_tc+'tk</span>';
-    const scoreCol=a.score>=65?'var(--green)':a.score>=45?'var(--yellow)':'var(--red)';
     row.innerHTML=
-      '<td class="L"><div class="iname">'+ix.n+(isActive?' ⚡':'')+'</div>'+
-        '<div class="isub">'+ix.sub+' '+spdBadge+_tcBadge+'</div></td>'+
+      '<td class="L"><div class="iname">'+ix.n+(isActive?' ⚡':'')+'</div><div class="isub">'+ix.sub+' '+spdBadge+_tcBadge+'</div></td>'+
       '<td><div class="pcell '+dir+'">'+(p?p.toFixed(2):'—')+'</div></td>'+
       '<td><span class="ms-badge '+msCls+'">'+msIcon+' '+a.ms+'</span></td>'+
-      '<td><span class="score-badge" style="color:'+scoreCol+'">'+a.score+'</span></td>'+
-      '<td><span class="rec-badge '+a.dif.c+'" title="'+a.dif.t+'">'+a.dif.l+'</span></td>'+
-      '<td><span class="rec-badge '+a.o2r.c+'" title="'+a.o2r.t+'">'+a.o2r.l+'</span></td>';
+      '<td><span class="score-badge" style="color:'+(a.score>=65?'var(--green)':a.score>=45?'var(--yellow)':'var(--red)')+'">'+a.score+'</span></td>'+
+      '<td><span class="rec-badge '+a.dif.c+'">'+a.dif.l+'</span></td>'+
+      '<td><span class="rec-badge '+a.o2r.c+'">'+a.o2r.l+'</span></td>';
     return;
   }
-
-  // Incremental update — patch ALL 6 cells every tick
-  // Cell 0: tick count badge
-  const c0=cells[0];
-  if(c0){
-    const tb=c0.querySelector('span[style*="tk"]');
-    if(tb){
-      const _t=s.ticks||0;
-      tb.textContent=_t+'tk';
-      tb.style.color=_t<500?'var(--red)':_t<1000?'var(--yellow)':'var(--green)';
-    }
-    const nm=c0.querySelector('.iname');
-    if(nm) nm.textContent=ix.n+(isActive?' ⚡':'');
-  }
-  // Cell 1: price
-  const c1=cells[1];
-  if(c1){const pc=c1.querySelector('.pcell');if(pc){pc.className='pcell '+dir;pc.textContent=p?p.toFixed(2):'—';}}
-  // Cell 2: market state
-  const c2=cells[2];
-  if(c2){
+  const c1=cells[1];if(c1){const pc=c1.querySelector('.pcell');if(pc){pc.className='pcell '+dir;pc.textContent=p?p.toFixed(2):'—';}}
+  const c3=cells[3];if(c3){const sc=c3.querySelector('.score-badge');if(sc){sc.style.color=a.score>=65?'var(--green)':a.score>=45?'var(--yellow)':'var(--red)';sc.textContent=a.score;}}
+  const c2=cells[2];if(c2){
     const ms=c2.querySelector('.ms-badge');
     if(ms){
       const msCls=a.isCon?'cy':a.ms==='EXPANDING'?'cn':'cw';
@@ -3275,26 +2286,13 @@ function updateRow(sym){
       if(ms.textContent!==newTxt){ms.className='ms-badge '+msCls;ms.textContent=newTxt;}
     }
   }
-  // Cell 3: score
-  const c3=cells[3];
-  if(c3){
-    const sc=c3.querySelector('.score-badge');
-    if(sc){
-      sc.style.color=a.score>=65?'var(--green)':a.score>=45?'var(--yellow)':'var(--red)';
-      sc.textContent=a.score;
+  const c0=cells[0];if(c0){
+    const tb=c0.querySelector('span[style*="tk"]');
+    if(tb){
+      const _t=s.ticks||0;
+      tb.textContent=_t+'tk';
+      tb.style.color=_t<500?'var(--red)':_t<1000?'var(--yellow)':'var(--green)';
     }
-  }
-  // Cell 4: DIFFERS badge — update every tick so it reflects fresh analysis
-  const c4=cells[4];
-  if(c4){
-    const db=c4.querySelector('.rec-badge');
-    if(db){db.className='rec-badge '+a.dif.c;db.textContent=a.dif.l;db.title=a.dif.t;}
-  }
-  // Cell 5: OVER2/UNDER7 badge — update every tick
-  const c5=cells[5];
-  if(c5){
-    const ob=c5.querySelector('.rec-badge');
-    if(ob){ob.className='rec-badge '+a.o2r.c;ob.textContent=a.o2r.l;ob.title=a.o2r.t;}
   }
 }
 
@@ -3314,15 +2312,14 @@ function updateSum(){
   let sb=0,bu=0,ne=0,wa=0,av=0;
   IDX.forEach(i=>{
     const s=ST[i.s];
-    const minT=i.minTicks||60;
-    if(!s||!s.conn||s.digits.length<minT){av++;return;}
+    if(!s||!s.conn||s.digits.length<30){av++;return;}
     try{
       const a=ana(i.s);
-      if(a.score>=65&&a.isCon)         sb++;
+      if(a.score>=65&&a.isCon)      sb++;
       else if(a.score>=55&&a.score<65) bu++;
       else if(a.score>=45&&a.score<55) ne++;
       else if(a.score>=35&&a.score<45) wa++;
-      else                              av++;
+      else                             av++;
     }catch(e){av++;}
   });
   const _ps=document.getElementById('pSB');if(_ps)_ps.textContent=sb;
