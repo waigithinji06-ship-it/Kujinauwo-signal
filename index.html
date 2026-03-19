@@ -1,202 +1,270 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
-<title>Deriv Smart Bot</title>
+<title>Deriv Elite V2</title>
 <style>
-body {
-  font-family: Arial;
-  background: #0f172a;
-  color: white;
-  text-align: center;
-  padding: 20px;
-}
-
-input, button {
-  padding: 10px;
-  margin: 5px;
-  border-radius: 6px;
-  border: none;
-}
-
-button {
-  background: #00ffcc;
-  font-weight: bold;
-  cursor: pointer;
-}
-
-#log {
-  margin-top: 20px;
-  background: #111827;
-  padding: 10px;
-  height: 200px;
-  overflow-y: auto;
-  font-size: 12px;
-}
+body { background:#0f172a; color:white; font-family:Arial; text-align:center; }
+input,button { padding:8px; margin:5px; border-radius:6px; border:none; }
+button { background:#00ffcc; font-weight:bold; cursor:pointer; }
+table { width:100%; margin-top:10px; border-collapse:collapse; }
+td,th { border:1px solid #333; padding:6px; font-size:12px; }
+.dashboard { display:flex; justify-content:space-around; margin-top:10px; }
+.card { background:#111; padding:10px; border-radius:8px; width:18%; }
+#log { height:120px; overflow:auto; background:#111; margin-top:10px; }
 </style>
 </head>
 
 <body>
 
-<h2>🚀 Deriv Smart Trading Bot</h2>
+<h2>🧠 Deriv Elite V2</h2>
 
-<input type="text" id="token" placeholder="Enter API Token">
+<input id="token" placeholder="API Token">
+<input id="risk" type="number" placeholder="Risk % (e.g 2)" value="2">
+<input id="tp" type="number" placeholder="Take Profit ($)" value="10">
+<input id="sl" type="number" placeholder="Stop Loss ($)" value="10">
+
 <br>
-<button onclick="start()">▶ Start</button>
-<button onclick="stop()">■ Stop</button>
+<button onclick="start()">START</button>
+<button onclick="stop()">STOP</button>
+
+<div id="status">Status: Idle</div>
+
+<div class="dashboard">
+  <div class="card">💰 Balance: <span id="balance">0</span></div>
+  <div class="card">📈 Profit: <span id="profit">0</span></div>
+  <div class="card">❌ Losses: <span id="losses">0</span></div>
+  <div class="card">🔢 Trades: <span id="trades">0</span></div>
+  <div class="card">🎯 WinRate: <span id="winrate">0%</span></div>
+</div>
+
+<h3>📊 Analysis</h3>
+<div id="analysis"></div>
+
+<h3>📋 Trades</h3>
+<table>
+<tr>
+<th>Time</th><th>Index</th><th>Signal</th><th>Stake</th><th>Result</th><th>P&L</th>
+</tr>
+<tbody id="table"></tbody>
+</table>
 
 <div id="log"></div>
 
 <script>
-// =====================
-// CONNECTION
-// =====================
-let ws;
-let authorized = false;
+let ws, authorized=false;
 
-function log(msg) {
-  document.getElementById("log").innerHTML += msg + "<br>";
-}
+let indices=["R_10","R_25","R_50","R_75","R_100"];
+let historyMap={};
 
-function start() {
-  let token = document.getElementById("token").value;
+let currentIndex="R_100";
+let lastTrade=0;
 
-  ws = new WebSocket("wss://ws.binaryws.com/websockets/v3?app_id=1089");
+let balance=0, profit=0, losses=0, trades=0, wins=0;
 
-  ws.onopen = () => {
-    log("Connecting...");
-    ws.send(JSON.stringify({ authorize: token }));
-  };
+// ================= START =================
+function start(){
+ let token=document.getElementById("token").value;
 
-  ws.onmessage = (msg) => {
-    let data = JSON.parse(msg.data);
+ ws=new WebSocket("wss://ws.binaryws.com/websockets/v3?app_id=1089");
 
-    if (data.msg_type === "authorize") {
-      if (data.error) {
-        log("❌ Login failed");
-      } else {
-        authorized = true;
-        log("✅ Authorized");
-        subscribeTicks();
-      }
-    }
+ ws.onopen=()=>ws.send(JSON.stringify({authorize:token}));
 
-    if (data.msg_type === "tick") {
-      handleTick(data.tick.quote);
-    }
+ ws.onmessage=(msg)=>{
+  let data=JSON.parse(msg.data);
 
-    if (data.msg_type === "buy") {
-      log("📥 Trade placed");
-    }
-
-    if (data.msg_type === "proposal_open_contract") {
-      if (data.proposal_open_contract.is_sold) {
-        let profit = data.proposal_open_contract.profit;
-        updateResult(profit);
-      }
-    }
-  };
-}
-
-// =====================
-// TICKS
-// =====================
-function subscribeTicks() {
-  ws.send(JSON.stringify({
-    ticks: "R_100"
-  }));
-}
-
-let history = [];
-
-function handleTick(price) {
-  let digit = parseInt(price.toString().slice(-1));
-  history.push(digit);
-
-  if (history.length > 50) history.shift();
-
-  if (canTrade() && shouldTrade()) {
-    trade(digit);
-  }
-}
-
-// =====================
-// FILTER
-// =====================
-function shouldTrade() {
-  let last = history.slice(-20);
-
-  let high = last.filter(d => d >= 7).length;
-  let low = last.filter(d => d <= 2).length;
-
-  return !(high > 14 || low > 14);
-}
-
-// =====================
-// STRATEGY
-// =====================
-let stake = 1;
-let lossStreak = 0;
-let lastTrade = 0;
-
-function trade(digit) {
-  if (!authorized) return;
-
-  let type;
-
-  if (digit <= 2) type = "DIGITOVER";
-  else if (digit >= 7) type = "DIGITUNDER";
-  else return;
-
-  lastTrade = Date.now();
-
-  ws.send(JSON.stringify({
-    buy: 1,
-    price: stake,
-    parameters: {
-      amount: stake,
-      basis: "stake",
-      contract_type: type,
-      currency: "USD",
-      duration: 1,
-      duration_unit: "t",
-      symbol: "R_100"
-    }
-  }));
-
-  log("📊 Trade: " + type + " | Stake: " + stake);
-}
-
-// =====================
-// RISK CONTROL
-// =====================
-function updateResult(profit) {
-  if (profit < 0) {
-    lossStreak++;
-    stake *= 3.5;
-    log("❌ Loss | New Stake: " + stake);
-  } else {
-    lossStreak = 0;
-    stake = 1;
-    log("✅ Win | Reset Stake");
+  if(data.msg_type==="authorize"){
+    authorized=true;
+    log("✅ Connected");
+    getBalance();
+    subscribeAll();
+    document.getElementById("status").innerText="Running...";
   }
 
-  if (lossStreak >= 4) {
-    log("🛑 Stopped (3 losses)");
-    stop();
+  if(data.msg_type==="balance"){
+    balance=data.balance.balance;
+    document.getElementById("balance").innerText=balance.toFixed(2);
   }
+
+  if(data.msg_type==="tick"){
+    handleTick(data.tick.symbol,data.tick.quote);
+  }
+
+  if(data.msg_type==="proposal_open_contract"){
+    if(data.proposal_open_contract.is_sold){
+      handleResult(data.proposal_open_contract.profit);
+    }
+  }
+ };
 }
 
-// =====================
-// CONTROL
-// =====================
-function canTrade() {
-  return (Date.now() - lastTrade) > 5000;
+// ================= BALANCE =================
+function getBalance(){
+ ws.send(JSON.stringify({balance:1}));
 }
 
-function stop() {
-  if (ws) ws.close();
-  log("Bot stopped");
+// ================= SUBSCRIBE =================
+function subscribeAll(){
+ indices.forEach(i=>{
+  ws.send(JSON.stringify({ticks:i}));
+  historyMap[i]=[];
+ });
+}
+
+// ================= ANALYSIS =================
+function handleTick(symbol,price){
+ let digit=parseInt(price.toString().slice(-1));
+ historyMap[symbol].push(digit);
+
+ if(historyMap[symbol].length>100) historyMap[symbol].shift();
+
+ analyze();
+}
+
+function analyze(){
+ let best=null, bestScore=0;
+ let html="";
+
+ indices.forEach(i=>{
+  let data=historyMap[i];
+  if(data.length<50) return;
+
+  let high=data.filter(d=>d>=7).length;
+  let low=data.filter(d=>d<=2).length;
+
+  // probability edge
+  let probEdge = Math.abs(high-low)/data.length;
+
+  // trend (last 10 digits momentum)
+  let recent=data.slice(-10);
+  let trend=recent.reduce((a,b)=>a+b,0)/10;
+
+  let score = probEdge + (trend/10);
+
+  html+=`${i} → Edge:${probEdge.toFixed(2)} Trend:${trend.toFixed(2)} Score:${score.toFixed(2)}<br>`;
+
+  if(score>bestScore){
+    bestScore=score;
+    best=i;
+  }
+ });
+
+ document.getElementById("analysis").innerHTML=html;
+
+ if(best){
+  currentIndex=best;
+  entryLogic(historyMap[best]);
+ }
+}
+
+// ================= ENTRY =================
+function entryLogic(data){
+ if(Date.now()-lastTrade<8000) return; // delay entry
+
+ let last=data[data.length-1];
+
+ let signal=null;
+
+ // combine trend + digit
+ let avg=data.slice(-10).reduce((a,b)=>a+b,0)/10;
+
+ if(last<=2 && avg>4) signal="DIGITOVER";
+ else if(last>=7 && avg<5) signal="DIGITUNDER";
+ else return;
+
+ executeTrade(signal);
+}
+
+// ================= SMART RISK =================
+function getStake(){
+ let riskPercent=parseFloat(document.getElementById("risk").value);
+ return (balance * riskPercent)/100;
+}
+
+// ================= TRADE =================
+function executeTrade(type){
+ lastTrade=Date.now();
+
+ let stake=getStake();
+
+ ws.send(JSON.stringify({
+  buy:1,
+  price:stake,
+  parameters:{
+    amount:stake,
+    basis:"stake",
+    contract_type:type,
+    currency:"USD",
+    duration:1,
+    duration_unit:"t",
+    symbol:currentIndex
+  }
+ }));
+
+ log("📊 "+currentIndex+" "+type+" Stake:"+stake.toFixed(2));
+}
+
+// ================= RESULT =================
+function handleResult(p){
+ trades++;
+
+ if(p>=0){
+  profit+=p;
+  wins++;
+ }else{
+  losses++;
+ }
+
+ updateDashboard();
+ addRow(p);
+
+ let tp=parseFloat(document.getElementById("tp").value);
+ let sl=parseFloat(document.getElementById("sl").value);
+
+ if(profit>=tp){
+  log("🎯 TP HIT");
+  stop();
+ }
+
+ if(profit<=-sl){
+  log("🛑 SL HIT");
+  stop();
+ }
+}
+
+// ================= DASHBOARD =================
+function updateDashboard(){
+ document.getElementById("profit").innerText=profit.toFixed(2);
+ document.getElementById("losses").innerText=losses;
+ document.getElementById("trades").innerText=trades;
+
+ let winrate = trades ? (wins/trades)*100 : 0;
+ document.getElementById("winrate").innerText=winrate.toFixed(1)+"%";
+}
+
+// ================= TABLE =================
+function addRow(p){
+ let row=document.createElement("tr");
+
+ row.innerHTML=`
+ <td>${new Date().toLocaleTimeString()}</td>
+ <td>${currentIndex}</td>
+ <td>Trade</td>
+ <td>${getStake().toFixed(2)}</td>
+ <td>${p>=0?"Win":"Loss"}</td>
+ <td>${p.toFixed(2)}</td>
+ `;
+
+ document.getElementById("table").prepend(row);
+}
+
+// ================= UTIL =================
+function log(msg){
+ document.getElementById("log").innerHTML+=msg+"<br>";
+}
+
+function stop(){
+ if(ws) ws.close();
+ document.getElementById("status").innerText="Stopped";
 }
 </script>
 
