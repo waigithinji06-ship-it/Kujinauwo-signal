@@ -751,7 +751,7 @@ letter-spacing:.5px;white-space:nowrap;margin-top:1px;
       <table id="TB" class="tbl"></table>
     </div>
     <!-- Digit frequency -->
-    <div style="font-size:9px;color:var(--sub);font-family:'Space Mono',monospace;letter-spacing:2px;margin-bottom:8px;">DIGIT FREQUENCY (LAST 100 TICKS)</div>
+    <div style="font-size:9px;color:var(--sub);font-family:'Space Mono',monospace;letter-spacing:2px;margin-bottom:8px;">DIGIT FREQUENCY — LAST <span id="digitBufLabel">100</span> TICKS (LIVE)</div>
     <div id="DC" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:14px;"></div>
     <div style="font-size:8px;color:var(--dim);font-family:'Space Mono',monospace;text-align:center;padding-bottom:14px;">Live via Deriv WebSocket API · Educational &amp; demo use recommended</div>
   </div>
@@ -3190,7 +3190,20 @@ function updateAIStats(){
 
 // ══ RENDER ══
 function bdg(r){return '<span class="b '+r.c+'" title="'+r.t+'">'+r.l+'</span>';}
-function initTable(){document.getElementById('TB').innerHTML=IDX.map(i=>'<tr id="R-'+i.s+'"></tr>').join('');}
+
+function initTable(){
+  // Build table with proper thead column headers
+  document.getElementById('TB').innerHTML=
+    '<thead><tr style="background:var(--card2);position:sticky;top:0;z-index:2;">'+
+    '<th class="L" style="padding:8px 12px;font-family:\'JetBrains Mono\',monospace;font-size:8px;font-weight:700;color:var(--sub);letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">MARKET</th>'+
+    '<th style="padding:8px 7px;font-family:\'JetBrains Mono\',monospace;font-size:8px;font-weight:700;color:var(--sub);letter-spacing:1px;text-transform:uppercase;">PRICE</th>'+
+    '<th style="padding:8px 7px;font-family:\'JetBrains Mono\',monospace;font-size:8px;font-weight:700;color:var(--sub);letter-spacing:1px;text-transform:uppercase;">STATE</th>'+
+    '<th style="padding:8px 7px;font-family:\'JetBrains Mono\',monospace;font-size:8px;font-weight:700;color:var(--sub);letter-spacing:1px;text-transform:uppercase;">SCORE</th>'+
+    '<th style="padding:8px 7px;font-family:\'JetBrains Mono\',monospace;font-size:8px;font-weight:700;color:var(--sub);letter-spacing:1px;text-transform:uppercase;">DIFFERS</th>'+
+    '<th style="padding:8px 7px;font-family:\'JetBrains Mono\',monospace;font-size:8px;font-weight:700;color:var(--sub);letter-spacing:1px;text-transform:uppercase;">OVER2/U7</th>'+
+    '</tr></thead>'+
+    '<tbody>'+IDX.map(i=>'<tr id="R-'+i.s+'"></tr>').join('')+'</tbody>';
+}
 
 function updateRow(sym){
   const row=document.getElementById('R-'+sym);if(!row)return;
@@ -3202,28 +3215,53 @@ function updateRow(sym){
   const ix=IDX.find(i=>i.s===sym);
   const isActive=AI.activeSym===sym&&AI.inTrade;
   row.style.background=isActive?'rgba(176,106,255,.06)':'';
+
   const cells=row.querySelectorAll('td');
+
   if(!cells.length||!row.dataset.rendered){
+    // First render — build all 6 cells
     row.dataset.rendered='1';
     let spdBadge='';
-    if(s.tickSpeed){const sc=s.tickSpeed<1200?'fast':s.tickSpeed<3500?'med':'slow';spdBadge='<span class="tick-speed '+sc+'">'+s.tickSpeed+'ms</span>';}
+    if(s.tickSpeed){
+      const sc=s.tickSpeed<1200?'fast':s.tickSpeed<3500?'med':'slow';
+      spdBadge='<span class="tick-speed '+sc+'">'+s.tickSpeed+'ms</span>';
+    }
     const msCls=a.isCon?'cy':a.ms==='EXPANDING'?'cn':'cw';
     const msIcon=a.isCon?'🟢':a.ms==='EXPANDING'?'🔴':'🟡';
     const _tc=s.ticks||0;
     const _tcCol=_tc<500?'var(--red)':_tc<1000?'var(--yellow)':'var(--green)';
     const _tcBadge='<span style="font-family:\'Space Mono\',monospace;font-size:7px;color:'+_tcCol+';margin-left:4px;">'+_tc+'tk</span>';
+    const scoreCol=a.score>=65?'var(--green)':a.score>=45?'var(--yellow)':'var(--red)';
     row.innerHTML=
-      '<td class="L"><div class="iname">'+ix.n+(isActive?' ⚡':'')+'</div><div class="isub">'+ix.sub+' '+spdBadge+_tcBadge+'</div></td>'+
+      '<td class="L"><div class="iname">'+ix.n+(isActive?' ⚡':'')+'</div>'+
+        '<div class="isub">'+ix.sub+' '+spdBadge+_tcBadge+'</div></td>'+
       '<td><div class="pcell '+dir+'">'+(p?p.toFixed(2):'—')+'</div></td>'+
       '<td><span class="ms-badge '+msCls+'">'+msIcon+' '+a.ms+'</span></td>'+
-      '<td><span class="score-badge" style="color:'+(a.score>=65?'var(--green)':a.score>=45?'var(--yellow)':'var(--red)')+'">'+a.score+'</span></td>'+
-      '<td><span class="rec-badge '+a.dif.c+'">'+a.dif.l+'</span></td>'+
-      '<td><span class="rec-badge '+a.o2r.c+'">'+a.o2r.l+'</span></td>';
+      '<td><span class="score-badge" style="color:'+scoreCol+'">'+a.score+'</span></td>'+
+      '<td><span class="rec-badge '+a.dif.c+'" title="'+a.dif.t+'">'+a.dif.l+'</span></td>'+
+      '<td><span class="rec-badge '+a.o2r.c+'" title="'+a.o2r.t+'">'+a.o2r.l+'</span></td>';
     return;
   }
-  const c1=cells[1];if(c1){const pc=c1.querySelector('.pcell');if(pc){pc.className='pcell '+dir;pc.textContent=p?p.toFixed(2):'—';}}
-  const c3=cells[3];if(c3){const sc=c3.querySelector('.score-badge');if(sc){sc.style.color=a.score>=65?'var(--green)':a.score>=45?'var(--yellow)':'var(--red)';sc.textContent=a.score;}}
-  const c2=cells[2];if(c2){
+
+  // Incremental update — patch ALL 6 cells every tick
+  // Cell 0: tick count badge
+  const c0=cells[0];
+  if(c0){
+    const tb=c0.querySelector('span[style*="tk"]');
+    if(tb){
+      const _t=s.ticks||0;
+      tb.textContent=_t+'tk';
+      tb.style.color=_t<500?'var(--red)':_t<1000?'var(--yellow)':'var(--green)';
+    }
+    const nm=c0.querySelector('.iname');
+    if(nm) nm.textContent=ix.n+(isActive?' ⚡':'');
+  }
+  // Cell 1: price
+  const c1=cells[1];
+  if(c1){const pc=c1.querySelector('.pcell');if(pc){pc.className='pcell '+dir;pc.textContent=p?p.toFixed(2):'—';}}
+  // Cell 2: market state
+  const c2=cells[2];
+  if(c2){
     const ms=c2.querySelector('.ms-badge');
     if(ms){
       const msCls=a.isCon?'cy':a.ms==='EXPANDING'?'cn':'cw';
@@ -3232,13 +3270,26 @@ function updateRow(sym){
       if(ms.textContent!==newTxt){ms.className='ms-badge '+msCls;ms.textContent=newTxt;}
     }
   }
-  const c0=cells[0];if(c0){
-    const tb=c0.querySelector('span[style*="tk"]');
-    if(tb){
-      const _t=s.ticks||0;
-      tb.textContent=_t+'tk';
-      tb.style.color=_t<500?'var(--red)':_t<1000?'var(--yellow)':'var(--green)';
+  // Cell 3: score
+  const c3=cells[3];
+  if(c3){
+    const sc=c3.querySelector('.score-badge');
+    if(sc){
+      sc.style.color=a.score>=65?'var(--green)':a.score>=45?'var(--yellow)':'var(--red)';
+      sc.textContent=a.score;
     }
+  }
+  // Cell 4: DIFFERS badge — update every tick so it reflects fresh analysis
+  const c4=cells[4];
+  if(c4){
+    const db=c4.querySelector('.rec-badge');
+    if(db){db.className='rec-badge '+a.dif.c;db.textContent=a.dif.l;db.title=a.dif.t;}
+  }
+  // Cell 5: OVER2/UNDER7 badge — update every tick
+  const c5=cells[5];
+  if(c5){
+    const ob=c5.querySelector('.rec-badge');
+    if(ob){ob.className='rec-badge '+a.o2r.c;ob.textContent=a.o2r.l;ob.title=a.o2r.t;}
   }
 }
 
