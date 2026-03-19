@@ -1161,6 +1161,7 @@ const AI={
   sessionStart:0,
   recoveryRestUntil:0,
   recoveryRestSym:null,
+  lastLostDigit:null,  // hot digit from S1 loss — used to inform recovery direction
 };
 
 // ══ TREND STATE ══
@@ -1987,59 +1988,108 @@ function setAIState(state){
 }
 
 // ══ MARKET FINDER ══
-function findBestRecoveryMarket(excludeSym){
-  // excludeSym: market that just lost S1 — skip it on first pass
-  // Only use it as fallback if no other market qualifies
-  const step=AI.martStep||1;
-  const threshold   =Math.min(82, 75+Math.floor(step/2));
-  const momThreshold=Math.min(80, 72+Math.floor(step/2));
+function findBestRecoveryMarket(excludeSym, lostDigit){
+  // lostDigit: the hot digit that just lost in S1 DIFFERS
+  // Used to inform preferred recovery direction:
+  //   - DIFFERS bets that a specific digit does NOT appear
+  //   - If lostDigit is LOW (0-4): the low end of the range just fired
+  //     → digits 3-9 (OVER2) are still statistically favoured
+  //     → prefer OVER2 direction
+  //   - If lostDigit is HIGH (5-9): the high end just fired
+  //     → digits 0-6 (UNDER7) are still statistically favoured
+  //     → prefer UNDER7 direction
+  //   - No digit info: no preference, pick strongest
+  let dirPreference=null; // 'OVER' or 'UNDER' or null
+  if(lostDigit!==null&&lostDigit!==undefined&&lostDigit!=='timeout'){
+    const d=parseInt(lostDigit);
+    if(!isNaN(d)){
+      // If hot digit (the one that caused loss) is in 0-2: it's a low digit
+      // DIFFERS on a low digit means that digit appeared → low end fired
+      // OVER2 (wins on 3-9) is now more aligned
+      if(d<=2)       dirPreference='OVER';
+      // If hot digit is in 7-9: high digit appeared → high end fired
+      // UNDER7 (wins on 0-6) is now more aligned
+      else if(d>=7)  dirPreference='UNDER';
+      // digits 3-6: mid-range — no strong preference, pick best available
+    }
+  }
 
-  const _scan=(skipSym)=>{
+  // Flat 75% threshold for all steps — no upward scaling
+  // Higher steps need to fire urgently, not wait longer
+  const threshold    = 75;
+  const momThreshold = 70; // 10-tick momentum gate — lower than before for speed
+
+  // S4/S5: urgent — skip confirmation requirement (handled in aiTick)
+  // Window: 30 ticks recent + 10 tick momentum
+  // This replaces the 50-tick window which was too stale
+
+  const _scan=(skipSym, preferDir)=>{
     let best=null, bestScore=0;
     IDX.forEach(i=>{
-      if(skipSym&&i.s===skipSym) return; // skip excluded market
+      if(skipSym&&i.s===skipSym) return;
       const s=ST[i.s];
-      const recMinT=i.tickScale===2?100:50;
+      // 30 ticks standard / 60 ticks for 1s indices (same real time depth)
+      const recMinT=i.tickScale===2?60:30;
       if(!s||!s.conn||s.digits.length<recMinT) return;
       try{
         const a=ana(i.s);
-        const rec50=s.digits.slice(-50);
-        const recTot=rec50.length||1;
-        const recO2=rec50.filter(d=>d>=3).length/recTot*100;
-        const recU7=rec50.filter(d=>d<=6).length/recTot*100;
+
+        // 30-tick recent window — recent enough to be actionable
+        const rec30=s.digits.slice(-30);
+        const recTot=rec30.length||1;
+        const recO2=rec30.filter(d=>d>=3).length/recTot*100;
+        const recU7=rec30.filter(d=>d<=6).length/recTot*100;
+
+        // 10-tick momentum confirmation
         const last10=s.digits.slice(-10);
-        const last10Tot=last10.length||1;
-        const momO2=last10.filter(d=>d>=3).length/last10Tot*100;
-        const momU7=last10.filter(d=>d<=6).length/last10Tot*100;
+        const l10Tot=last10.length||1;
+        const momO2=last10.filter(d=>d>=3).length/l10Tot*100;
+        const momU7=last10.filter(d=>d<=6).length/l10Tot*100;
+
+        // Consolidating markets get ranking bonus
         const conBonus=a.isCon?2:0;
 
+        // Direction preference bonus — if the lost digit informs direction
+        // preferred direction gets +3 ranking bonus
+        const prefBonusO2=(preferDir==='OVER')?3:0;
+        const prefBonusU7=(preferDir==='UNDER')?3:0;
+
         if(recO2>=threshold&&momO2>=momThreshold){
-          const sc=recO2+conBonus+(momO2>threshold?1:0);
+          const sc=recO2+conBonus+prefBonusO2+(momO2>threshold?1:0);
           if(sc>bestScore){bestScore=sc;
             best={sym:i.s,a,direction:'OVER',barrier:2,
-              pct:Math.round(recO2*10)/10,momPct:Math.round(momO2*10)/10,
-              threshold,momThreshold};}
+              pct:Math.round(recO2*10)/10,
+              momPct:Math.round(momO2*10)/10,
+              threshold,momThreshold,
+              dirFromDigit:preferDir==='OVER'};}
         }
         if(recU7>=threshold&&momU7>=momThreshold){
-          const sc=recU7+conBonus+(momU7>threshold?1:0);
+          const sc=recU7+conBonus+prefBonusU7+(momU7>threshold?1:0);
           if(sc>bestScore){bestScore=sc;
             best={sym:i.s,a,direction:'UNDER',barrier:7,
-              pct:Math.round(recU7*10)/10,momPct:Math.round(momU7*10)/10,
-              threshold,momThreshold};}
+              pct:Math.round(recU7*10)/10,
+              momPct:Math.round(momU7*10)/10,
+              threshold,momThreshold,
+              dirFromDigit:preferDir==='UNDER'};}
         }
       }catch(e){}
     });
     return best;
   };
 
-  // First pass: exclude the market that just lost
-  const best=_scan(excludeSym);
+  // First pass: exclude the lost market, apply digit-based direction preference
+  const best=_scan(excludeSym, dirPreference);
   if(best) return best;
 
-  // Fallback: if no alternative exists, allow the excluded market
-  // but only if it genuinely qualifies — log clearly that it's a fallback
+  // Second pass: no direction preference — take best available excluding lost market
+  if(dirPreference){
+    const best2=_scan(excludeSym, null);
+    if(best2) return best2;
+  }
+
+  // Final fallback: allow the lost market if nothing else qualifies
   if(excludeSym){
-    const fallback=_scan(null);
+    const fallback=_scan(null, dirPreference)||_scan(null, null);
     if(fallback&&fallback.sym===excludeSym){
       fallback.isFallback=true;
       return fallback;
@@ -2210,27 +2260,33 @@ function aiTick(sym){
       +' ('+hotPct+'%) | $'+stake.toFixed(2)
       +' Score:'+a.score+' Grade:'+a.marketGrade+' Conf:'+conf.toFixed(2)+'x','info');
   } else {
-    // Pass the market that just lost S1 — recovery will skip it and scan all others first
-    const recovery=findBestRecoveryMarket(AI.martStep===1?AI.activeSym:null);
+    // Pass: excluded market (just lost S1) + the digit that caused the loss
+    const lostDigit=AI.lastLostDigit;
+    const recovery=findBestRecoveryMarket(AI.martStep===1?AI.activeSym:null, lostDigit);
     if(!recovery){
       setAIState('waiting');
       AI.prevRecovery=null;
-      const thr=Math.min(82,75+Math.floor((AI.martStep||1)/2));
-      const momThr=Math.min(80,72+Math.floor((AI.martStep||1)/2));
-      aiLog('⏳ S'+(AI.martStep+1)+' — scanning all markets OVER2/U7 ≥'+thr+'% (50tk) + mom ≥'+momThr+'% (10tk)…','warn');
+      aiLog('⏳ S'+(AI.martStep+1)+' — scanning all markets OVER2/U7 ≥75% (30tk+10tk mom)…','warn');
       return;
     }
+
+    // Confirmation logic:
+    // S2/S3: require 2-tick direction confirmation (standard)
+    // S4/S5: fire immediately — urgency outweighs noise risk at high stakes
+    const needsConfirm=AI.martStep<=2;
     const _prev=AI.prevRecovery;
-    const _confirmed=_prev
-      && _prev.direction===recovery.direction
-      && recovery.pct>=(_prev.pct-2);
+    const _confirmed=!needsConfirm||(_prev
+      &&_prev.direction===recovery.direction
+      &&recovery.pct>=(_prev.pct-2));
+
     AI.prevRecovery={sym:recovery.sym,direction:recovery.direction,pct:recovery.pct};
     if(!_confirmed){
       setAIState('waiting');
       const _rx=IDX.find(i=>i.s===recovery.sym);
       aiLog('🔍 S'+(AI.martStep+1)+' | '+(_rx?_rx.n:recovery.sym)
         +' | '+(recovery.direction==='UNDER'?'UNDER7':'OVER2')
-        +' r50:'+recovery.pct.toFixed(0)+'% m10:'+recovery.momPct.toFixed(0)+'%'
+        +' r30:'+recovery.pct.toFixed(0)+'% m10:'+recovery.momPct.toFixed(0)+'%'
+        +(recovery.dirFromDigit?' [digit-aligned]':'')
         +(recovery.isFallback?' [fallback]':'')
         +' — confirming…','warn');
       return;
@@ -2245,8 +2301,10 @@ function aiTick(sym){
     AI.prevRecovery=null;
     aiLog('🔄 S'+(AI.martStep+1)+' | '+ix.n
       +' | '+typeLabel
-      +' r50:'+recovery.pct.toFixed(0)+'% m10:'+recovery.momPct.toFixed(0)+'%'
-      +(recovery.isFallback?' ⚠ same market fallback':'')
+      +' r30:'+recovery.pct.toFixed(0)+'% m10:'+recovery.momPct.toFixed(0)+'%'
+      +(recovery.dirFromDigit?' 🎯digit-aligned':'')
+      +(recovery.isFallback?' ⚠fallback':'')
+      +(AI.martStep>=3?' ⚡urgent':'')
       +' | $'+stake.toFixed(2)+' ✓','warn');
   }
 
@@ -2552,11 +2610,13 @@ function onContract(poc){
         aiLog('⏸ '+(IDX.find(i=>i.s===AI.activeSym)||{n:AI.activeSym}).n+' resting 45s','info');
       }
       aiLog('✅ WIN +$'+profit.toFixed(2)+' S'+(AI.martStep+1)+' | Reset to S1','success');
-      AI.martStep=0;AI.prevRecovery=null;
+      AI.martStep=0;AI.prevRecovery=null;AI.lastLostDigit=null;
       setTimeout(()=>{for(let i=0;i<5;i++){const e=document.getElementById('lad'+i);if(e)e.classList.remove('won','lost','active');}updateLadderUI();},1000);
     } else {
       AI.losses++;AI.consecLoss++;
       if(stepEl){stepEl.classList.remove('active');stepEl.classList.add('lost');}
+      // Store the losing digit from S1 — used to inform recovery direction
+      if(AI.martStep===0) AI.lastLostDigit=AI.activeDigit;
       if(AI.martStep<4){AI.martStep++;aiLog('❌ LOSS S'+(AI.martStep+1)+' OVER2 $'+calcStake(AI.martStep).toFixed(2),'danger');}
       else{
         AI.recoveryRestUntil=Date.now()+60000;
@@ -3203,6 +3263,7 @@ function resetAI(){
   stopAI();trendStop();powerStop();
   AI.wins=0;AI.losses=0;AI.totalPnl=0;AI.sessPnl=0;
   AI.consecLoss=0;AI.martStep=0;AI.activeCid=null;AI.equityPoints=[0];AI.sessionStart=0;
+  AI.lastLostDigit=null;
   AI.tp1Hit=false;AI.tp2Hit=false;
   AI.recoveryRestUntil=0;AI.recoveryRestSym=null;
   TR.step=0;TR.consecLoss=0;TR.lastDirection=null;TR.sessPnl=0;TR.wins=0;TR.losses=0;
