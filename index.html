@@ -1125,15 +1125,15 @@ letter-spacing:.5px;white-space:nowrap;margin-top:1px;
 // minTicks:  minimum ticks before analysis is meaningful
 const IDX=[
   {s:'R_10',   n:'V10',      sub:'Volatility 10',    v:10,  dp:3, tickScale:1, conThresh:0.015, minTicks:60},
-  {s:'R_25',   n:'V25',      sub:'Volatility 25',    v:25,  dp:3, tickScale:1, conThresh:0.018, minTicks:60},
-  {s:'R_50',   n:'V50',      sub:'Volatility 50',    v:50,  dp:4, tickScale:1, conThresh:0.022, minTicks:60},
-  {s:'R_75',   n:'V75',      sub:'Volatility 75',    v:75,  dp:4, tickScale:1, conThresh:0.028, minTicks:60},
-  {s:'R_100',  n:'V100',     sub:'Volatility 100',   v:100, dp:2, tickScale:1, conThresh:0.035, minTicks:60},
+  {s:'R_25',   n:'V25',      sub:'Volatility 25',    v:25,  dp:3, tickScale:1, conThresh:0.015, minTicks:60},
+  {s:'R_50',   n:'V50',      sub:'Volatility 50',    v:50,  dp:4, tickScale:1, conThresh:0.015, minTicks:60},
+  {s:'R_75',   n:'V75',      sub:'Volatility 75',    v:75,  dp:4, tickScale:1, conThresh:0.015, minTicks:60},
+  {s:'R_100',  n:'V100',     sub:'Volatility 100',   v:100, dp:2, tickScale:1, conThresh:0.015, minTicks:60},
   {s:'1HZ10V', n:'V10 (1s)', sub:'Volatility 10 1s', v:10,  dp:3, tickScale:2, conThresh:0.010, minTicks:120},
-  {s:'1HZ25V', n:'V25 (1s)', sub:'Volatility 25 1s', v:25,  dp:3, tickScale:2, conThresh:0.012, minTicks:120},
-  {s:'1HZ50V', n:'V50 (1s)', sub:'Volatility 50 1s', v:50,  dp:4, tickScale:2, conThresh:0.015, minTicks:120},
-  {s:'1HZ75V', n:'V75 (1s)', sub:'Volatility 75 1s', v:75,  dp:4, tickScale:2, conThresh:0.018, minTicks:120},
-  {s:'1HZ100V',n:'V100 (1s)',sub:'Volatility 100 1s',v:100, dp:2, tickScale:2, conThresh:0.022, minTicks:120},
+  {s:'1HZ25V', n:'V25 (1s)', sub:'Volatility 25 1s', v:25,  dp:3, tickScale:2, conThresh:0.010, minTicks:120},
+  {s:'1HZ50V', n:'V50 (1s)', sub:'Volatility 50 1s', v:50,  dp:4, tickScale:2, conThresh:0.010, minTicks:120},
+  {s:'1HZ75V', n:'V75 (1s)', sub:'Volatility 75 1s', v:75,  dp:4, tickScale:2, conThresh:0.010, minTicks:120},
+  {s:'1HZ100V',n:'V100 (1s)',sub:'Volatility 100 1s',v:100, dp:2, tickScale:2, conThresh:0.010, minTicks:120},
 ];
 
 // ══ MARKET STATE ══
@@ -1825,18 +1825,8 @@ function ana(sym){
     const esd=ix?(ix.v/100)*mn*esdMult:mn*0.01;
     vl=Math.min(100,Math.round((sd/esd)*50));
 
-    // Consolidation: primary check — sdp vs per-index threshold
+    // Consolidation: single tight check — sdp must be below per-index threshold
     isCon=sdp<conThresh;
-
-    // Secondary check: strong range compression confirms consolidation
-    // Only applies if sdp is also below 2× threshold (prevents false positives on volatile markets)
-    // Ratio tightened to 0.5 — recent range must be HALF the previous range to qualify
-    if(!isCon && sdp<conThresh*2 && pr.length>=recWindow10){
-      const wHalf=Math.max(5,Math.round(recWindow10/2));
-      const l5=Math.max(...pr.slice(-wHalf))-Math.min(...pr.slice(-wHalf));
-      const p5=Math.max(...pr.slice(-recWindow10,-wHalf))-Math.min(...pr.slice(-recWindow10,-wHalf));
-      if(p5>0&&l5<p5*0.5) isCon=true;
-    }
     ms=isCon?'CONSOLIDATING':(vl>65?'EXPANDING':'TRENDING');
   }
 
