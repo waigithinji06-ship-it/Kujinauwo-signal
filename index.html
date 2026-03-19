@@ -822,7 +822,7 @@ letter-spacing:.5px;white-space:nowrap;margin-top:1px;
   </div>
 
   <!-- Mode subpages -->
-  <div style="flex:1;overflow:hidden;min-height:0;display:flex;flex-direction:column;">
+  <div style="flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;max-height:58%">
 
     <!-- 🚀 PIONEER -->
     <div id="mpPioneer" class="mpage active">
@@ -881,28 +881,6 @@ letter-spacing:.5px;white-space:nowrap;margin-top:1px;
       <!-- Bot activity log -->
       <div style="font-size:9px;color:var(--sub);font-family:'Space Mono',monospace;letter-spacing:2px;margin-bottom:4px;">BOT ACTIVITY</div>
       <div id="aiLog" class="ai-log"><div class="ai-log-line info"><span class="ts">--:--:--</span>System ready. Waiting for connection…</div></div>
-      <!-- Transaction log -->
-      <div style="font-size:9px;color:var(--sub);font-family:'Space Mono',monospace;letter-spacing:2px;margin:10px 0 6px;display:flex;justify-content:space-between;align-items:center;">
-        <span>📋 STATEMENT</span>
-        <span id="tradeCount" style="color:var(--dim);font-size:8px;">0 trades</span>
-      </div>
-      <div id="tradeLog" class="tlog">
-        <table class="dtable">
-          <thead><tr>
-            <th class="c">STATUS</th>
-            <th>DATE/TIME</th>
-            <th>MARKET</th>
-            <th>CONTRACT</th>
-            <th class="r">DURATION</th>
-            <th class="r">BUY</th>
-            <th class="r">SELL</th>
-            <th class="r">P&amp;L</th>
-            <th class="r">BALANCE</th>
-            <th>REF #</th>
-          </tr></thead>
-          <tbody id="tradeLogBody"></tbody>
-        </table>
-      </div>
     </div>
 
     <!-- 📈 TREND -->
@@ -973,24 +951,6 @@ letter-spacing:.5px;white-space:nowrap;margin-top:1px;
       </div>
       <div style="font-size:9px;color:var(--sub);font-family:'Space Mono',monospace;letter-spacing:2px;margin-bottom:6px;">AI DECISION LOG</div>
       <div id="aiLogTR" class="ai-log"></div>
-      <div style="font-size:9px;color:var(--sub);font-family:'Space Mono',monospace;letter-spacing:2px;margin:10px 0 6px;">📋 STATEMENT</div>
-      <div id="tradeLogTR" class="tlog">
-        <table class="dtable">
-          <thead><tr>
-            <th class="c">STATUS</th>
-            <th>DATE/TIME</th>
-            <th>MARKET</th>
-            <th>CONTRACT</th>
-            <th class="r">DURATION</th>
-            <th class="r">BUY</th>
-            <th class="r">SELL</th>
-            <th class="r">P&amp;L</th>
-            <th class="r">BALANCE</th>
-            <th>REF #</th>
-          </tr></thead>
-          <tbody id="tradeLogBodyTR"></tbody>
-        </table>
-      </div>
     </div>
 
     <!-- ⚡ POWER -->
@@ -1070,25 +1030,40 @@ letter-spacing:.5px;white-space:nowrap;margin-top:1px;
       <!-- Bot log -->
       <div style="font-size:9px;color:var(--sub);font-family:'Space Mono',monospace;letter-spacing:2px;margin-bottom:4px;">BOT ACTIVITY</div>
       <div id="aiLogPW" class="ai-log"></div>
-
-      <!-- Statement table -->
-      <div style="font-size:9px;color:var(--sub);font-family:'Space Mono',monospace;letter-spacing:2px;margin:10px 0 6px;display:flex;justify-content:space-between;align-items:center;">
-        <span>📋 STATEMENT</span>
-        <span id="pwTradeCount" style="color:var(--dim);font-size:8px;">0 trades</span>
-      </div>
-      <div id="tradeLogPW" class="tlog">
-        <table class="dtable">
-          <thead><tr>
-            <th class="c">STATUS</th><th>DATE/TIME</th><th>MARKET</th><th>CONTRACT</th>
-            <th class="r">DURATION</th><th class="r">BUY</th><th class="r">SELL</th>
-            <th class="r">P&amp;L</th><th class="r">BALANCE</th><th>REF #</th>
-          </tr></thead>
-          <tbody id="tradeLogBodyPW"></tbody>
-        </table>
-      </div>
     </div>
 
   </div><!-- end mode subpages wrapper -->
+
+  <!-- ── UNIFIED STATEMENT TABLE — all modes ── -->
+  <div style="flex-shrink:0;padding:10px 14px 0;display:flex;justify-content:space-between;align-items:center;">
+    <div style="font-size:9px;color:var(--sub);font-family:'Space Mono',monospace;letter-spacing:2px;">
+      📋 STATEMENT — ALL TRADES
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;">
+      <span id="tradeCount" style="color:var(--dim);font-size:8px;font-family:'Space Mono',monospace;">0 trades</span>
+      <span id="tradePnlSum" style="font-size:9px;font-family:'Space Mono',monospace;color:var(--sub);">P&L: —</span>
+      <button onclick="document.getElementById('tradeLogBody').innerHTML='';_totalTrades=0;_runningBalance=null;_sessionPnlSum=0;document.getElementById('tradeCount').textContent='0 trades';document.getElementById('tradePnlSum').textContent='P&L: —';"
+        style="font-size:8px;font-family:'Space Mono',monospace;background:none;border:1px solid var(--border);color:var(--dim);padding:2px 7px;border-radius:4px;cursor:pointer;">CLEAR</button>
+    </div>
+  </div>
+  <div id="tradeLog" style="flex:1;min-height:180px;margin:8px 14px 10px;border-radius:10px;border:1px solid var(--border);overflow:auto;background:var(--card);-webkit-overflow-scrolling:touch;">
+    <table class="dtable">
+      <thead><tr>
+        <th class="c" style="position:sticky;top:0;z-index:2;background:var(--card2);">STATUS</th>
+        <th style="position:sticky;top:0;z-index:2;background:var(--card2);">MODE</th>
+        <th style="position:sticky;top:0;z-index:2;background:var(--card2);">DATE/TIME</th>
+        <th style="position:sticky;top:0;z-index:2;background:var(--card2);">MARKET</th>
+        <th style="position:sticky;top:0;z-index:2;background:var(--card2);">CONTRACT</th>
+        <th class="r" style="position:sticky;top:0;z-index:2;background:var(--card2);">BUY</th>
+        <th class="r" style="position:sticky;top:0;z-index:2;background:var(--card2);">SELL</th>
+        <th class="r" style="position:sticky;top:0;z-index:2;background:var(--card2);">P&amp;L</th>
+        <th class="r" style="position:sticky;top:0;z-index:2;background:var(--card2);">BALANCE</th>
+        <th style="position:sticky;top:0;z-index:2;background:var(--card2);">REF #</th>
+      </tr></thead>
+      <tbody id="tradeLogBody"></tbody>
+    </table>
+  </div>
+
 </div><!-- end pgAI -->
 
 <!-- ── PAGE 3: ACCOUNT ── -->
@@ -3050,43 +3025,13 @@ function typeLabel_for_step(step){
   return PW.direction==='OVER'?'OVER 2':'UNDER 7';
 }
 
-// ── Power trade log ──
-let _pwTrades=0;
+// Power trades route through the unified addTradeLog
 function addPowerTradeLog(sym,type,stake,profit,won,contractId){
-  const ix=IDX.find(i=>i.s===sym);
-  const now=new Date();
-  const dateStr=now.toUTCString().slice(5,11)+' '+now.toUTCString().slice(17,25)+' UTC';
-  const buyPrice=parseFloat(stake||0);
-  const sellPrice=won?(buyPrice+parseFloat(profit||0)):0;
-  const pnl=parseFloat(profit||0);
-  const balVal=document.getElementById('balVal');
-  const bal=balVal?parseFloat(balVal.textContent)||null:null;
-  if(bal!==null)_runningBalance=bal;
-  const balDisplay=_runningBalance!==null?('$'+_runningBalance.toFixed(2)):'—';
-  const cidNum=contractId||AI.activeCid||'—';
-  const cidShort=cidNum&&cidNum!=='—'?String(cidNum).slice(-8):cidNum;
-  const pnlClass=pnl>0?'dpnl-pos':pnl<0?'dpnl-neg':'dpnl-zero';
-  const row=document.createElement('tr');
-  row.className='drow-'+(won?'win':'loss');
-  row.innerHTML=
-    '<td class="c"><span class="dstatus-badge '+(won?'won':'lost')+'">'+
-      '<span class="dstatus-dot '+(won?'win':'loss')+'"></span>'+(won?'Won':'Lost')+'</span></td>'+
-    '<td class="dim" style="font-size:9px;">'+dateStr+'</td>'+
-    '<td><div style="font-weight:700;font-size:10px;">'+(ix?ix.n:(sym||'—'))+'</div>'+
-        '<div style="color:var(--dim);font-size:8px;">'+(ix?ix.sub:(sym||'—'))+'</div></td>'+
-    '<td>'+_contractTypePill(type)+'</td>'+
-    '<td class="r dim">1 tick</td>'+
-    '<td class="r" style="color:var(--text);font-weight:600;">$'+buyPrice.toFixed(2)+'</td>'+
-    '<td class="r" style="color:'+(won?'#22c55e':'#ef4444')+';">$'+sellPrice.toFixed(2)+'</td>'+
-    '<td class="r"><span class="'+pnlClass+'">'+(pnl>=0?'+':'')+'$'+pnl.toFixed(2)+'</span></td>'+
-    '<td class="r" style="color:var(--accent);">'+balDisplay+'</td>'+
-    '<td><span class="dcid" title="Contract #'+cidNum+'">'+
-      (cidNum!=='—'?'#'+cidShort:'—')+'</span></td>';
-  const tbody=document.getElementById('tradeLogBodyPW');
-  if(tbody){tbody.appendChild(row);const tlog=tbody.closest('.tlog');if(tlog)tlog.scrollTop=tlog.scrollHeight;}
-  _pwTrades++;
-  const tc=document.getElementById('pwTradeCount');
-  if(tc) tc.textContent=_pwTrades+(_pwTrades===1?' trade':' trades');
+  // Temporarily set activeSource so mode pill renders correctly
+  const prevSource=AI.activeSource;
+  AI.activeSource='power';
+  addTradeLog(sym,type,null,stake,profit,won,'PW S'+(PW.step+1),contractId,1,null);
+  AI.activeSource=prevSource;
 }
 
 // ── Power start / stop ──
@@ -3133,102 +3078,97 @@ function powerStop(){
 
 // ══ STATEMENT TABLE — DERIV STYLE ══
 let _totalTrades=0;
-let _runningBalance=null; // tracks live balance after each trade
-
-function _ensureLogHeader(logId){/* no-op — table headers in HTML */}
+let _runningBalance=null;
+let _sessionPnlSum=0;
 
 function _contractTypePill(type){
-  const t=(type||'').toUpperCase();
-  if(t==='CALL')   return '<span class="dtype-pill call">▲ CALL</span>';
-  if(t==='PUT')    return '<span class="dtype-pill put">▼ PUT</span>';
-  if(t==='DIFFER') return '<span class="dtype-pill differ">≠ DIFFERS</span>';
-  if(t.includes('OVER'))  return '<span class="dtype-pill over">↑ OVER 2</span>';
-  if(t.includes('UNDER')) return '<span class="dtype-pill under">↓ UNDER 7</span>';
-  return '<span class="dtype-pill differ">'+t+'</span>';
+  const t=(type||'').toUpperCase().trim();
+  if(t==='CALL')  return '<span class="dtype-pill call">▲ CALL</span>';
+  if(t==='PUT')   return '<span class="dtype-pill put">▼ PUT</span>';
+  if(t==='DIFFER'||t==='DIGITDIFF'||t==='DIFFERS')
+                  return '<span class="dtype-pill differ">≠ DIFFERS</span>';
+  if(t==='OVER 1'||t==='OVER1') return '<span class="dtype-pill over">↑ OVER 1</span>';
+  if(t==='UNDER 8'||t==='UNDER8') return '<span class="dtype-pill under">↓ UNDER 8</span>';
+  if(t==='OVER 2'||t==='OVER2'||t==='DIGITOVER'||t==='OVER2')
+                  return '<span class="dtype-pill over">↑ OVER 2</span>';
+  if(t==='UNDER 7'||t==='UNDER7'||t==='DIGITUNDER'||t==='UNDER7')
+                  return '<span class="dtype-pill under">↓ UNDER 7</span>';
+  if(t.includes('OVER'))  return '<span class="dtype-pill over">↑ '+type+'</span>';
+  if(t.includes('UNDER')) return '<span class="dtype-pill under">↓ '+type+'</span>';
+  return '<span class="dtype-pill differ">'+type+'</span>';
 }
 
+function _modePill(mode){
+  if(mode==='pioneer') return '<span style="font-size:7px;font-family:\'Space Mono\',monospace;background:rgba(56,189,248,.1);color:#38bdf8;border:1px solid rgba(56,189,248,.2);border-radius:4px;padding:1px 5px;">🚀</span>';
+  if(mode==='trend')   return '<span style="font-size:7px;font-family:\'Space Mono\',monospace;background:rgba(96,165,250,.1);color:#60a5fa;border:1px solid rgba(96,165,250,.2);border-radius:4px;padding:1px 5px;">📈</span>';
+  if(mode==='power')   return '<span style="font-size:7px;font-family:\'Space Mono\',monospace;background:rgba(34,197,94,.1);color:#22c55e;border:1px solid rgba(34,197,94,.2);border-radius:4px;padding:1px 5px;">⚡</span>';
+  return '<span style="font-size:7px;font-family:\'Space Mono\',monospace;color:var(--dim);">'+mode+'</span>';
+}
+
+// Unified trade log — all modes, all trades, one table
 function addTradeLog(sym, type, digit, stake, profit, won, label, contractId, ticks, payout){
   const ix=IDX.find(i=>i.s===sym);
-  // Full market name like Deriv uses
-  const marketName=ix?ix.sub:(sym||'—');
   const shortName=ix?ix.n:(sym||'—');
+  const marketName=ix?ix.sub:(sym||'—');
+  const mode=AI.activeSource||'pioneer';
 
-  // Date/time — Deriv shows full UTC datetime
   const now=new Date();
   const dateStr=now.toUTCString().slice(5,11)+' '+now.toUTCString().slice(17,25)+' UTC';
 
-  // Buy price = stake paid
   const buyPrice=parseFloat(stake||0);
-  // Sell price = what was received (stake + profit if won, 0 if lost)
-  const sellPrice=won?(buyPrice+parseFloat(profit||0)):0;
   const pnl=parseFloat(profit||0);
+  const sellPrice=won?(buyPrice+pnl):0;
 
-  // Running balance
+  // Track running balance
   const balVal=document.getElementById('balVal');
   const currentBal=balVal?parseFloat(balVal.textContent)||null:null;
   if(currentBal!==null) _runningBalance=currentBal;
   const balDisplay=_runningBalance!==null?('$'+_runningBalance.toFixed(2)):'—';
 
-  // Duration
-  const durDisplay=(ticks||1)+(ticks===1?' tick':' ticks');
-
-  // Contract ID ref
   const cidNum=contractId||AI.activeCid||'—';
   const cidShort=cidNum&&cidNum!=='—'?String(cidNum).slice(-8):cidNum;
-
-  // Status
+  const pnlClass=pnl>0?'dpnl-pos':pnl<0?'dpnl-neg':'dpnl-zero';
   const statusClass=won?'won':'lost';
   const dotClass=won?'win':'loss';
-  const statusText=won?'Won':'Lost';
 
-  // P&L class
-  const pnlClass=pnl>0?'dpnl-pos':pnl<0?'dpnl-neg':'dpnl-zero';
-
-  // digit detail for DIFFERS
-  const digitNote=type==='DIFFER'&&digit!==undefined&&digit!==null&&digit!=='timeout'
-    ? ' <span style="color:var(--dim);font-size:8px;">(d'+digit+')</span>' : '';
+  const digitNote=(type==='DIFFER'||type==='DIGITDIFF')&&digit!==undefined&&digit!==null&&digit!=='timeout'
+    ?'<span style="color:var(--dim);font-size:8px;"> d.'+digit+'</span>':'';
 
   const row=document.createElement('tr');
   row.className='drow-'+(won?'win':'loss');
   row.innerHTML=
     '<td class="c"><span class="dstatus-badge '+statusClass+'">'+
-      '<span class="dstatus-dot '+dotClass+'"></span>'+statusText+'</span></td>'+
+      '<span class="dstatus-dot '+dotClass+'"></span>'+(won?'Won':'Lost')+'</span></td>'+
+    '<td class="c">'+_modePill(mode)+'</td>'+
     '<td class="dim" style="font-size:9px;white-space:nowrap;">'+dateStr+'</td>'+
     '<td><div style="font-weight:700;font-size:10px;">'+shortName+'</div>'+
         '<div style="color:var(--dim);font-size:8px;">'+marketName+'</div></td>'+
     '<td>'+_contractTypePill(type)+digitNote+'</td>'+
-    '<td class="r dim">'+durDisplay+'</td>'+
     '<td class="r" style="color:var(--text);font-weight:600;">$'+buyPrice.toFixed(2)+'</td>'+
     '<td class="r" style="color:'+(won?'#22c55e':'#ef4444')+';">$'+sellPrice.toFixed(2)+'</td>'+
     '<td class="r"><span class="'+pnlClass+'">'+(pnl>=0?'+':'')+'$'+pnl.toFixed(2)+'</span></td>'+
     '<td class="r" style="color:var(--accent);font-weight:600;">'+balDisplay+'</td>'+
-    '<td><span class="dcid" title="Contract #'+cidNum+'" onclick="navigator.clipboard&&navigator.clipboard.writeText(\''+cidNum+'\').then(()=>aiLog(\'📋 Contract ID copied\',\'info\'))">'+
+    '<td><span class="dcid" title="Contract #'+cidNum+'"'+
+      (cidNum!=='—'?' onclick="navigator.clipboard&&navigator.clipboard.writeText(\''+cidNum+'\').then(()=>aiLog(\'📋 Copied\',\'info\'))"':'')+'>'+
       (cidNum!=='—'?'#'+cidShort:'—')+'</span></td>';
 
-  // Append to correct tbody
-  const src=AI.activeSource||'pioneer';
-  const bodyMap={pioneer:'tradeLogBody',trend:'tradeLogBodyTR'};
-  const bodyId=bodyMap[src]||'tradeLogBody';
-  const tbody=document.getElementById(bodyId);
+  const tbody=document.getElementById('tradeLogBody');
   if(tbody){
     tbody.appendChild(row);
-    // scroll parent tlog to bottom
-    const tlog=tbody.closest('.tlog');
+    const tlog=document.getElementById('tradeLog');
     if(tlog) tlog.scrollTop=tlog.scrollHeight;
   }
-  // Mirror to pioneer body if source is trend
-  if(bodyId!=='tradeLogBody'){
-    const mb=document.getElementById('tradeLogBody');
-    if(mb){
-      const r2=row.cloneNode(true);
-      mb.appendChild(r2);
-      const tlog2=mb.closest('.tlog');
-      if(tlog2) tlog2.scrollTop=tlog2.scrollHeight;
-    }
-  }
+
   _totalTrades++;
+  _sessionPnlSum=Math.round((_sessionPnlSum+pnl)*100)/100;
+
   const tc=document.getElementById('tradeCount');
-  if(tc) tc.textContent=_totalTrades+(_totalTrades===1?' trade':' trades');
+  if(tc) tc.textContent=_totalTrades+' trade'+(_totalTrades===1?'':'s');
+  const ps=document.getElementById('tradePnlSum');
+  if(ps){
+    ps.textContent='P&L: '+(_sessionPnlSum>=0?'+':'')+'$'+_sessionPnlSum.toFixed(2);
+    ps.style.color=_sessionPnlSum>0?'var(--green)':_sessionPnlSum<0?'var(--red)':'var(--sub)';
+  }
 }
 
 // ══ AI CONTROLS ══
@@ -3286,11 +3226,9 @@ function resetAI(){
   document.getElementById('curTrade').classList.remove('active');
   document.getElementById('curTrade').style.display='none';
   const tb1=document.getElementById('tradeLogBody');if(tb1)tb1.innerHTML='';
-  const tb2=document.getElementById('tradeLogBodyTR');if(tb2)tb2.innerHTML='';
-  const tb3=document.getElementById('tradeLogBodyPW');if(tb3)tb3.innerHTML='';
-  _totalTrades=0; _runningBalance=null; _pwTrades=0;
+  _totalTrades=0;_runningBalance=null;_sessionPnlSum=0;
   const tc=document.getElementById('tradeCount');if(tc)tc.textContent='0 trades';
-  const tc2=document.getElementById('pwTradeCount');if(tc2)tc2.textContent='0 trades';
+  const ps=document.getElementById('tradePnlSum');if(ps){ps.textContent='P&L: —';ps.style.color='var(--sub)';}
   for(let i=0;i<5;i++){const e=document.getElementById('lad'+i);if(e)e.classList.remove('won','lost','active');}
   for(let i=0;i<5;i++){const e=document.getElementById('tlad'+i);if(e)e.classList.remove('won','lost','active');}
   refreshLadder();refreshTrendLadder();
