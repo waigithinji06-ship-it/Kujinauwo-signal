@@ -2454,7 +2454,7 @@ function trendStop(){
   document.getElementById('stopBtn').disabled=true;
   ['trendStake','trendMult','trendTicks','trendPayout','trendRsiThresh','trendIndex','trendDir']
     .forEach(id=>{const el=document.getElementById(id);if(el)el.disabled=false;});
-  if(!AI.running)setAIState('idle');
+  if(!AI.running&&!PW.running)setAIState('idle');
   document.getElementById('trendRunning').textContent='⏸ IDLE';
   document.getElementById('trendRunning').style.color='var(--dim)';
   aiLog('⏹ Trend stopped.','warn');
@@ -2529,7 +2529,7 @@ function placeTrade(sym,code,stake,barrier,typeLabel,source){
           else if(src==='trend'&&TR.step<4) TR.step++;
           updateAIStats();drawEquity();
           document.getElementById('curTrade').classList.remove('active');
-          setAIState(AI.running||TR.running?'scanning':'idle');
+          setAIState(AI.running||TR.running||PW.running?'scanning':'idle');
         }
       },30000);
     }
@@ -2551,7 +2551,7 @@ function onBuy(msg){
     );
     AI.inTrade=false;AI.pendingResult=false;
     if(isBal){stopAI();trendStop();}
-    setAIState(AI.running||TR.running?'scanning':'idle');return;
+    setAIState(AI.running||TR.running||PW.running?'scanning':'idle');return;
   }
   if(!msg.buy)return;
   AI.activeCid=msg.buy.contract_id;
@@ -3033,7 +3033,7 @@ function powerStop(){
   document.getElementById('stopBtn').disabled=true;
   ['pwStake','pwMult','pwTP','pwSL','pwMinScore','pwIndex']
     .forEach(id=>{const el=document.getElementById(id);if(el)el.disabled=false;});
-  if(!AI.running&&!TR.running)setAIState('idle');
+  if(!AI.running&&!TR.running&&!PW.running)setAIState('idle');
   document.getElementById('pwRunning').textContent='⏸ IDLE';
   document.getElementById('pwRunning').style.color='var(--dim)';
   aiLogPW('⏹ Power stopped.','warn');
