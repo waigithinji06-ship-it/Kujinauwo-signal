@@ -2692,100 +2692,79 @@ const PW={
 function powerAna(sym){
   const s=ST[sym];
   if(!s||!s.conn||s.digits.length<60) return null;
+
   const a=ana(sym);
-  if(!a.isCon) return null;
+  const ix=IDX.find(i=>i.s===sym);
 
   // Transition guard
   const pr=s.prices;
   if(pr.length>=40){
-    const r20=pr.slice(-20), mn20=r20.reduce((a,b)=>a+b,0)/r20.length;
-    const sd20=Math.sqrt(r20.reduce((a,b)=>a+(b-mn20)**2,0)/r20.length);
-    const r40=pr.slice(-40,-20), mn40=r40.reduce((a,b)=>a+b,0)/r40.length;
-    const sd40=Math.sqrt(r40.reduce((a,b)=>a+(b-mn40)**2,0)/r40.length);
-    if(sd40>0&&sd20>sd40*1.20) return null;
+    const r20=pr.slice(-20), mn20=r20.reduce((x,y)=>x+y,0)/r20.length;
+    const sd20=Math.sqrt(r20.reduce((x,y)=>x+(y-mn20)**2,0)/r20.length);
+    const r40=pr.slice(-40,-20), mn40=r40.reduce((x,y)=>x+y,0)/r40.length;
+    const sd40=Math.sqrt(r40.reduce((x,y)=>x+(y-mn40)**2,0)/r40.length);
+    if(sd40>0&&sd20>sd40*1.25) return null;
   }
 
-  const ix=IDX.find(i=>i.s===sym);
-  const speedPenalty=ix&&ix.tickScale===2?5:0;
-  const tot=a.tot||1;
-  const fr=a.fr;
   const digits=s.digits;
-
   const last10=digits.slice(-10);
   const last5 =digits.slice(-5);
-  const lowIn10 =last10.filter(d=>d<=1).length;
   const highIn10=last10.filter(d=>d>=8).length;
-  const lowIn5  =last5.filter(d=>d<=1).length;
+  const lowIn10 =last10.filter(d=>d<=1).length;
   const highIn5 =last5.filter(d=>d>=8).length;
+  const lowIn5  =last5.filter(d=>d<=1).length;
 
-  // Reversion signal — 3 of last 10 at extreme + 1 of last 5 confirming
+  // Reversion signal
   let signal=null;
   if(highIn10>=3&&highIn5>=1) signal='OVER';
   if(lowIn10>=3&&lowIn5>=1)   signal='UNDER';
-  if(highIn10>=3&&lowIn10>=3) signal=null; // both extremes active — ambiguous
-  if(!signal) return{signal:null,score:a.score,isCon:true,sym,speedPenalty};
+  if(highIn10>=3&&lowIn10>=3) signal=null; // ambiguous
+  if(!signal) return null;
 
-  // Distribution must support the bet
-  const over1Pct =[2,3,4,5,6,7,8,9].reduce((s,d)=>s+(fr[d]||0),0)/tot*100;
-  const under8Pct=[0,1,2,3,4,5,6,7].reduce((s,d)=>s+(fr[d]||0),0)/tot*100;
-  if(signal==='OVER'&&over1Pct<75)   return null;
-  if(signal==='UNDER'&&under8Pct<75) return null;
-
+  // Score: isCon bonus + slow index bonus + cluster strength
+  const conBonus=a.isCon?15:0;
+  const speedBonus=ix&&ix.tickScale===1?5:0;
+  const score=a.score+conBonus+speedBonus;
   const clusterStrength=signal==='OVER'?highIn10:lowIn10;
 
-  return{
-    signal,score:a.score-speedPenalty,isCon:true,sym,
+  const tot=a.tot||1;
+  const fr=a.fr;
+  const over1Pct =[2,3,4,5,6,7,8,9].reduce((s,d)=>s+(fr[d]||0),0)/tot*100;
+  const under8Pct=[0,1,2,3,4,5,6,7].reduce((s,d)=>s+(fr[d]||0),0)/tot*100;
+
+  return{signal,score,isCon:a.isCon,sym,
     over1Pct:Math.round(over1Pct*10)/10,
     under8Pct:Math.round(under8Pct*10)/10,
-    clusterStrength,lowIn10,highIn10,lowIn5,highIn5,
-    speedPenalty,
-  };
+    clusterStrength,lowIn10,highIn10,lowIn5,highIn5,speedBonus,conBonus};
 }
 
-// ── Find best Power market ──
-// Idea 4: Require two markets agreeing on same direction before entering
+// ── Find best Power S1 market ──
 function findPowerMarket(overrideMinScore){
-  const minScore=overrideMinScore||parseInt(document.getElementById('pwMinScore')?document.getElementById('pwMinScore').value:55)||55;
+  const minScore=overrideMinScore||parseInt(document.getElementById('pwMinScore')?document.getElementById('pwMinScore').value:45)||45;
   const tgt=document.getElementById('pwIndex')?document.getElementById('pwIndex').value:'AUTO';
 
-  const candidates=[];
   if(tgt!=='AUTO'){
     if(tgt===PW.lastLostSym) return null;
-    try{const p=powerAna(tgt);if(p&&p.signal&&p.score>=minScore) candidates.push(p);}catch(e){}
-  } else {
-    IDX.forEach(i=>{
-      if(i.s===PW.lastLostSym) return;
-      try{const p=powerAna(i.s);if(p&&p.signal&&p.score>=minScore) candidates.push(p);}catch(e){}
-    });
+    try{const p=powerAna(tgt);if(!p||!p.signal||p.score<minScore) return null;return p;}catch(e){return null;}
   }
 
-  if(!candidates.length){PW.s1ConfirmPrev=null;return null;}
+  let best=null,bestScore=0;
+  IDX.forEach(i=>{
+    if(i.s===PW.lastLostSym) return;
+    try{
+      const p=powerAna(i.s);
+      if(!p||!p.signal||p.score<minScore) return;
+      if(p.score>bestScore){bestScore=p.score;best=p;}
+    }catch(e){}
+  });
 
-  const overC =candidates.filter(p=>p.signal==='OVER');
-  const underC=candidates.filter(p=>p.signal==='UNDER');
-
-  let pool=null;
-  if(overC.length>=2&&overC.length>=underC.length)       pool=overC;
-  else if(underC.length>=2)                              pool=underC;
-  else {
-    // Solo candidate — confirm direction holds on next tick
-    // Match on direction (not specific market) — any market showing same direction confirms
-    const solo=candidates[0];
-    if(PW.s1ConfirmPrev&&PW.s1ConfirmPrev.signal===solo.signal){
-      PW.s1ConfirmPrev=null;
-      return solo;
-    }
-    PW.s1ConfirmPrev={sym:solo.sym,signal:solo.signal};
-    return null;
+  if(!best&&PW.lastLostSym){
+    try{const p=powerAna(PW.lastLostSym);if(p&&p.signal&&p.score>=minScore)best=p;}catch(e){}
   }
-
-  PW.s1ConfirmPrev=null;
-  pool.sort((a,b)=>(b.clusterStrength-a.clusterStrength)||(b.score-a.score));
-  return pool[0];
+  return best;
 }
 
-// ── Find best Power recovery market ──
-// Idea 7: Recovery stays in S1 directional family
+
 function findPowerRecoveryMarket(){
   const preferDir=PW.direction;
   const threshold=75;
