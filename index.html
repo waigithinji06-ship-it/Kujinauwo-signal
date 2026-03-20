@@ -2718,12 +2718,10 @@ function powerAna(sym){
   const lowIn5  =last5.filter(d=>d<=1).length;
   const highIn5 =last5.filter(d=>d>=8).length;
 
-  // Idea 3: Reversion signal
-  // High cluster recently → bet OVER1 (digits 2-9, reversion away from high extreme)
-  // Low cluster recently  → bet UNDER8 (digits 0-7, reversion away from low extreme)
+  // Reversion signal — 3 of last 10 at extreme + 1 of last 5 confirming
   let signal=null;
-  if(highIn10>=3&&highIn5>=2) signal='OVER';
-  if(lowIn10>=3&&lowIn5>=2)   signal='UNDER';
+  if(highIn10>=3&&highIn5>=1) signal='OVER';
+  if(lowIn10>=3&&lowIn5>=1)   signal='UNDER';
   if(highIn10>=3&&lowIn10>=3) signal=null; // both extremes active — ambiguous
   if(!signal) return{signal:null,score:a.score,isCon:true,sym,speedPenalty};
 
@@ -2770,9 +2768,10 @@ function findPowerMarket(overrideMinScore){
   if(overC.length>=2&&overC.length>=underC.length)       pool=overC;
   else if(underC.length>=2)                              pool=underC;
   else {
-    // Solo candidate — 2-tick confirm
+    // Solo candidate — confirm direction holds on next tick
+    // Match on direction (not specific market) — any market showing same direction confirms
     const solo=candidates[0];
-    if(PW.s1ConfirmPrev&&PW.s1ConfirmPrev.sym===solo.sym&&PW.s1ConfirmPrev.signal===solo.signal){
+    if(PW.s1ConfirmPrev&&PW.s1ConfirmPrev.signal===solo.signal){
       PW.s1ConfirmPrev=null;
       return solo;
     }
