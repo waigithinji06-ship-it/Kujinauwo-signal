@@ -2679,251 +2679,162 @@ const PW={
   sessPnl:0, wins:0, losses:0, consecLoss:0,
   equityPoints:[0],
   prevMarket:null,
-  s1StreakLoss:0,   // consecutive S1 losses — raises entry bar dynamically
-  lastLostSym:null, // P4: market that just lost S1 — skipped on next scan
+  s1StreakLoss:0,
+  lastLostSym:null,
+  s1ConfirmPrev:null, // Idea 4: stores first solo qualifying market for 2-tick confirm
+  s1PauseUntil:0,     // Idea 8: S1 streak pause timestamp
 };
 
 // ── Power market analyser ──
-// Implements all 4 loss-cap fixes:
-// P1: Triple timeframe agreement — 100, 50, and 20 tick windows must all show same signal
-// P2: Transition guard — reject market if volatility score is rising (about to expand)
-// P3: Volatility-tiered thresholds — V75/V100 require stronger signal
-// P4: Handled in findPowerMarket — always picks best, skips last-lost market
-function powerAna(sym, lastLostSym){
+// Idea 1+3: Reversion logic — bet AGAINST recent extreme cluster (mean reversion)
+// Idea 2: Market state is the core filter — consolidating required
+// Idea 5: Prefer standard indices over 1s (speed penalty)
+function powerAna(sym){
   const s=ST[sym];
-  if(!s||!s.conn||s.digits.length<100) return null; // need full 100 ticks for triple check
+  if(!s||!s.conn||s.digits.length<60) return null;
   const a=ana(sym);
-  if(!a.isCon) return null; // must be consolidating
+  if(!a.isCon) return null;
 
-  const ix=IDX.find(i=>i.s===sym);
-  const isHighVol=(sym==='R_75'||sym==='R_100'||sym==='1HZ75V'||sym==='1HZ100V');
-  const isMidVol =(sym==='R_50'||sym==='1HZ50V');
-
-  // ── P2: Transition guard ──
-  // Check if volatility score is rising — early warning of market about to expand
-  // We compare vl from last 20 ticks vs last 40 ticks using price slices
-  // If recent vl is higher than older vl — market is expanding, skip
+  // Transition guard
   const pr=s.prices;
-  let vlRecent=0, vlOlder=0;
   if(pr.length>=40){
     const r20=pr.slice(-20), mn20=r20.reduce((a,b)=>a+b,0)/r20.length;
     const sd20=Math.sqrt(r20.reduce((a,b)=>a+(b-mn20)**2,0)/r20.length);
     const r40=pr.slice(-40,-20), mn40=r40.reduce((a,b)=>a+b,0)/r40.length;
     const sd40=Math.sqrt(r40.reduce((a,b)=>a+(b-mn40)**2,0)/r40.length);
-    vlRecent=sd20; vlOlder=sd40;
+    if(sd40>0&&sd20>sd40*1.20) return null;
   }
-  // If recent volatility is more than 20% higher than older — transitioning, skip
-  if(vlOlder>0&&vlRecent>vlOlder*1.20) return null;
 
+  const ix=IDX.find(i=>i.s===sym);
+  const speedPenalty=ix&&ix.tickScale===2?5:0;
   const tot=a.tot||1;
   const fr=a.fr;
-  const hotD=a.hotD;
-  const hotPct=a.hotPctRaw||((fr[hotD]||0)/tot*100);
+  const digits=s.digits;
 
-  // ── P3: Volatility-tiered frequency threshold ──
-  const freqThreshold = isHighVol ? 20 : isMidVol ? 18 : 16;
-
-  // Hot digit must be at an extreme
-  let signal=null;
-  if(hotD<=1&&hotPct>=freqThreshold) signal='OVER';
-  if(hotD>=8&&hotPct>=freqThreshold) signal='UNDER';
-  if(!signal) return{lowPct:0,highPct:0,recentConfirm:0,signal:null,score:a.score,isCon:true,sym,hotD,hotPct,tframe100:0,tframe50:0,tframe20:0};
-
-  // ── P1: Triple timeframe agreement ──
-  // All three windows — last 100, last 50, last 20 ticks — must show the same dominant digit direction
-  const digits=s.digits; // last 100 ticks (capped at 100 in ST)
-
-  // Helper: get hot digit direction in a window
-  function windowSignal(digs){
-    if(!digs||digs.length<10) return null;
-    const wTot=digs.length;
-    const freq=new Array(10).fill(0);
-    digs.forEach(d=>freq[d]++);
-    const wHotD=freq.indexOf(Math.max(...freq));
-    const wHotPct=freq[wHotD]/wTot*100;
-    if(wHotD<=1&&wHotPct>=(freqThreshold-2)) return 'OVER';  // slight tolerance for shorter windows
-    if(wHotD>=8&&wHotPct>=(freqThreshold-2)) return 'UNDER';
-    return null;
-  }
-
-  const win100=digits;                          // all 100 ticks
-  const win50 =digits.slice(-50);               // last 50
-  const win20 =digits.slice(-20);               // last 20
-
-  const sig100=windowSignal(win100);
-  const sig50 =windowSignal(win50);
-  const sig20 =windowSignal(win20);
-
-  // All three must agree on the same direction
-  if(sig100!==signal||sig50!==signal||sig20!==signal) return null;
-
-  // Count how many of the extreme digits appear in each window (for logging)
-  const count=d=>(signal==='OVER'?d<=1:d>=8);
-  const tframe100=Math.round(win100.filter(count).length/win100.length*100);
-  const tframe50 =Math.round(win50.filter(count).length/win50.length*100);
-  const tframe20 =Math.round(win20.filter(count).length/win20.length*100);
-
-  // ── Recent momentum ── 2 of last 5 AND 3 of last 10
   const last10=digits.slice(-10);
   const last5 =digits.slice(-5);
-  const recent5 =last5.filter(count).length;
-  const recent10=last10.filter(count).length;
-  if(recent5<2||recent10<3) return null;
+  const lowIn10 =last10.filter(d=>d<=1).length;
+  const highIn10=last10.filter(d=>d>=8).length;
+  const lowIn5  =last5.filter(d=>d<=1).length;
+  const highIn5 =last5.filter(d=>d>=8).length;
 
-  const lowPct =((fr[0]||0)+(fr[1]||0))/tot*100;
-  const highPct=((fr[8]||0)+(fr[9]||0))/tot*100;
+  // Idea 3: Reversion signal
+  // High cluster recently → bet OVER1 (digits 2-9, reversion away from high extreme)
+  // Low cluster recently  → bet UNDER8 (digits 0-7, reversion away from low extreme)
+  let signal=null;
+  if(highIn10>=3&&highIn5>=2) signal='OVER';
+  if(lowIn10>=3&&lowIn5>=2)   signal='UNDER';
+  if(highIn10>=3&&lowIn10>=3) signal=null; // both extremes active — ambiguous
+  if(!signal) return{signal:null,score:a.score,isCon:true,sym,speedPenalty};
 
-  return{lowPct,highPct,recentConfirm:recent5,signal,score:a.score,isCon:true,sym,
-    hotD,hotPct,recent10,tframe100,tframe50,tframe20,freqThreshold,isHighVol,isMidVol};
+  // Distribution must support the bet
+  const over1Pct =[2,3,4,5,6,7,8,9].reduce((s,d)=>s+(fr[d]||0),0)/tot*100;
+  const under8Pct=[0,1,2,3,4,5,6,7].reduce((s,d)=>s+(fr[d]||0),0)/tot*100;
+  if(signal==='OVER'&&over1Pct<75)   return null;
+  if(signal==='UNDER'&&under8Pct<75) return null;
+
+  const clusterStrength=signal==='OVER'?highIn10:lowIn10;
+
+  return{
+    signal,score:a.score-speedPenalty,isCon:true,sym,
+    over1Pct:Math.round(over1Pct*10)/10,
+    under8Pct:Math.round(under8Pct*10)/10,
+    clusterStrength,lowIn10,highIn10,lowIn5,highIn5,
+    speedPenalty,
+  };
 }
 
 // ── Find best Power market ──
-// P4: Always picks the best market from all 10 — skips the market that just lost S1
-// so the bot cannot re-enter the same market that just failed
+// Idea 4: Require two markets agreeing on same direction before entering
 function findPowerMarket(overrideMinScore){
   const minScore=overrideMinScore||parseInt(document.getElementById('pwMinScore')?document.getElementById('pwMinScore').value:55)||55;
   const tgt=document.getElementById('pwIndex')?document.getElementById('pwIndex').value:'AUTO';
 
+  const candidates=[];
   if(tgt!=='AUTO'){
-    // Manual index — use it but still apply all filters
-    if(tgt===PW.lastLostSym){
-      aiLogPW('⏭ Skipping '+tgt+' (last S1 loss) — scanning for alternative','warn');
-      return null; // force wait if only one market and it just lost
-    }
-    const p=powerAna(tgt);
-    if(!p||!p.signal||p.score<minScore) return null;
-    return p;
+    if(tgt===PW.lastLostSym) return null;
+    try{const p=powerAna(tgt);if(p&&p.signal&&p.score>=minScore) candidates.push(p);}catch(e){}
+  } else {
+    IDX.forEach(i=>{
+      if(i.s===PW.lastLostSym) return;
+      try{const p=powerAna(i.s);if(p&&p.signal&&p.score>=minScore) candidates.push(p);}catch(e){}
+    });
   }
 
-  // AUTO: rank all 10 markets, skip lastLostSym, pick best by signal strength
-  let best=null, bestStrength=0;
-  IDX.forEach(i=>{
-    // P4: never re-enter the market that just lost S1
-    if(i.s===PW.lastLostSym) return;
-    try{
-      const p=powerAna(i.s);
-      if(!p||!p.signal||p.score<minScore) return;
-      // Rank by the strength of the cluster in the extreme window (tframe20 = most current)
-      // Weight: 50% tframe20 (most current) + 30% tframe50 + 20% tframe100
-      const strength=(p.tframe20*0.5)+(p.tframe50*0.3)+(p.tframe100*0.2);
-      if(strength>bestStrength){bestStrength=strength;best=p;}
-    }catch(e){}
-  });
+  if(!candidates.length){PW.s1ConfirmPrev=null;return null;}
 
-  // If no market found excluding lastLostSym, try the last-lost market again
-  // but only if it passes ALL filters — this prevents infinite lockout
-  if(!best&&PW.lastLostSym){
-    const p=powerAna(PW.lastLostSym);
-    if(p&&p.signal&&p.score>=minScore){
-      best=p;
-      aiLogPW('↩ No alternative found — returning to '+PW.lastLostSym+' (signal strengthened)','info');
+  const overC =candidates.filter(p=>p.signal==='OVER');
+  const underC=candidates.filter(p=>p.signal==='UNDER');
+
+  let pool=null;
+  if(overC.length>=2&&overC.length>=underC.length)       pool=overC;
+  else if(underC.length>=2)                              pool=underC;
+  else {
+    // Solo candidate — 2-tick confirm
+    const solo=candidates[0];
+    if(PW.s1ConfirmPrev&&PW.s1ConfirmPrev.sym===solo.sym&&PW.s1ConfirmPrev.signal===solo.signal){
+      PW.s1ConfirmPrev=null;
+      return solo;
     }
+    PW.s1ConfirmPrev={sym:solo.sym,signal:solo.signal};
+    return null;
   }
 
-  return best;
+  PW.s1ConfirmPrev=null;
+  pool.sort((a,b)=>(b.clusterStrength-a.clusterStrength)||(b.score-a.score));
+  return pool[0];
 }
 
-// ── Find best Power recovery market — exactly like Pioneer ──
-// Scans ALL markets, picks whichever has highest OVER2 or UNDER7 ≥65%
-// No direction lock — picks best available signal regardless of S1 direction
+// ── Find best Power recovery market ──
+// Idea 7: Recovery stays in S1 directional family
 function findPowerRecoveryMarket(){
-  let best=null, bestPct=0;
-  IDX.forEach(i=>{
-    const s=ST[i.s];
-    if(!s||!s.conn||s.digits.length<20) return;
-    try{
-      const a=ana(i.s);
-      // OVER2: digits 3-9, ~70% base rate
-      if(a.o2>=65&&a.o2>bestPct){
-        bestPct=a.o2;
-        best={sym:i.s,a,direction:'OVER',barrier:2,pct:a.o2,contractCode:'DIGITOVER',typeLabel:'OVER 2'};
-      }
-      // UNDER7: digits 0-6, ~70% base rate
-      if(a.u7>=65&&a.u7>bestPct){
-        bestPct=a.u7;
-        best={sym:i.s,a,direction:'UNDER',barrier:7,pct:a.u7,contractCode:'DIGITUNDER',typeLabel:'UNDER 7'};
-      }
-    }catch(e){}
-  });
-  return best;
-}
+  const preferDir=PW.direction;
+  const threshold=75;
+  const momThreshold=70;
 
-// ── Power ladder ──
-function calcPowerStake(step){
-  const base=parseFloat(document.getElementById('pwStake')?document.getElementById('pwStake').value:1)||1;
-  let s=base;
-  for(let i=0;i<step;i++) s=Math.round(s*PW.mult*100)/100;
-  return s;
-}
-function refreshPowerLadder(){
-  PW.mult=parseFloat(document.getElementById('pwMult')?document.getElementById('pwMult').value:3.6)||3.6;
-  let totalExp=0;
-  for(let i=0;i<5;i++){
-    const stake=calcPowerStake(i); totalExp+=stake;
-    const se=document.getElementById('plads'+i);
-    if(se) se.textContent='$'+stake.toFixed(2);
-    // Update label based on locked direction if running
-    const lt=document.getElementById('pladt'+i);
-    if(lt&&i>0){
-      if(PW.direction==='OVER') lt.textContent='OVER 2';
-      else if(PW.direction==='UNDER') lt.textContent='UNDER 7';
-    }
-  }
-  const exp=document.getElementById('pwExposure');
-  if(exp) exp.textContent='Max: $'+totalExp.toFixed(2);
-}
-function updatePowerLadderUI(){
-  for(let i=0;i<5;i++){
-    const el=document.getElementById('plad'+i);if(!el)continue;
-    el.classList.remove('active','won','lost');
-    if(i<PW.step) el.classList.add('lost');
-    else if(i===PW.step&&PW.running) el.classList.add('active');
-  }
-  const sd=document.getElementById('pwStep');
-  if(sd) sd.textContent='S'+(PW.step+1);
-  const nd=document.getElementById('pwNS');
-  if(nd) nd.textContent='$'+calcPowerStake(PW.step).toFixed(2);
-  const dEl=document.getElementById('pwDir');
-  if(dEl){
-    dEl.textContent=PW.direction||'—';
-    dEl.style.color=PW.direction==='OVER'?'var(--green)':PW.direction==='UNDER'?'var(--blue)':'var(--yellow)';
-  }
-  const str=document.getElementById('pwStreak');
-  if(str) str.textContent=PW.consecLoss;
-}
+  const _scan=(dirFilter)=>{
+    let best=null,bestScore=0;
+    IDX.forEach(i=>{
+      const s=ST[i.s];
+      const recMinT=i.tickScale===2?60:30;
+      if(!s||!s.conn||s.digits.length<recMinT) return;
+      try{
+        const a=ana(i.s);
+        const rec30=s.digits.slice(-30);
+        const recTot=rec30.length||1;
+        const recO2=rec30.filter(d=>d>=3).length/recTot*100;
+        const recU7=rec30.filter(d=>d<=6).length/recTot*100;
+        const last10=s.digits.slice(-10);
+        const l10Tot=last10.length||1;
+        const momO2=last10.filter(d=>d>=3).length/l10Tot*100;
+        const momU7=last10.filter(d=>d<=6).length/l10Tot*100;
+        const conBonus=a.isCon?2:0;
+        const famBonusO2=(preferDir==='OVER')?3:0;
+        const famBonusU7=(preferDir==='UNDER')?3:0;
+        if((!dirFilter||dirFilter==='OVER')&&recO2>=threshold&&momO2>=momThreshold){
+          const sc=recO2+conBonus+famBonusO2;
+          if(sc>bestScore){bestScore=sc;
+            best={sym:i.s,a,direction:'OVER',barrier:2,
+              pct:Math.round(recO2*10)/10,momPct:Math.round(momO2*10)/10,
+              typeLabel:'OVER 2',contractCode:'DIGITOVER',
+              sameFamily:preferDir==='OVER'};}
+        }
+        if((!dirFilter||dirFilter==='UNDER')&&recU7>=threshold&&momU7>=momThreshold){
+          const sc=recU7+conBonus+famBonusU7;
+          if(sc>bestScore){bestScore=sc;
+            best={sym:i.s,a,direction:'UNDER',barrier:7,
+              pct:Math.round(recU7*10)/10,momPct:Math.round(momU7*10)/10,
+              typeLabel:'UNDER 7',contractCode:'DIGITUNDER',
+              sameFamily:preferDir==='UNDER'};}
+        }
+      }catch(e){}
+    });
+    return best;
+  };
 
-// ── Power equity curve ──
-function drawPowerEquity(){
-  const canvas=document.getElementById('eqCanvasPW');if(!canvas)return;
-  const ctx=canvas.getContext('2d');
-  const W=canvas.offsetWidth||500;canvas.width=W;canvas.height=70;
-  ctx.clearRect(0,0,W,70);
-  const pts=PW.equityPoints||[];
-  if(!pts||pts.length<2){
-    ctx.strokeStyle='rgba(34,197,94,.15)';ctx.lineWidth=1;
-    ctx.beginPath();ctx.moveTo(0,35);ctx.lineTo(W,35);ctx.stroke();return;
-  }
-  const mn=Math.min(...pts),mx=Math.max(...pts),range=mx-mn||1;
-  const toY=v=>5+(60*(1-(v-mn)/range));
-  ctx.strokeStyle='rgba(34,197,94,.12)';ctx.lineWidth=1;ctx.setLineDash([3,4]);
-  ctx.beginPath();ctx.moveTo(0,toY(0));ctx.lineTo(W,toY(0));ctx.stroke();ctx.setLineDash([]);
-  const last=pts[pts.length-1];
-  const grad=ctx.createLinearGradient(0,0,0,70);
-  if(last>=0){grad.addColorStop(0,'rgba(34,197,94,.25)');grad.addColorStop(1,'rgba(34,197,94,.02)');}
-  else{grad.addColorStop(0,'rgba(239,68,68,.02)');grad.addColorStop(1,'rgba(239,68,68,.2)');}
-  ctx.beginPath();
-  pts.forEach((v,i)=>{const x=i/(pts.length-1)*W,y=toY(v);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
-  ctx.lineTo(W,70);ctx.lineTo(0,70);ctx.closePath();ctx.fillStyle=grad;ctx.fill();
-  ctx.strokeStyle=last>=0?'#22c55e':'#ff3d5a';ctx.lineWidth=2;
-  ctx.beginPath();
-  pts.forEach((v,i)=>{const x=i/(pts.length-1)*W,y=toY(v);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
-  ctx.stroke();
-  const es=document.getElementById('eqStatsPW');
-  if(es){
-    const peak=Math.max(...pts),trough=Math.min(...pts);
-    es.textContent='Now '+(last>=0?'+':'')+last.toFixed(2)+'  Peak '+(peak>=0?'+':'')+peak.toFixed(2)+'  Low '+(trough>=0?'+':'')+trough.toFixed(2);
-    es.style.color=last>=0?'var(--green)':'var(--red)';
-  }
+  const sameFam=_scan(preferDir==='OVER'?'OVER':preferDir==='UNDER'?'UNDER':null);
+  if(sameFam) return sameFam;
+  return _scan(null);
 }
 
 // ── Power tick handler ──
@@ -2935,80 +2846,77 @@ function powerTick(){
   const tp=parseFloat(document.getElementById('pwTP')?document.getElementById('pwTP').value:20)||20;
   const sl=parseFloat(document.getElementById('pwSL')?document.getElementById('pwSL').value:30)||30;
 
-  if(PW.sessPnl>=tp){
-    aiLogPW('🎯 TP +$'+PW.sessPnl.toFixed(2)+' — Power stopped.','success');
-    powerStop();return;
+  if(PW.sessPnl>=tp){aiLogPW('🎯 TP +$'+PW.sessPnl.toFixed(2)+' — Power stopped.','success');powerStop();return;}
+  if(PW.sessPnl<=-Math.abs(sl)){aiLogPW('🛑 SL -$'+Math.abs(PW.sessPnl).toFixed(2)+' — Power stopped.','danger');powerStop();return;}
+
+  // Idea 8: S1 streak circuit breaker — 3 consecutive S1 losses → 2 min pause
+  if(PW.s1StreakLoss>=3){
+    if(!PW.s1PauseUntil) PW.s1PauseUntil=Date.now()+120000;
+    if(Date.now()<PW.s1PauseUntil){
+      const rem=Math.ceil((PW.s1PauseUntil-Date.now())/1000);
+      if(rem%20===0) aiLogPW('⏸ S1 streak pause — '+rem+'s remaining','warn');
+      setAIState('waiting');return;
+    }
+    PW.s1StreakLoss=0;PW.s1PauseUntil=0;
+    aiLogPW('▶ Resuming after S1 streak pause','info');
   }
-  if(PW.sessPnl<=-Math.abs(sl)){
-    aiLogPW('🛑 SL -$'+Math.abs(PW.sessPnl).toFixed(2)+' — Power stopped.','danger');
-    powerStop();return;
-  }
+
   if(PW.consecLoss>=5){
     pushError('circuit','Power circuit breaker — 5 consecutive losses','Reset to start a new session');
     setAIState('stopped');powerStop();return;
   }
 
   setAIState('scanning');
-
-  let tradeSym, contractCode, barrier, typeLabel, stake;
+  let tradeSym,contractCode,barrier,typeLabel,stake;
 
   if(PW.step===0){
-    // ── S1: OVER 1 or UNDER 8 ──
-    // Dynamic score floor: after 2+ straight S1 losses, require a stronger signal
     const baseMinScore=parseInt(document.getElementById('pwMinScore')?document.getElementById('pwMinScore').value:55)||55;
-    const dynamicMinScore=PW.s1StreakLoss>=2 ? Math.min(85, baseMinScore+10*(PW.s1StreakLoss-1)) : baseMinScore;
-    if(dynamicMinScore>baseMinScore){
-      aiLogPW('⚠ S1 streak '+PW.s1StreakLoss+' — requiring score≥'+dynamicMinScore+' for next entry','warn');
-    }
-
-    const market=findPowerMarket(dynamicMinScore);
-    if(!market){
-      updatePowerSignalDisplay();
-      setAIState('waiting');return;
-    }
+    const market=findPowerMarket(baseMinScore);
+    if(!market){updatePowerSignalDisplay();setAIState('waiting');return;}
     tradeSym=market.sym;
     PW.direction=market.signal;
     if(PW.direction==='OVER'){contractCode='DIGITOVER';barrier=1;typeLabel='OVER 1';}
     else{contractCode='DIGITUNDER';barrier=8;typeLabel='UNDER 8';}
-    stake=calcPowerStake(0);
+    // Idea 6: Confidence stake — stronger cluster = larger stake (up to 1.5x)
+    const baseStake=calcPowerStake(0);
+    const confMult=Math.min(1.5,1.0+((market.clusterStrength-3)/7)*0.5);
+    stake=Math.round(baseStake*confMult*100)/100;
     const ix=IDX.find(i=>i.s===tradeSym);
     aiLogPW('⚡ S1 | '+(ix?ix.n:tradeSym)+' | '+typeLabel
-      +' | hotD:'+market.hotD+' | 100tk:'+market.tframe100+'% 50tk:'+market.tframe50+'% 20tk:'+market.tframe20+'%'
-      +' | r5:'+market.recentConfirm+'/r10:'+market.recent10
-      +' | $'+stake.toFixed(2)+' Score:'+market.score,'info');
+      +' | cluster:'+market.clusterStrength+'/10'
+      +' | dist:'+(PW.direction==='OVER'?market.over1Pct:market.under8Pct)+'%'
+      +' | conf:'+confMult.toFixed(2)+'× $'+stake.toFixed(2)
+      +(market.speedPenalty?' [1s]':''),'info');
     refreshPowerLadder();
   } else {
-    // ── S2–S5: Recovery — best OVER2 or UNDER7 across all markets (like Pioneer) ──
     const recovery=findPowerRecoveryMarket();
     if(!recovery){
       PW.prevMarket=null;
-      aiLogPW('⏳ S'+(PW.step+1)+' — waiting for OVER 2 or UNDER 7 ≥65%…','warn');
+      aiLogPW('⏳ S'+(PW.step+1)+' — scanning '+(PW.direction||'')+' family ≥75%…','warn');
       setAIState('waiting');return;
     }
-    // 2-tick confirmation on direction (same as Pioneer confirms direction)
+    const needsConfirm=PW.step<=2;
     const prev=PW.prevMarket;
-    const confirmed=prev&&prev.direction===recovery.direction;
-    PW.prevMarket={sym:recovery.sym,direction:recovery.direction};
+    const confirmed=!needsConfirm||(prev&&prev.direction===recovery.direction&&recovery.pct>=(prev.pct-2));
+    PW.prevMarket={sym:recovery.sym,direction:recovery.direction,pct:recovery.pct};
     if(!confirmed){
       const ix=IDX.find(i=>i.s===recovery.sym);
       aiLogPW('🔍 S'+(PW.step+1)+' | '+(ix?ix.n:recovery.sym)
-        +' | '+recovery.typeLabel+' ('+recovery.pct.toFixed(0)+'%) — confirming…','warn');
+        +' | '+recovery.typeLabel+' ('+recovery.pct.toFixed(0)+'%)'
+        +(recovery.sameFamily?' 🎯':'')
+        +' — confirming…','warn');
       setAIState('waiting');return;
     }
-    tradeSym=recovery.sym;
-    PW.prevMarket=null;
-    contractCode=recovery.contractCode;
-    barrier=recovery.barrier;
-    typeLabel=recovery.typeLabel;
+    tradeSym=recovery.sym;PW.prevMarket=null;
+    contractCode=recovery.contractCode;barrier=recovery.barrier;typeLabel=recovery.typeLabel;
     stake=calcPowerStake(PW.step);
-    // Update ladder labels to show actual recovery direction
-    for(let i=1;i<5;i++){
-      const lt=document.getElementById('pladt'+i);
-      if(lt) lt.textContent=recovery.typeLabel;
-    }
+    for(let i=1;i<5;i++){const lt=document.getElementById('pladt'+i);if(lt)lt.textContent=recovery.typeLabel;}
     const ix=IDX.find(i=>i.s===tradeSym);
     aiLogPW('🔄 S'+(PW.step+1)+' | '+(ix?ix.n:tradeSym)
-      +' | '+typeLabel+' ('+recovery.pct.toFixed(0)+'%) | $'+stake.toFixed(2)+' ✓','warn');
+      +' | '+typeLabel+' ('+recovery.pct.toFixed(0)+'%)'
+      +(recovery.sameFamily?' 🎯fam':'')
+      +(PW.step>=3?' ⚡urgent':'')
+      +' | $'+stake.toFixed(2)+' ✓','warn');
   }
 
   updatePowerLadderUI();
@@ -3019,19 +2927,20 @@ function powerTick(){
 // ── Power signal display ──
 function updatePowerSignalDisplay(){
   if(AI.mode!=='power') return;
-  let bestLow=0,bestHigh=0,bestSig='WAIT';
+  let bestOver=0,bestUnder=0,bestSig='WAIT';
   IDX.forEach(i=>{
     try{
       const s=ST[i.s];if(!s||!s.conn||s.digits.length<30)return;
       const a=ana(i.s);if(!a.isCon)return;
-      const lp=((a.fr[0]||0)+(a.fr[1]||0))/a.tot*100;
-      const hp=((a.fr[8]||0)+(a.fr[9]||0))/a.tot*100;
-      if(lp>bestLow){bestLow=lp;bestSig='OVER 1';}
-      if(hp>bestHigh){bestHigh=hp;bestSig='UNDER 8';}
+      const last10=s.digits.slice(-10);
+      const hi=last10.filter(d=>d>=8).length;
+      const lo=last10.filter(d=>d<=1).length;
+      if(hi>bestOver){bestOver=hi;bestSig='OVER 1';}
+      if(lo>bestUnder){bestUnder=lo;bestSig='UNDER 8';}
     }catch(e){}
   });
-  const lEl=document.getElementById('pwLow');if(lEl)lEl.textContent=bestLow.toFixed(1)+'%';
-  const hEl=document.getElementById('pwHigh');if(hEl)hEl.textContent=bestHigh.toFixed(1)+'%';
+  const lEl=document.getElementById('pwLow');if(lEl)lEl.textContent=bestUnder+'/10';
+  const hEl=document.getElementById('pwHigh');if(hEl)hEl.textContent=bestOver+'/10';
   const sEl=document.getElementById('pwSignal');
   if(sEl){
     sEl.textContent=bestSig;
@@ -3065,7 +2974,7 @@ function onPowerContract(poc){
     if(stepEl){stepEl.classList.remove('active');stepEl.classList.add('won');}
     aiLogPW('✅ WIN +$'+profit.toFixed(2)+' S'+(PW.step+1)+' '+AI.activeType+' | Session: $'+PW.sessPnl.toFixed(2),'success');
     aiLogPW('🔍 Scanning all markets for next best signal…','info');
-    PW.step=0;PW.direction=null;PW.prevMarket=null;
+    PW.step=0;PW.direction=null;PW.prevMarket=null;PW.s1ConfirmPrev=null;
     setTimeout(()=>{
       for(let i=0;i<5;i++){const e=document.getElementById('plad'+i);if(e)e.classList.remove('won','lost','active');}
       updatePowerLadderUI();
@@ -3122,7 +3031,7 @@ function powerStart(){
   PW.baseStake=parseFloat(document.getElementById('pwStake').value)||1;
   PW.mult=parseFloat(document.getElementById('pwMult').value)||3.6;
   PW.step=0;PW.consecLoss=0;PW.direction=null;PW.sessPnl=0;PW.wins=0;PW.losses=0;
-  PW.equityPoints=[0];PW.prevMarket=null;PW.s1StreakLoss=0;PW.lastLostSym=null;
+  PW.equityPoints=[0];PW.prevMarket=null;PW.s1StreakLoss=0;PW.lastLostSym=null;PW.s1ConfirmPrev=null;PW.s1PauseUntil=0;
   PW.running=true;
   refreshPowerLadder();updatePowerLadderUI();
   document.getElementById('startBtn').disabled=true;
@@ -3299,7 +3208,7 @@ function resetAI(){
   TR.step=0;TR.consecLoss=0;TR.lastDirection=null;TR.sessPnl=0;TR.wins=0;TR.losses=0;
   TR.equityPoints=[0];
   PW.step=0;PW.consecLoss=0;PW.direction=null;PW.sessPnl=0;PW.wins=0;PW.losses=0;
-  PW.equityPoints=[0];PW.prevMarket=null;PW.s1StreakLoss=0;PW.lastLostSym=null;
+  PW.equityPoints=[0];PW.prevMarket=null;PW.s1StreakLoss=0;PW.lastLostSym=null;PW.s1ConfirmPrev=null;PW.s1PauseUntil=0;
   clearAllErrors();
   setAIState('idle');updateAIStats();drawEquity();drawTrendEquity();drawPowerEquity();
   const eqS=document.getElementById('eqStats');if(eqS){eqS.textContent='Now +0.00  Peak +0.00  Low +0.00';eqS.style.color='var(--sub)';}
