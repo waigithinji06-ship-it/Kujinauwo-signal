@@ -730,6 +730,10 @@ letter-spacing:.5px;white-space:nowrap;margin-top:1px;
     </div>
     <div class="topbar-right">
       <span id="CLK">00:00:00</span>
+      <div class="live-pill" id="pingPill" style="cursor:default;" title="WebSocket ping to Deriv">
+        <div id="pingDot" class="cdot" style="background:var(--dim);"></div>
+        <span id="pingVal" style="font-family:var(--font-mono);font-size:9px;color:var(--dim);">—ms</span>
+      </div>
       <div class="live-pill">
         <div id="CD" class="cdot"></div>
         <span id="CL">CONNECTING</span>
@@ -1163,7 +1167,18 @@ const AI={
   recoveryRestUntil:0,
   recoveryRestSym:null,
   lastLostDigit:null,
-  circuitPausedUntil:0, // auto-resume after 5-loss circuit breaker
+  circuitPausedUntil:0,
+  // Fix 1: pre-recovery rest after S1 loss
+  recoveryCanFireAt:0,
+  // Fix 3: long-wait grade escalation
+  waitingSince:0,
+  // Fix 4: no-signal auto-pause
+  noSignalPauseUntil:0,
+  // Fix 6: waiting diagnosis — last logged reason
+  lastWaitReason:'',
+  lastWaitLogTime:0,
+  // Network: last trade round-trip latency
+  lastBuyTime:0,
 };
 
 // ══ TREND STATE ══
@@ -1734,6 +1749,8 @@ function startConn(){
     updConn(true);hideErr();
     if(userToken&&!isGuest) ws.send(JSON.stringify({authorize:userToken}));
     else subAll();
+    // Start ping measurement every 10s
+    _startPing();
   };
   ws.onmessage=e=>{
     try{
@@ -1743,17 +1760,59 @@ function startConn(){
       if(m.msg_type==='authorize'&&!m.error){subAll();ws.send(JSON.stringify({balance:1,subscribe:1}));}
       if(m.msg_type==='tick'){try{onTick(m.tick);}catch(e){console.warn('tick err',e);}}
       if(m.msg_type==='balance')updBal(m.balance);
-      if(m.msg_type==='buy')onBuy(m);
+      if(m.msg_type==='buy'){
+        // Fix 5: measure round-trip latency
+        if(AI.lastBuyTime>0){
+          const lat=Date.now()-AI.lastBuyTime;
+          _updateLatency(lat);
+          AI.lastBuyTime=0;
+        }
+        onBuy(m);
+      }
       if(m.msg_type==='proposal')onProposal(m);
       if(m.msg_type==='proposal_open_contract'){
         const _p=m.proposal_open_contract;
         onContract(_p);
         return;
       }
+      // Ping response
+      if(m.msg_type==='ping'&&_pingTime>0){
+        const rtt=Date.now()-_pingTime;
+        _pingTime=0;
+        _updatePing(rtt);
+      }
     }catch(x){}
   };
-  ws.onclose=()=>{updConn(false);sched();};
+  ws.onclose=()=>{updConn(false);sched();_stopPing();};
   ws.onerror=()=>{updConn(false);};
+}
+
+// ── Fix 5: Ping & latency display ──
+let _pingTime=0, _pingTimer=null;
+function _startPing(){
+  _stopPing();
+  _pingTimer=setInterval(()=>{
+    if(ws&&ws.readyState===1){
+      _pingTime=Date.now();
+      ws.send(JSON.stringify({ping:1}));
+    }
+  },10000);
+}
+function _stopPing(){clearInterval(_pingTimer);_pingTimer=null;_pingTime=0;}
+function _updatePing(rtt){
+  const dot=document.getElementById('pingDot');
+  const val=document.getElementById('pingVal');
+  if(!dot||!val)return;
+  val.textContent=rtt+'ms';
+  if(rtt<150){dot.style.background='var(--green)';val.style.color='var(--green)';}
+  else if(rtt<300){dot.style.background='var(--yellow)';val.style.color='var(--yellow)';}
+  else{dot.style.background='var(--red)';val.style.color='var(--red)';
+    if(AI.running||DM.running) aiLog('⚠ High latency: '+rtt+'ms — execution risk elevated','warn');}
+}
+function _updateLatency(lat){
+  // Show last trade round-trip in ping pill as well
+  const val=document.getElementById('pingVal');
+  if(val) val.title='Last trade latency: '+lat+'ms';
 }
 function subAll(){IDX.forEach(i=>ws.send(JSON.stringify({ticks:i.s,subscribe:1})));}
 function sched(){clearTimeout(rtimer);rtimer=setTimeout(startConn,4000);}
@@ -1990,18 +2049,21 @@ function setAIState(state){
 
 // ══ MARKET FINDER ══
 function findBestRecoveryMarket(){
-  // Uses ana() directly — the same analysis engine that drives S1 selection.
-  // Recovery must only fire on markets the analysis already approves.
+  // Uses ana() directly — same engine as S1.
+  // Fix 2: DUAL WINDOW — full buffer + recent 20 ticks must both agree.
+  // If recent data contradicts the full buffer, skip that market.
+  // This prevents lagging averages from triggering false recovery entries.
   //
-  // Rules (matching your requirement):
-  //   1. Market must be CONSOLIDATING (isCon=true) — same discipline as S1
-  //   2. marketGrade must not be SKIP — analysis must consider it tradeable
-  //   3. o2 or u7 from ana() must be ≥72% — above-random edge required
-  //   4. Direction comes from the market itself: if o2 > u7 → OVER2, else → UNDER7
-  //   5. No digit preference from S1 loss — market decides direction
-  //   6. Pick the market with the highest qualifying percentage across all 10
+  // Rules:
+  //   1. isCon=true — consolidating only
+  //   2. marketGrade not SKIP
+  //   3. Full buffer o2/u7 ≥72% AND recent 20 ticks ≥68% — both windows agree
+  //   4. Direction from market — o2 vs u7
+  //   5. Best ranked by full-buffer pct + score
 
-  const THRESHOLD = 72; // above 70% base rate — genuine edge
+  const THRESHOLD_FULL   = 72;  // full buffer threshold
+  const THRESHOLD_RECENT = 68;  // recent 20-tick threshold — slightly lower for speed
+  const RECENT_WINDOW    = 20;  // ticks to check for recency confirmation
 
   let best=null, bestPct=0;
 
@@ -2011,34 +2073,36 @@ function findBestRecoveryMarket(){
     if(!s||!s.conn||s.digits.length<minT) return;
     try{
       const a=ana(i.s);
-
-      // Must be consolidating — no recovery on expanding/trending markets
       if(!a.isCon) return;
-
-      // Must not be SKIP grade — analysis approves
       if(a.marketGrade==='SKIP') return;
 
-      // Pick direction from the market's own distribution
-      // o2 = % of ticks that are digits 3-9 (OVER2 wins on these)
-      // u7 = % of ticks that are digits 0-6 (UNDER7 wins on these)
+      // Full buffer direction and pct
       const bestDir = a.o2>=a.u7 ? 'OVER' : 'UNDER';
-      const bestPctThis = bestDir==='OVER' ? a.o2 : a.u7;
+      const fullPct  = bestDir==='OVER' ? a.o2 : a.u7;
+      if(fullPct < THRESHOLD_FULL) return;
 
-      // Must meet minimum threshold
-      if(bestPctThis < THRESHOLD) return;
+      // Recent 20-tick window — must confirm same direction
+      const recent=s.digits.slice(-RECENT_WINDOW);
+      const rTot=recent.length||1;
+      const rO2=recent.filter(d=>d>=3).length/rTot*100; // OVER2 wins on 3-9
+      const rU7=recent.filter(d=>d<=6).length/rTot*100; // UNDER7 wins on 0-6
+      const recentPct = bestDir==='OVER' ? rO2 : rU7;
 
-      // Rank by percentage — higher is stronger edge
-      // Tie-break by score
-      const rankScore = bestPctThis + (a.score/100);
+      // Recent window must agree — if it contradicts, skip
+      if(recentPct < THRESHOLD_RECENT) return;
+
+      // Both windows agree — rank by full pct + score
+      const rankScore = fullPct + (a.score/100);
       if(rankScore > bestPct){
         bestPct=rankScore;
         best={
-          sym:i.s, a,
+          sym:      i.s, a,
           direction: bestDir,
           barrier:   bestDir==='OVER'?2:7,
           contractCode: bestDir==='OVER'?'DIGITOVER':'DIGITUNDER',
           typeLabel: bestDir==='OVER'?'OVER2':'UNDER7',
-          pct:       Math.round(bestPctThis*10)/10,
+          pct:       Math.round(fullPct*10)/10,
+          recentPct: Math.round(recentPct*10)/10,
           grade:     a.marketGrade,
           score:     a.score
         };
@@ -2175,17 +2239,30 @@ function aiTick(sym){
   if(!AI.running||AI.inTrade||AI.pendingResult)return;
   if(Date.now()-lastTradeTime<1800)return;
 
-  // Circuit breaker pause — auto-resume after 3 minutes
+  // Circuit breaker auto-resume
   if(AI.circuitPausedUntil>0){
     if(Date.now()<AI.circuitPausedUntil){
       const rem=Math.ceil((AI.circuitPausedUntil-Date.now())/1000);
       if(rem%30===0) aiLog('⏸ Circuit pause — resuming in '+rem+'s','warn');
       setAIState('waiting');return;
     }
-    // Pause over — resume cleanly
     AI.circuitPausedUntil=0;
+    AI.waitingSince=0;
     aiLog('▶ Circuit pause over — resuming Pioneer','info');
   }
+
+  // Fix 4: no-signal auto-pause — if no qualifying market in 90s, pause 5 min
+  if(AI.noSignalPauseUntil>0){
+    if(Date.now()<AI.noSignalPauseUntil){
+      const rem=Math.ceil((AI.noSignalPauseUntil-Date.now())/1000);
+      if(rem%60===0) aiLog('⏸ No-signal pause — resuming in '+Math.ceil(rem/60)+'min','warn');
+      setAIState('waiting');return;
+    }
+    AI.noSignalPauseUntil=0;
+    AI.waitingSince=0;
+    aiLog('▶ No-signal pause over — resuming with fresh scan','info');
+  }
+
   const tp=parseFloat(document.getElementById('cfgTP').value)||30;
   const sl=parseFloat(document.getElementById('cfgSL').value)||50;
   if(AI.sessPnl<=-Math.abs(sl)){aiLog('🛑 SL -$'+Math.abs(AI.sessPnl).toFixed(2)+'.','danger');stopAI();return;}
@@ -2217,8 +2294,42 @@ function aiTick(sym){
   let tradeSym,a,ix,stake,contractCode,barrierDigit,typeLabel;
 
   if(AI.martStep===0){
+    // Fix 3: grade escalation — if waiting >60s, require Grade A only
+    const waitMs=AI.waitingSince>0?Date.now()-AI.waitingSince:0;
+    const requireGradeA=waitMs>60000;
+    const minScore=parseInt(document.getElementById('cfgMinScore')?document.getElementById('cfgMinScore').value:45)||45;
+
     const market=findBestMarket();
-    if(!market) return;
+
+    // Fix 3: apply grade escalation gate
+    if(market&&requireGradeA&&market.a.marketGrade!=='A'){
+      const _reason='⏳ '+(Math.round(waitMs/1000))+'s wait — escalating to Grade A only. Best: '+
+        (IDX.find(i=>i.s===market.sym)||{n:market.sym}).n+' Grade:'+market.a.marketGrade+' Score:'+market.a.score;
+      _logWaitReason(_reason);
+      setAIState('waiting');return;
+    }
+
+    if(!market){
+      // Fix 6: waiting diagnosis — log exactly why no market qualifies
+      const _reason=_diagnosWait(minScore);
+      _logWaitReason(_reason);
+
+      // Start wait timer
+      if(AI.waitingSince===0) AI.waitingSince=Date.now();
+
+      // Fix 4: if waiting >90s with no signal, trigger 5-min pause
+      if(AI.waitingSince>0&&Date.now()-AI.waitingSince>90000){
+        AI.noSignalPauseUntil=Date.now()+300000;
+        AI.waitingSince=0;
+        aiLog('⏸ No qualifying market in 90s — pausing 5min to let conditions improve','warn');
+        pushError('info','Pioneer paused — no qualifying market in 90 seconds','Bot will auto-resume in 5 minutes');
+      }
+      setAIState('waiting');return;
+    }
+
+    // Good signal found — reset wait timer
+    AI.waitingSince=0;
+
     if(AI.recoveryRestSym&&AI.recoveryRestUntil>Date.now()&&market.sym===AI.recoveryRestSym){
       setAIState('waiting'); return;
     }
@@ -2232,19 +2343,31 @@ function aiTick(sym){
     const conf=Math.min(1.5,1.0+((a.score-45)/40)*0.5);
     const hotPct=Math.round(a.fr[barrierDigit]/a.tot*100);
     if(a.hotRecent===false){setAIState('waiting');return;}
+    AI.lastBuyTime=Date.now();
     aiLog('🎯 S1 | '+ix.n+' | DIFFERS d.'+barrierDigit
       +' ('+hotPct+'%) | $'+stake.toFixed(2)
       +' Score:'+a.score+' Grade:'+a.marketGrade+' Conf:'+conf.toFixed(2)+'x','info');
+
   } else {
+    // Fix 1: 15s pre-recovery rest after S1 loss — let market settle
+    if(AI.recoveryCanFireAt>0&&Date.now()<AI.recoveryCanFireAt){
+      const rem=Math.ceil((AI.recoveryCanFireAt-Date.now())/1000);
+      if(rem%5===0) aiLog('⏳ S'+(AI.martStep+1)+' — settling '+rem+'s before recovery scan…','warn');
+      setAIState('waiting');return;
+    }
+    AI.recoveryCanFireAt=0;
+
     const recovery=findBestRecoveryMarket();
     if(!recovery){
       setAIState('waiting');
       AI.prevRecovery=null;
-      aiLog('⏳ S'+(AI.martStep+1)+' — waiting for consolidating market with OVER2/U7 ≥72%…','warn');
+      // Fix 6: diagnosis for recovery wait
+      const _rReason=_diagnoseRecoveryWait();
+      _logWaitReason(_rReason);
       return;
     }
 
-    // Confirmation: S2/S3 need 2 ticks, S4/S5 urgent — fire immediately
+    // Confirmation: S2/S3 need 2 ticks, S4/S5 urgent
     const needsConfirm=AI.martStep<=2;
     const _prev=AI.prevRecovery;
     const _confirmed=!needsConfirm||(_prev
@@ -2256,21 +2379,20 @@ function aiTick(sym){
       setAIState('waiting');
       const _rx=IDX.find(i=>i.s===recovery.sym);
       aiLog('🔍 S'+(AI.martStep+1)+' | '+(_rx?_rx.n:recovery.sym)
-        +' | '+recovery.typeLabel+' '+recovery.pct.toFixed(0)+'%'
-        +' | Grade:'+recovery.grade+' Score:'+recovery.score
-        +' — confirming…','warn');
+        +' | '+recovery.typeLabel+' buf:'+recovery.pct.toFixed(0)+'% rec20:'+recovery.recentPct.toFixed(0)+'%'
+        +' | Grade:'+recovery.grade+' — confirming…','warn');
       return;
     }
     tradeSym=recovery.sym; a=recovery.a;
     ix=IDX.find(i=>i.s===tradeSym);
     stake=calcStake(AI.martStep);
-    const isUnder=recovery.direction==='UNDER';
     contractCode=recovery.contractCode;
     barrierDigit=recovery.barrier;
     typeLabel=recovery.typeLabel;
     AI.prevRecovery=null;
+    AI.lastBuyTime=Date.now();
     aiLog('🔄 S'+(AI.martStep+1)+' | '+ix.n
-      +' | '+typeLabel+' '+recovery.pct.toFixed(0)+'%'
+      +' | '+typeLabel+' buf:'+recovery.pct.toFixed(0)+'% rec20:'+recovery.recentPct.toFixed(0)+'%'
       +' | Grade:'+recovery.grade+' Score:'+recovery.score
       +(AI.martStep>=3?' ⚡urgent':'')
       +' | $'+stake.toFixed(2)+' ✓','warn');
@@ -2278,6 +2400,69 @@ function aiTick(sym){
 
   lastTradeTime=Date.now();
   placeTrade(tradeSym,contractCode,stake,barrierDigit,typeLabel,'pioneer');
+}
+
+// ── Fix 6: Waiting diagnosis helpers ──
+function _logWaitReason(reason){
+  const now=Date.now();
+  if(reason===AI.lastWaitReason&&now-AI.lastWaitLogTime<30000) return;
+  AI.lastWaitReason=reason;
+  AI.lastWaitLogTime=now;
+  aiLog(reason,'warn');
+}
+
+function _diagnosWait(minScore){
+  let bestSym=null,bestScore=0,bestGrade='—',bestCon=false,bestHot=false;
+  IDX.forEach(i=>{
+    const s=ST[i.s];
+    if(!s||!s.conn||s.digits.length<(i.minTicks||60)) return;
+    try{
+      const a=ana(i.s);
+      if(a.score>bestScore){
+        bestScore=a.score;bestSym=i.s;
+        bestGrade=a.marketGrade;bestCon=a.isCon;bestHot=a.hotRecent;
+      }
+    }catch(e){}
+  });
+  if(!bestSym) return '⏳ Waiting — no markets connected yet';
+  const ix=IDX.find(i=>i.s===bestSym);
+  const name=ix?ix.n:bestSym;
+  const reasons=[];
+  if(!bestCon)  reasons.push('not consolidating');
+  if(bestScore<minScore) reasons.push('score '+bestScore+' < min '+minScore);
+  if(!bestHot)  reasons.push('hot digit fading');
+  if(bestGrade==='SKIP'||bestGrade==='C') reasons.push('grade '+bestGrade);
+  return '⏳ Waiting — best: '+name+' Score:'+bestScore+' Grade:'+bestGrade
+    +(reasons.length?' ['+reasons.join(', ')+']':'');
+}
+
+function _diagnoseRecoveryWait(){
+  let bestSym=null,bestScore=0,bestCon=false,bestO2=0,bestU7=0,bestR20O2=0,bestR20U7=0;
+  IDX.forEach(i=>{
+    const s=ST[i.s];
+    if(!s||!s.conn||s.digits.length<(i.minTicks||60)) return;
+    try{
+      const a=ana(i.s);
+      if(a.score>bestScore){
+        bestScore=a.score;bestSym=i.s;bestCon=a.isCon;
+        bestO2=a.o2;bestU7=a.u7;
+        const rec=s.digits.slice(-20);const rt=rec.length||1;
+        bestR20O2=Math.round(rec.filter(d=>d>=3).length/rt*100);
+        bestR20U7=Math.round(rec.filter(d=>d<=6).length/rt*100);
+      }
+    }catch(e){}
+  });
+  if(!bestSym) return '⏳ S'+(AI.martStep+1)+' — no markets ready';
+  const ix=IDX.find(i=>i.s===bestSym);
+  const name=ix?ix.n:bestSym;
+  const reasons=[];
+  if(!bestCon) reasons.push('not consolidating');
+  if(Math.max(bestO2,bestU7)<72) reasons.push('best edge only '+(Math.max(bestO2,bestU7)).toFixed(0)+'% (need 72%)');
+  if(Math.max(bestR20O2,bestR20U7)<68) reasons.push('rec20 only '+(Math.max(bestR20O2,bestR20U7))+'% (need 68%)');
+  return '⏳ S'+(AI.martStep+1)+' recovery — best: '+name
+    +' buf O2:'+bestO2.toFixed(0)+'% U7:'+bestU7.toFixed(0)+'%'
+    +' rec20 O2:'+bestR20O2+'% U7:'+bestR20U7+'%'
+    +(reasons.length?' ['+reasons.join(', ')+']':'');
 }
 
 // ══ TREND TICK ══
@@ -2583,9 +2768,14 @@ function onContract(poc){
     } else {
       AI.losses++;AI.consecLoss++;
       if(stepEl){stepEl.classList.remove('active');stepEl.classList.add('lost');}
-      // Store the losing digit from S1 — used to inform recovery direction
-      if(AI.martStep===0) AI.lastLostDigit=AI.activeDigit;
-      if(AI.martStep<4){AI.martStep++;aiLog('❌ LOSS S'+(AI.martStep+1)+' OVER2 $'+calcStake(AI.martStep).toFixed(2),'danger');}
+      // Store the losing digit from S1
+      if(AI.martStep===0){
+        AI.lastLostDigit=AI.activeDigit;
+        // Fix 1: 15s pre-recovery rest — let market settle before recovery fires
+        AI.recoveryCanFireAt=Date.now()+15000;
+        aiLog('⏳ S1 lost — 15s market settling before recovery scan','warn');
+      }
+      if(AI.martStep<4){AI.martStep++;aiLog('❌ LOSS S'+(AI.martStep+1)+' OVER2/U7 $'+calcStake(AI.martStep).toFixed(2),'danger');}
       else{
         AI.recoveryRestUntil=Date.now()+60000;
         AI.recoveryRestSym=AI.activeSym;
@@ -2745,6 +2935,8 @@ function resetAI(){
   AI.wins=0;AI.losses=0;AI.totalPnl=0;AI.sessPnl=0;
   AI.consecLoss=0;AI.martStep=0;AI.activeCid=null;AI.equityPoints=[0];AI.sessionStart=0;
   AI.lastLostDigit=null;AI.circuitPausedUntil=0;
+  AI.recoveryCanFireAt=0;AI.waitingSince=0;AI.noSignalPauseUntil=0;
+  AI.lastWaitReason='';AI.lastWaitLogTime=0;AI.lastBuyTime=0;
   AI.tp1Hit=false;AI.tp2Hit=false;
   AI.recoveryRestUntil=0;AI.recoveryRestSym=null;AI.prevRecovery=null;
   TR.step=0;TR.consecLoss=0;TR.lastDirection=null;TR.sessPnl=0;TR.wins=0;TR.losses=0;
