@@ -834,6 +834,7 @@ letter-spacing:.5px;white-space:nowrap;margin-top:1px;
   <div class="mode-row">
     <div class="mchip active" id="chipPioneer" onclick="setMode('pioneer')"><span class="mci">🚀</span>PIONEER</div>
     <div class="mchip" id="chipTrend"    onclick="setMode('trend')"><span class="mci">📈</span>TREND</div>
+    <div class="mchip" id="chipDiffers"  onclick="setMode('differs')"><span class="mci">🎯</span>DIFFERS</div>
   </div>
 
   <!-- Mode subpages -->
@@ -969,6 +970,70 @@ letter-spacing:.5px;white-space:nowrap;margin-top:1px;
     </div>
 
   </div><!-- end mode subpages wrapper -->
+
+    <!-- 🎯 DIFFERS MODE -->
+    <div id="mpDiffers" class="mpage" style="display:none;flex-direction:column;">
+      <!-- Equity -->
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:8px;margin-bottom:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+          <div style="font-size:7px;color:var(--sub);font-family:var(--font-mono);letter-spacing:2px;">🎯 DIFFERS · EQUITY</div>
+          <div style="font-size:8px;font-family:var(--font-mono);" id="eqStatsDM">Now +0.00  Peak +0.00  Low +0.00</div>
+        </div>
+        <canvas id="eqCanvasDM" style="width:100%;height:70px;display:block;min-height:70px;"></canvas>
+      </div>
+      <!-- Config -->
+      <div style="margin-bottom:8px;">
+        <div onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'grid':'none'" style="font-size:9px;color:var(--sub);font-family:var(--font-mono);letter-spacing:2px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:var(--surface);border:1px solid var(--border);border-radius:8px;">
+          <span>⚙ CONFIG</span><span>▼</span>
+        </div>
+        <div style="display:none;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-top:8px;">
+          <div class="cfg-block"><div class="cfg-label">💰 BASE STAKE ($)</div><input class="cfg-input" id="dmStake" type="number" value="0.35" min="0.35" step="0.35"/></div>
+          <div class="cfg-block"><div class="cfg-label">RECOVERY MULT ×</div><input class="cfg-input" id="dmMult" type="number" value="4.2" min="2" max="10" step="0.1"/><div style="font-size:8px;color:var(--dim);margin-top:3px;font-family:var(--font-mono);">Rec: OVER1/UNDER8</div></div>
+          <div class="cfg-block"><div class="cfg-label">TAKE PROFIT ($)</div><input class="cfg-input" id="dmTP" type="number" value="20" min="1" step="1"/></div>
+          <div class="cfg-block"><div class="cfg-label">STOP LOSS ($)</div><input class="cfg-input" id="dmSL" type="number" value="40" min="1" step="1"/></div>
+          <div class="cfg-block"><div class="cfg-label">MIN SCORE</div><input class="cfg-input" id="dmMinScore" type="number" value="45" min="30" max="85" step="5"/></div>
+          <div class="cfg-block" style="grid-column:1/-1;"><div class="cfg-label">INDEX (Standard only — DIFFERS needs 2s+ ticks)</div>
+            <select class="cfg-select" id="dmIndex">
+              <option value="AUTO">AUTO — Standard indices only</option>
+              <option value="R_10">V10</option><option value="R_25">V25</option>
+              <option value="R_50">V50</option><option value="R_75">V75</option>
+              <option value="R_100">V100</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <!-- Tick speed warning -->
+      <div id="dmTickWarn" style="display:none;background:rgba(234,179,8,.08);border:1px solid rgba(234,179,8,.25);border-radius:8px;padding:6px 10px;margin-bottom:8px;font-size:9px;color:var(--yellow);font-family:var(--font-mono);">
+        ⚡ TICK SPEED WARNING — market ticking too fast for safe DIFFERS entry
+      </div>
+      <!-- Ladder -->
+      <div style="margin-bottom:8px;">
+        <div style="font-size:9px;color:var(--sub);font-family:var(--font-mono);letter-spacing:2px;margin-bottom:6px;display:flex;justify-content:space-between;">
+          <span>LADDER (4.2× recovery)</span><span id="dmExposure" style="color:var(--red)"></span>
+        </div>
+        <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;">
+          <div class="lad-step differ" id="dlad0"><div class="lad-num">S1</div><div class="lad-type" id="dladt0">DIFFERS</div><div class="lad-stake" id="dlads0">$0.35</div></div>
+          <div class="lad-arrow">→</div>
+          <div class="lad-step over" id="dlad1"><div class="lad-num">S2</div><div class="lad-type" id="dladt1">OV1/UN8</div><div class="lad-stake" id="dlads1">$1.47</div></div>
+          <div class="lad-arrow">→</div>
+          <div class="lad-step over" id="dlad2"><div class="lad-num">S3</div><div class="lad-type" id="dladt2">OV1/UN8</div><div class="lad-stake" id="dlads2">$6.17</div></div>
+          <div class="lad-arrow">→</div>
+          <div class="lad-step over" id="dlad3"><div class="lad-num">S4</div><div class="lad-type" id="dladt3">OV1/UN8</div><div class="lad-stake" id="dlads3">$25.93</div></div>
+          <div class="lad-arrow">→</div>
+          <div class="lad-step over final" id="dlad4"><div class="lad-num">S5</div><div class="lad-type" id="dladt4">OV1/UN8</div><div class="lad-stake" id="dlads4">$108.89</div></div>
+        </div>
+      </div>
+      <!-- Status bar -->
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 12px;margin-bottom:10px;font-family:var(--font-mono);font-size:9px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;">
+        <span style="color:var(--sub);">STEP <span id="dmStepDisp" style="color:var(--accent);font-weight:700;">S1</span></span>
+        <span style="color:var(--sub);">NEXT <span id="dmNextStake" style="color:var(--text);font-weight:700;">$0.35</span></span>
+        <span style="color:var(--sub);">LATENCY <span id="dmLatency" style="color:var(--green);font-weight:700;">—</span></span>
+        <span id="dmRunning" style="color:var(--dim);">⏸ IDLE</span>
+      </div>
+      <!-- Log -->
+      <div style="font-size:9px;color:var(--sub);font-family:var(--font-mono);letter-spacing:2px;margin-bottom:6px;">AI DECISION LOG</div>
+      <div id="aiLogDM" class="ai-log"></div>
+    </div>
 
   <!-- ── UNIFIED STATEMENT TABLE — all modes ── -->
   <div style="flex-shrink:0;padding:10px 14px 0;display:flex;justify-content:space-between;align-items:center;">
@@ -1417,19 +1482,20 @@ function navTo(page){
 // ══ MODE ══
 // FIX #4: Only iterate chips that actually exist in the DOM
 function setMode(m){
-  if(AI.running||TR.running)return;
+  if(AI.running||TR.running||DM.running)return;
   AI.mode=m;
-  ['pioneer','trend'].forEach(x=>{
+  ['pioneer','trend','differs'].forEach(x=>{
     const el=document.getElementById('chip'+x.charAt(0).toUpperCase()+x.slice(1));
     if(el) el.classList.toggle('active',x===m);
   });
-  const mpMap={pioneer:'mpPioneer',trend:'mpTrend'};
-  Object.values(mpMap).forEach(id=>{const el=document.getElementById(id);if(el)el.classList.remove('active');});
+  const mpMap={pioneer:'mpPioneer',trend:'mpTrend',differs:'mpDiffers'};
+  Object.values(mpMap).forEach(id=>{const el=document.getElementById(id);if(el){el.classList.remove('active');el.style.display='none';}});
   const active=document.getElementById(mpMap[m]);
-  if(active)active.classList.add('active');
+  if(active){active.classList.add('active');active.style.display='flex';}
   if(m==='pioneer') refreshLadder();
   if(m==='trend')   refreshTrendLadder();
-  aiLog('🔄 Mode: '+(m==='pioneer'?'Pioneer':m==='trend'?'Trend':'Power'),'info');
+  if(m==='differs') refreshDMLadder();
+  aiLog('🔄 Mode: '+(m==='pioneer'?'🚀 Pioneer':m==='trend'?'📈 Trend':'🎯 Differs'),'info');
 }
 
 // ══ PIONEER LADDER ══
@@ -1499,7 +1565,7 @@ function doLogin(){
 }
 function doGuest(){isGuest=true;userToken=null;launchDash(null);}
 function doLogout(){
-  stopAI();trendStop();
+  stopAI();trendStop();dmStop();
   if(ws){ws.onclose=null;ws.close();}
   clearTimeout(rtimer);
   userToken=null;isGuest=false;
@@ -1565,7 +1631,7 @@ function launchDash(auth){
   }
   AI.baseStake=parseFloat(document.getElementById('cfgStake').value)||5;
   AI.mult=parseFloat(document.getElementById('cfgMult').value)||3.6;
-  initTable();initDC();refreshLadder();refreshTrendLadder();drawEquity();startConn();
+  initTable();initDC();refreshLadder();refreshTrendLadder();refreshDMLadder();drawEquity();startConn();
 }
 
 // ══ WEBSOCKET ══
@@ -1723,6 +1789,7 @@ function onTick(tk){
   }
   if(AI.running&&AI.mode==='pioneer') aiTick(tk.symbol);
   if(TR.running&&AI.mode==='trend'&&!AI.inTrade&&!AI.pendingResult&&Date.now()-lastTrendTradeTime>400) trendTick();
+  if(DM.running&&AI.mode==='differs'&&!AI.inTrade&&!AI.pendingResult) dmTick();
   if(AI.mode==='trend'&&total%3===0) updateTrendDisplay(tk.symbol);
 }
 
@@ -2400,7 +2467,7 @@ function placeTrade(sym,code,stake,barrier,typeLabel,source){
           else if(src==='trend'&&TR.step<4) TR.step++;
           updateAIStats();drawEquity();
           document.getElementById('curTrade').classList.remove('active');
-          setAIState(AI.running||TR.running?'scanning':'idle');
+          setAIState(AI.running||TR.running||DM.running?'scanning':'idle');
         }
       },30000);
     }
@@ -2421,8 +2488,8 @@ function onBuy(msg){
       'Code: '+errCode+' · Index: '+(AI.activeSym||'?')+' · Contract: '+(AI.activeType||'?')+' · Stake: $'+(AI.activeDigit||'?')
     );
     AI.inTrade=false;AI.pendingResult=false;
-    if(isBal){stopAI();trendStop();}
-    setAIState(AI.running||TR.running?'scanning':'idle');return;
+    if(isBal){stopAI();trendStop();dmStop();}
+    setAIState(AI.running||TR.running||DM.running?'scanning':'idle');return;
   }
   if(!msg.buy)return;
   AI.activeCid=msg.buy.contract_id;
@@ -2450,6 +2517,13 @@ function onContract(poc){
   const stake=parseFloat(poc.buy_price||0);
   const source=AI.activeSource||'pioneer';
   AI.pendingResult=false;AI.inTrade=false;
+
+  // ── Route DIFFERS immediately ──
+  if(source==='differs'){
+    document.getElementById('ctStatus').textContent=won?'WON ✅':'LOST ❌';
+    document.getElementById('ctStatus').style.color=won?'var(--green)':'var(--red)';
+    onDMContract(poc);return;
+  }
 
   // ── Pioneer and Trend P&L accounting ──
   AI.totalPnl=Math.round((AI.totalPnl+profit)*100)/100;
@@ -2557,10 +2631,10 @@ function _contractTypePill(type){
 }
 
 function _modePill(mode){
-  if(mode==='pioneer') return '<span style="font-size:7px;font-family:\'Space Mono\',monospace;background:rgba(56,189,248,.1);color:#38bdf8;border:1px solid rgba(56,189,248,.2);border-radius:4px;padding:1px 5px;">🚀</span>';
-  if(mode==='trend')   return '<span style="font-size:7px;font-family:\'Space Mono\',monospace;background:rgba(96,165,250,.1);color:#60a5fa;border:1px solid rgba(96,165,250,.2);border-radius:4px;padding:1px 5px;">📈</span>';
-  if(mode==='power')   return '<span style="font-size:7px;font-family:\'Space Mono\',monospace;background:rgba(34,197,94,.1);color:#22c55e;border:1px solid rgba(34,197,94,.2);border-radius:4px;padding:1px 5px;">⚡</span>';
-  return '<span style="font-size:7px;font-family:\'Space Mono\',monospace;color:var(--dim);">'+mode+'</span>';
+  if(mode==='pioneer') return '<span style="font-size:7px;font-family:var(--font-mono);background:rgba(56,189,248,.1);color:var(--accent);border:1px solid rgba(56,189,248,.2);border-radius:4px;padding:1px 5px;">🚀</span>';
+  if(mode==='trend')   return '<span style="font-size:7px;font-family:var(--font-mono);background:rgba(96,165,250,.1);color:var(--blue);border:1px solid rgba(96,165,250,.2);border-radius:4px;padding:1px 5px;">📈</span>';
+  if(mode==='differs') return '<span style="font-size:7px;font-family:var(--font-mono);background:rgba(167,139,250,.1);color:var(--purple);border:1px solid rgba(167,139,250,.2);border-radius:4px;padding:1px 5px;">🎯</span>';
+  return '<span style="font-size:7px;font-family:var(--font-mono);color:var(--dim);">'+mode+'</span>';
 }
 
 // Unified trade log — all modes, all trades, one table
@@ -2633,7 +2707,8 @@ function addTradeLog(sym, type, digit, stake, profit, won, label, contractId, ti
 function startAI(){
   if(!userToken||isGuest){aiLog('⚠ Token required.','danger');return;}
   if(AI.mode==='trend'){trendStart();return;}
-  if(TR.running){aiLog('⚠ Stop other mode first.','warn');return;}
+  if(AI.mode==='differs'){dmStart();return;}
+  if(TR.running||DM.running){aiLog('⚠ Stop other mode first.','warn');return;}
   AI.baseStake=parseFloat(document.getElementById('cfgStake').value)||5;
   AI.mult=parseFloat(document.getElementById('cfgMult').value)||3.6;
   AI.tp=parseFloat(document.getElementById('cfgTP').value)||15;
@@ -2651,8 +2726,8 @@ function startAI(){
   aiLog('⚠ Max exposure: $'+[0,1,2,3,4].reduce((s,i)=>s+calcStake(i),0).toFixed(2),'warn');
 }
 
-// FIX #5: stopAI — removed references to non-existent mode IDs (modeManual, modeScalper)
 function stopAI(){
+  if(AI.mode==='differs'&&DM.running){dmStop();return;}
   if(!AI.running)return;
   AI.running=false;AI.inTrade=false;AI.pendingResult=false;
   clearTimeout(AI.tradeTimer);clearTimeout(AI.lateTimer);
@@ -2660,25 +2735,29 @@ function stopAI(){
   document.getElementById('stopBtn').disabled=true;
   ['cfgStake','cfgMult','cfgTP','cfgSL','cfgIndex','cfgMinScore','cfgTimeLimit']
     .forEach(id=>{const el=document.getElementById(id);if(el)el.disabled=false;});
-  if(AI.state!=='stopped')setAIState('idle');
+  if(!DM.running&&!TR.running)setAIState('idle');
   aiLog('⏹ Pioneer stopped.','warn');
 }
 
-// FIX #3: resetAI — removed references to non-existent Scalper/Manual mode elements
+// ══ RESET ══
 function resetAI(){
-  stopAI();trendStop();
+  stopAI();trendStop();dmStop();dmStop();
   AI.wins=0;AI.losses=0;AI.totalPnl=0;AI.sessPnl=0;
   AI.consecLoss=0;AI.martStep=0;AI.activeCid=null;AI.equityPoints=[0];AI.sessionStart=0;
   AI.lastLostDigit=null;AI.circuitPausedUntil=0;
   AI.tp1Hit=false;AI.tp2Hit=false;
-  AI.recoveryRestUntil=0;AI.recoveryRestSym=null;
+  AI.recoveryRestUntil=0;AI.recoveryRestSym=null;AI.prevRecovery=null;
   TR.step=0;TR.consecLoss=0;TR.lastDirection=null;TR.sessPnl=0;TR.wins=0;TR.losses=0;
   TR.equityPoints=[0];
-  PW.equityPoints=[0];PW.prevMarket=null;PW.s1StreakLoss=0;PW.lastLostSym=null;PW.s1ConfirmPrev=null;PW.s1PauseUntil=0;
+  DM.step=0;DM.consecLoss=0;DM.direction=null;DM.sessPnl=0;DM.wins=0;DM.losses=0;
+  DM.equityPoints=[0];DM.prevRecovery=null;DM.s1StreakLoss=0;DM.circuitPausedUntil=0;
   clearAllErrors();
-  setAIState('idle');updateAIStats();drawEquity();drawTrendEquity();
+  document.getElementById('startBtn').disabled=false;
+  document.getElementById('stopBtn').disabled=true;
+  setAIState('idle');updateAIStats();drawEquity();drawTrendEquity();drawDMEquity();
   const eqS=document.getElementById('eqStats');if(eqS){eqS.textContent='Now +0.00  Peak +0.00  Low +0.00';eqS.style.color='var(--sub)';}
   const eqSTR=document.getElementById('eqStatsTR');if(eqSTR){eqSTR.textContent='Now +0.00  Peak +0.00  Low +0.00';eqSTR.style.color='var(--sub)';}
+  const eqSDM=document.getElementById('eqStatsDM');if(eqSDM){eqSDM.textContent='Now +0.00  Peak +0.00  Low +0.00';eqSDM.style.color='var(--sub)';}
   document.getElementById('curTrade').classList.remove('active');
   document.getElementById('curTrade').style.display='none';
   const tb1=document.getElementById('tradeLogBody');if(tb1)tb1.innerHTML='';
@@ -2687,14 +2766,415 @@ function resetAI(){
   const ps=document.getElementById('tradePnlSum');if(ps){ps.textContent='P&L: —';ps.style.color='var(--sub)';}
   for(let i=0;i<5;i++){const e=document.getElementById('lad'+i);if(e)e.classList.remove('won','lost','active');}
   for(let i=0;i<5;i++){const e=document.getElementById('tlad'+i);if(e)e.classList.remove('won','lost','active');}
-  refreshLadder();refreshTrendLadder();
+  for(let i=0;i<5;i++){const e=document.getElementById('dlad'+i);if(e)e.classList.remove('won','lost','active');}
+  refreshLadder();refreshTrendLadder();refreshDMLadder();
   aiLog('↺ Stats reset. Ready.','info');
 }
+
+// ════════════════════════════════════════════════════════════
+// 🎯 DIFFERS MODE
+// S1: DIGITDIFF on hottest digit — standard indices only
+//     Tick speed gate: skip if last 5 ticks avg < 1800ms
+//     Latency tracker: measure round-trip, warn if > 350ms
+// S2-S5: OVER1 or UNDER8 — 4.2× — direction from ana()
+//         All 10 indices eligible for recovery
+// ════════════════════════════════════════════════════════════
+
+const DM={
+  running:false,
+  step:0,
+  baseStake:0.35,
+  mult:4.2,
+  direction:null,     // 'OVER' or 'UNDER' — locked at S1 loss
+  sessPnl:0, wins:0, losses:0, consecLoss:0,
+  equityPoints:[0],
+  prevRecovery:null,
+  s1StreakLoss:0,
+  circuitPausedUntil:0,
+  lastLatency:0,      // ms — round-trip time from send to onBuy
+  _buyTime:0,         // timestamp when buy was sent
+};
+
+// ── Tick speed check — returns avg ms between last 5 ticks ──
+function dmTickInterval(sym){
+  const s=ST[sym];
+  if(!s||!s.tickTimes||s.tickTimes.length<5) return 9999;
+  const times=s.tickTimes.slice(-5);
+  let sum=0;
+  for(let i=1;i<times.length;i++) sum+=times[i]-times[i-1];
+  return sum/(times.length-1);
+}
+
+// ── DIFFERS S1 market finder ──
+// Standard indices only — 1s indices excluded (tick too fast for safe DIFFERS)
+// Requires: isCon, grade A/B, minScore, tick interval ≥1800ms
+function findDMMarket(){
+  const minScore=parseInt(document.getElementById('dmMinScore')?document.getElementById('dmMinScore').value:45)||45;
+  const tgt=document.getElementById('dmIndex')?document.getElementById('dmIndex').value:'AUTO';
+
+  // Standard indices only — 1s excluded for DIFFERS
+  const eligible=['R_10','R_25','R_50','R_75','R_100'];
+
+  const check=(sym)=>{
+    const s=ST[sym];
+    const ix=IDX.find(i=>i.s===sym);
+    if(!s||!s.conn||s.digits.length<(ix?ix.minTicks:60)) return null;
+    try{
+      const a=ana(sym);
+      if(!a.isCon) return null;
+      if(a.marketGrade==='SKIP'||a.marketGrade==='C') return null;
+      if(a.score<minScore) return null;
+      if(a.hotRecent===false) return null;
+      // Tick speed gate — must have ≥1800ms avg interval
+      const interval=dmTickInterval(sym);
+      if(interval<1800){
+        aiLogDM('⚠ '+ix.n+' ticking too fast ('+Math.round(interval)+'ms) — skipping','warn');
+        return null;
+      }
+      return{sym,a,interval};
+    }catch(e){return null;}
+  };
+
+  if(tgt!=='AUTO'){
+    if(!eligible.includes(tgt)) return null; // block 1s on manual too
+    return check(tgt);
+  }
+
+  let best=null,bestEff=0;
+  eligible.forEach(sym=>{
+    const r=check(sym);
+    if(!r) return;
+    const gradeBoost=r.a.marketGrade==='A'?20:0;
+    const eff=r.a.score+gradeBoost+(r.a.hotRecent?8:0);
+    if(eff>bestEff){bestEff=eff;best=r;}
+  });
+  return best;
+}
+
+// ── Recovery market finder — OVER1/UNDER8 using ana() ──
+// All 10 indices eligible — recovery not tick-sensitive
+// Direction from market's own distribution via ana()
+function findDMRecoveryMarket(){
+  const THRESHOLD=72;
+  let best=null,bestPct=0;
+  IDX.forEach(i=>{
+    const s=ST[i.s];
+    const minT=i.minTicks||60;
+    if(!s||!s.conn||s.digits.length<minT) return;
+    try{
+      const a=ana(i.s);
+      if(!a.isCon) return;
+      if(a.marketGrade==='SKIP') return;
+      const tot=a.tot||1;
+      const fr=a.fr;
+      // low01: % of digits 0-1 (OVER1 wins when NOT 0 or 1 → wins on 2-9)
+      const low01=((fr[0]||0)+(fr[1]||0))/tot*100;
+      // high89: % of digits 8-9 (UNDER8 wins when NOT 8 or 9 → wins on 0-7)
+      const high89=((fr[8]||0)+(fr[9]||0))/tot*100;
+
+      // OVER1 is good when low digits (0/1) are NOT dominant — i.e. high digits dominate
+      // Actually: OVER1 wins on digits 2-9 — so we want high frequency of 2-9
+      const over1Edge=100-low01; // % of ticks that are digits 2-9
+      // UNDER8 wins on digits 0-7 — we want high frequency of 0-7
+      const under8Edge=100-high89; // % of ticks that are digits 0-7
+
+      let dir=null,pct=0;
+      if(over1Edge>=THRESHOLD&&over1Edge>=under8Edge){dir='OVER';pct=over1Edge;}
+      else if(under8Edge>=THRESHOLD){dir='UNDER';pct=under8Edge;}
+      if(!dir) return;
+
+      const rankScore=pct+(a.score/100);
+      if(rankScore>bestPct){
+        bestPct=rankScore;
+        best={sym:i.s,a,direction:dir,
+          barrier:dir==='OVER'?1:8,
+          contractCode:dir==='OVER'?'DIGITOVER':'DIGITUNDER',
+          typeLabel:dir==='OVER'?'OVER 1':'UNDER 8',
+          pct:Math.round(pct*10)/10,
+          grade:a.marketGrade,score:a.score};
+      }
+    }catch(e){}
+  });
+  return best;
+}
+
+// ── DM stake calculator ──
+function calcDMStake(step){
+  const base=parseFloat(document.getElementById('dmStake')?document.getElementById('dmStake').value:0.35)||0.35;
+  if(step===0) return base;
+  let s=base;
+  const mult=parseFloat(document.getElementById('dmMult')?document.getElementById('dmMult').value:4.2)||4.2;
+  for(let i=0;i<step;i++) s=Math.round(s*mult*100)/100;
+  return s;
+}
+
+// ── DM ladder refresh ──
+function refreshDMLadder(){
+  DM.mult=parseFloat(document.getElementById('dmMult')?document.getElementById('dmMult').value:4.2)||4.2;
+  let totalExp=0;
+  for(let i=0;i<5;i++){
+    const stake=calcDMStake(i); totalExp+=stake;
+    const se=document.getElementById('dlads'+i);if(se)se.textContent='$'+stake.toFixed(2);
+    const lt=document.getElementById('dladt'+i);
+    if(lt&&i>0){
+      lt.textContent=DM.direction==='OVER'?'OVER 1':DM.direction==='UNDER'?'UNDER 8':'OV1/UN8';
+    }
+  }
+  const exp=document.getElementById('dmExposure');if(exp)exp.textContent='Max: $'+totalExp.toFixed(2);
+}
+
+// ── DM ladder UI update ──
+function updateDMLadderUI(){
+  for(let i=0;i<5;i++){
+    const el=document.getElementById('dlad'+i);if(!el)continue;
+    el.classList.remove('active','won','lost');
+    if(i<DM.step) el.classList.add('lost');
+    else if(i===DM.step&&DM.running) el.classList.add('active');
+  }
+  const sd=document.getElementById('dmStepDisp');if(sd)sd.textContent='S'+(DM.step+1);
+  const nd=document.getElementById('dmNextStake');if(nd)nd.textContent='$'+calcDMStake(DM.step).toFixed(2);
+}
+
+// ── DM equity curve ──
+function drawDMEquity(){
+  const canvas=document.getElementById('eqCanvasDM');if(!canvas)return;
+  const ctx=canvas.getContext('2d');
+  const W=canvas.offsetWidth||500;canvas.width=W;canvas.height=70;
+  ctx.clearRect(0,0,W,70);
+  const pts=DM.equityPoints||[];
+  if(pts.length<2){
+    ctx.strokeStyle='rgba(167,139,250,.15)';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(0,35);ctx.lineTo(W,35);ctx.stroke();return;
+  }
+  const mn=Math.min(...pts),mx=Math.max(...pts),range=mx-mn||1;
+  const toY=v=>5+(60*(1-(v-mn)/range));
+  const last=pts[pts.length-1];
+  const grad=ctx.createLinearGradient(0,0,0,70);
+  if(last>=0){grad.addColorStop(0,'rgba(167,139,250,.25)');grad.addColorStop(1,'rgba(167,139,250,.02)');}
+  else{grad.addColorStop(0,'rgba(239,68,68,.02)');grad.addColorStop(1,'rgba(239,68,68,.2)');}
+  ctx.beginPath();
+  pts.forEach((v,i)=>{const x=i/(pts.length-1)*W,y=toY(v);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
+  ctx.lineTo(W,70);ctx.lineTo(0,70);ctx.closePath();ctx.fillStyle=grad;ctx.fill();
+  ctx.strokeStyle=last>=0?'var(--purple)':'var(--red)';ctx.lineWidth=2;
+  ctx.beginPath();
+  pts.forEach((v,i)=>{const x=i/(pts.length-1)*W,y=toY(v);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
+  ctx.stroke();
+  const es=document.getElementById('eqStatsDM');
+  if(es){
+    const peak=Math.max(...pts),trough=Math.min(...pts);
+    es.textContent='Now '+(last>=0?'+':'')+last.toFixed(2)+'  Peak '+(peak>=0?'+':'')+peak.toFixed(2)+'  Low '+(trough>=0?'+':'')+trough.toFixed(2);
+    es.style.color=last>=0?'var(--purple)':'var(--red)';
+  }
+}
+
+// ── DM log helper ──
+function aiLogDM(msg,cls){
+  aiLogTo('aiLogDM',msg,cls);
+  aiLogTo('aiLog',msg,cls);
+}
+
+// ── DM tick handler ──
+let _lastDMTradeTime=0;
+function dmTick(){
+  if(!DM.running||AI.inTrade||AI.pendingResult)return;
+  if(Date.now()-_lastDMTradeTime<2000)return; // 2s min between trades
+
+  const tp=parseFloat(document.getElementById('dmTP')?document.getElementById('dmTP').value:20)||20;
+  const sl=parseFloat(document.getElementById('dmSL')?document.getElementById('dmSL').value:40)||40;
+
+  if(DM.sessPnl>=tp){aiLogDM('🎯 TP +$'+DM.sessPnl.toFixed(2)+' — DIFFERS stopped.','success');dmStop();return;}
+  if(DM.sessPnl<=-Math.abs(sl)){aiLogDM('🛑 SL -$'+Math.abs(DM.sessPnl).toFixed(2)+' — DIFFERS stopped.','danger');dmStop();return;}
+
+  // Circuit breaker pause — 3 minutes after 5 consecutive losses
+  if(DM.circuitPausedUntil>0){
+    if(Date.now()<DM.circuitPausedUntil){
+      const rem=Math.ceil((DM.circuitPausedUntil-Date.now())/1000);
+      if(rem%30===0) aiLogDM('⏸ Circuit pause — resuming in '+rem+'s','warn');
+      setAIState('waiting');return;
+    }
+    DM.circuitPausedUntil=0;
+    aiLogDM('▶ Circuit pause over — resuming DIFFERS','info');
+  }
+
+  if(DM.consecLoss>=5){
+    DM.circuitPausedUntil=Date.now()+180000;
+    DM.consecLoss=0;DM.step=0;DM.direction=null;DM.prevRecovery=null;
+    pushError('circuit','DIFFERS circuit breaker — 5 losses. Auto-resuming in 3 min.','Pausing to let market settle.');
+    setAIState('waiting');
+    aiLogDM('⏸ CIRCUIT BREAKER — pausing 3 minutes','warn');
+    return;
+  }
+
+  setAIState('scanning');
+  let tradeSym,contractCode,barrier,typeLabel,stake;
+
+  if(DM.step===0){
+    // ── S1: DIGITDIFF — standard indices, tick speed gated ──
+    const market=findDMMarket();
+    if(!market){
+      const warn=document.getElementById('dmTickWarn');
+      setAIState('waiting');return;
+    }
+    const warn=document.getElementById('dmTickWarn');if(warn)warn.style.display='none';
+    tradeSym=market.sym;
+    contractCode='DIGITDIFF';
+    barrier=market.a.hotD;
+    typeLabel='DIFFERS d.'+barrier;
+    stake=calcDMStake(0);
+    const ix=IDX.find(i=>i.s===tradeSym);
+    const hotPct=Math.round((market.a.fr[barrier]||0)/market.a.tot*100);
+    const interval=Math.round(market.interval);
+    DM._buyTime=Date.now();
+    aiLogDM('🎯 S1 | '+ix.n+' | DIFFERS d.'+barrier+' ('+hotPct+'%)'
+      +' | Score:'+market.a.score+' Grade:'+market.a.marketGrade
+      +' | Tick:'+interval+'ms | $'+stake.toFixed(2),'info');
+    refreshDMLadder();
+
+  } else {
+    // ── S2-S5: OVER1 or UNDER8 — 4.2× — all indices eligible ──
+    const recovery=findDMRecoveryMarket();
+    if(!recovery){
+      DM.prevRecovery=null;
+      aiLogDM('⏳ S'+(DM.step+1)+' — waiting for consolidating OVER1/UNDER8 ≥72%…','warn');
+      setAIState('waiting');return;
+    }
+    // Confirm same market+direction on next tick for S2/S3, fire immediately S4/S5
+    const needsConfirm=DM.step<=2;
+    const prev=DM.prevRecovery;
+    const confirmed=!needsConfirm||(prev&&prev.sym===recovery.sym&&prev.direction===recovery.direction);
+    DM.prevRecovery={sym:recovery.sym,direction:recovery.direction};
+    if(!confirmed){
+      const ix=IDX.find(i=>i.s===recovery.sym);
+      aiLogDM('🔍 S'+(DM.step+1)+' | '+(ix?ix.n:recovery.sym)
+        +' | '+recovery.typeLabel+' '+recovery.pct.toFixed(0)+'%'
+        +' | Grade:'+recovery.grade+' — confirming…','warn');
+      setAIState('waiting');return;
+    }
+    tradeSym=recovery.sym;
+    DM.prevRecovery=null;
+    contractCode=recovery.contractCode;
+    barrier=recovery.barrier;
+    typeLabel=recovery.typeLabel;
+    stake=calcDMStake(DM.step);
+    DM.direction=recovery.direction;
+    for(let i=1;i<5;i++){const lt=document.getElementById('dladt'+i);if(lt)lt.textContent=recovery.typeLabel;}
+    const ix=IDX.find(i=>i.s===tradeSym);
+    DM._buyTime=Date.now();
+    aiLogDM('🔄 S'+(DM.step+1)+' | '+(ix?ix.n:tradeSym)
+      +' | '+typeLabel+' '+recovery.pct.toFixed(0)+'%'
+      +' | Grade:'+recovery.grade
+      +(DM.step>=3?' ⚡urgent':'')
+      +' | $'+stake.toFixed(2)+' ✓','warn');
+  }
+
+  updateDMLadderUI();
+  _lastDMTradeTime=Date.now();
+  placeTrade(tradeSym,contractCode,stake,barrier,typeLabel,'differs');
+}
+
+// ── DM contract result handler ──
+function onDMContract(poc){
+  const won=poc.is_sold&&poc.profit>0;
+  const profit=parseFloat(poc.profit||0);
+  const stake=parseFloat(poc.buy_price||0);
+  // Track latency
+  if(DM._buyTime>0){
+    DM.lastLatency=Date.now()-DM._buyTime;
+    const latEl=document.getElementById('dmLatency');
+    if(latEl){
+      latEl.textContent=DM.lastLatency+'ms';
+      latEl.style.color=DM.lastLatency<250?'var(--green)':DM.lastLatency<400?'var(--yellow)':'var(--red)';
+    }
+    DM._buyTime=0;
+  }
+
+  DM.sessPnl=Math.round((DM.sessPnl+profit)*100)/100;
+  DM.equityPoints.push(DM.sessPnl);
+  if(DM.equityPoints.length>300)DM.equityPoints.shift();
+  AI.totalPnl=Math.round((AI.totalPnl+profit)*100)/100;
+  AI.sessPnl=Math.round((AI.sessPnl+profit)*100)/100;
+  AI.equityPoints.push(AI.sessPnl);
+
+  const stepEl=document.getElementById('dlad'+DM.step);
+  if(won){
+    DM.wins++;AI.wins++;DM.consecLoss=0;AI.consecLoss=0;
+    DM.s1StreakLoss=0;
+    if(stepEl){stepEl.classList.remove('active');stepEl.classList.add('won');}
+    aiLogDM('✅ WIN +$'+profit.toFixed(2)+' S'+(DM.step+1)+' | Session: $'+DM.sessPnl.toFixed(2),'success');
+    DM.step=0;DM.direction=null;DM.prevRecovery=null;
+    setTimeout(()=>{
+      for(let i=0;i<5;i++){const e=document.getElementById('dlad'+i);if(e)e.classList.remove('won','lost','active');}
+      updateDMLadderUI();
+    },1000);
+  } else {
+    DM.losses++;AI.losses++;DM.consecLoss++;AI.consecLoss++;
+    if(DM.step===0) DM.s1StreakLoss++;
+    if(stepEl){stepEl.classList.remove('active');stepEl.classList.add('lost');}
+    if(DM.step<4){
+      DM.step++;
+      aiLogDM('❌ LOSS S'+DM.step+' | Next: '+(DM.step===1?'OVER1/UNDER8':'same')+' $'+calcDMStake(DM.step).toFixed(2),'danger');
+    }
+  }
+  // Add to unified statement table
+  const prevSource=AI.activeSource;
+  AI.activeSource='differs';
+  addTradeLog(AI.activeSym,AI.activeType,AI.activeDigit,stake,profit,won,'DM S'+(DM.step+1),poc.contract_id,1,poc.payout);
+  AI.activeSource=prevSource;
+  updateAIStats();drawEquity();drawDMEquity();
+  setTimeout(()=>{
+    const _ct=document.getElementById('curTrade');if(_ct){_ct.classList.remove('active');_ct.style.display='none';}
+    if(DM.running) setAIState('scanning');
+    updateDMLadderUI();
+  },600);
+}
+
+// ── DM start / stop ──
+function dmStart(){
+  if(!userToken||isGuest){aiLogDM('⚠ Token required.','danger');return;}
+  if(!ws||ws.readyState!==1){aiLogDM('⚠ Not connected.','warn');return;}
+  if(AI.running||TR.running){aiLogDM('⚠ Stop other mode first.','warn');return;}
+  DM.baseStake=parseFloat(document.getElementById('dmStake').value)||0.35;
+  DM.mult=parseFloat(document.getElementById('dmMult').value)||4.2;
+  DM.step=0;DM.consecLoss=0;DM.direction=null;DM.sessPnl=0;DM.wins=0;DM.losses=0;
+  DM.equityPoints=[0];DM.prevRecovery=null;DM.s1StreakLoss=0;DM.circuitPausedUntil=0;
+  DM.running=true;
+  refreshDMLadder();updateDMLadderUI();
+  document.getElementById('startBtn').disabled=true;
+  document.getElementById('stopBtn').disabled=false;
+  ['dmStake','dmMult','dmTP','dmSL','dmMinScore','dmIndex']
+    .forEach(id=>{const el=document.getElementById(id);if(el)el.disabled=true;});
+  setAIState('scanning');
+  document.getElementById('dmRunning').textContent='▶ RUNNING';
+  document.getElementById('dmRunning').style.color='var(--purple)';
+  const maxExp=[0,1,2,3,4].reduce((s,i)=>s+calcDMStake(i),0);
+  aiLogDM('🎯 DIFFERS STARTED — Base:$'+DM.baseStake+' Mult:×'+DM.mult
+    +' TP:$'+(document.getElementById('dmTP').value||20)
+    +' SL:$'+(document.getElementById('dmSL').value||40),'success');
+  aiLogDM('🔒 S1: Standard indices only (tick speed ≥1800ms required)','info');
+  aiLogDM('🔄 S2-S5: OVER1/UNDER8 ×'+DM.mult+' — all indices eligible','info');
+  aiLogDM('⚠ Max exposure: $'+maxExp.toFixed(2),'warn');
+}
+
+function dmStop(){
+  DM.running=false;
+  document.getElementById('startBtn').disabled=false;
+  document.getElementById('stopBtn').disabled=true;
+  ['dmStake','dmMult','dmTP','dmSL','dmMinScore','dmIndex']
+    .forEach(id=>{const el=document.getElementById(id);if(el)el.disabled=false;});
+  setAIState('idle');
+  const dr=document.getElementById('dmRunning');if(dr){dr.textContent='⏸ IDLE';dr.style.color='var(--dim)';}
+  aiLogDM('⏹ DIFFERS stopped.','warn');
+}
+
+// ════════════════════════════════════════════════════════════
+// END DIFFERS MODE
+// ════════════════════════════════════════════════════════════
 
 // ══ STATS ══
 function updateAIStats(){
   let w,l,sessPnl;
-  if(TR.running){w=TR.wins;l=TR.losses;sessPnl=TR.sessPnl;}
+  if(DM.running){w=DM.wins;l=DM.losses;sessPnl=DM.sessPnl;}
+  else if(TR.running){w=TR.wins;l=TR.losses;sessPnl=TR.sessPnl;}
   else{w=AI.wins;l=AI.losses;sessPnl=AI.sessPnl;}
   const tot=w+l;
   document.getElementById('astW').textContent=w;
@@ -2704,7 +3184,8 @@ function updateAIStats(){
   pe.textContent=(AI.totalPnl>=0?'+':'')+AI.totalPnl.toFixed(2);
   pe.style.color=AI.totalPnl>=0?'var(--green)':'var(--red)';
   document.getElementById('astCL').textContent=AI.consecLoss;
-  if(TR.running){document.getElementById('astMS').textContent='[📈] '+(TR.lastDirection||'SCAN')+' S'+(TR.step+1);document.getElementById('astNS').textContent='$'+calcTrendStake(TR.step).toFixed(2);}
+  if(DM.running){document.getElementById('astMS').textContent='[🎯] DIFFERS S'+(DM.step+1);document.getElementById('astNS').textContent='$'+calcDMStake(DM.step).toFixed(2);}
+  else if(TR.running){document.getElementById('astMS').textContent='[📈] '+(TR.lastDirection||'SCAN')+' S'+(TR.step+1);document.getElementById('astNS').textContent='$'+calcTrendStake(TR.step).toFixed(2);}
   else{document.getElementById('astMS').textContent=(AI.martStep===0?'DIFFERS':'OVER2')+' S'+(AI.martStep+1);document.getElementById('astNS').textContent='$'+calcStake(AI.martStep).toFixed(2);}
   const sp=document.getElementById('sessPnl');
   sp.textContent=(sessPnl>=0?'+':'')+sessPnl.toFixed(2);
@@ -3035,7 +3516,7 @@ function updateTrendDisplay(sym){
 setInterval(()=>{document.getElementById('CLK').textContent=new Date().toUTCString().slice(17,25);},1000);
 setTimeout(calcTpLevels,500);
 updConn(false);
-setInterval(()=>{if(AI.equityPoints.length>1)drawEquity();if(TR.equityPoints&&TR.equityPoints.length>1)drawTrendEquity();},4000);
+setInterval(()=>{if(AI.equityPoints.length>1)drawEquity();if(TR.equityPoints&&TR.equityPoints.length>1)drawTrendEquity();if(DM.equityPoints&&DM.equityPoints.length>1)drawDMEquity();},4000);
 updateAIStats();
 </script>
 
