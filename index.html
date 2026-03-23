@@ -57,15 +57,119 @@
 }
 :root.day body,
 :root.day #appShell { background:var(–bg); color:var(–text); }
-:root.day .topbar   { background:var(–surface); border-bottom-color:var(–border); }
-:root.day .ai-header{ background:var(–bg); }
-:root.day .bnav     { background:var(–surface); }
-:root.day #pgLogin  { background:var(–bg) !important; }
-:root.day #pgLogin input { background:var(–surface) !important; color:var(–text) !important; border-color:var(–border) !important; }
-:root.day #pgLogin button#loginBtn { background:var(–red) !important; color:#fff !important; }
-:root.day .err-msg  { color:var(–red) !important; }
-:root.day .err-msg strong { color:var(–text) !important; }
-:root.day #errCentre{ background:var(–err-bg) !important; border-bottom-color:var(–err-border) !important; }
+
+/* ── Layout shells ── */
+:root.day .topbar        { background:var(–surface); border-bottom-color:var(–border); }
+:root.day .ai-header     { background:var(–surface); border-bottom-color:var(–border); }
+:root.day .bnav          { background:var(–surface); border-top-color:var(–border); }
+:root.day .page          { background:var(–bg); }
+:root.day .mpage         { background:var(–bg); }
+:root.day .pscroll       { background:var(–bg); }
+
+/* ── Cards and surfaces ── */
+:root.day .lcard         { background:var(–card); box-shadow:0 4px 24px rgba(0,0,0,.08); }
+:root.day .dcard         { background:var(–surface); border-color:var(–border); }
+:root.day .dcard.best-market { border-color:var(–green); }
+:root.day .cfg-block     { background:var(–card2); border-color:var(–border); }
+:root.day .cstat         { background:var(–card2); border-color:var(–border); }
+:root.day .mstat         { background:var(–card2); border-color:var(–border); }
+:root.day .signal-card   { background:var(–card2); border-color:var(–border); }
+
+/* ── Inputs and selects ── */
+:root.day .cfg-input     { background:var(–surface); color:var(–text); border-color:var(–border); }
+:root.day .cfg-input:focus { border-color:var(–accent); }
+:root.day .cfg-input:disabled { background:var(–card2); color:var(–dim); }
+:root.day .cfg-select    { background:var(–surface); color:var(–text); border-color:var(–border); }
+:root.day .cfg-select:disabled { background:var(–card2); color:var(–dim); }
+:root.day .tin           { background:var(–surface); color:var(–text); border-color:var(–border); }
+
+/* ── Buttons — must be visible on light bg ── */
+:root.day .ai-btn.start  { background:var(–blue); color:#fff; }
+:root.day .ai-btn.stop   { background:var(–red); color:#fff; }
+:root.day .ai-btn.reset  { background:var(–card2); border-color:var(–border2); color:var(–sub); }
+:root.day .ai-btn.reset:hover { border-color:var(–yellow); color:var(–yellow); }
+:root.day .ai-btn:disabled { opacity:.35; }
+:root.day .lbtn          { color:#fff; }
+:root.day .theme-btn     { background:var(–card2); border-color:var(–border); color:var(–sub); }
+
+/* ── Mode chips ── */
+:root.day .mchip         { background:var(–card2); border-color:var(–border); color:var(–sub); }
+:root.day .mchip:hover   { background:var(–surface); border-color:var(–border2); color:var(–text); }
+:root.day .mchip.active  { background:var(–accent); color:#fff; border-color:var(–accent); }
+
+/* ── Ladder steps ── */
+:root.day .lad-step      { background:var(–surface); border-color:var(–border); }
+:root.day .lad-step.differ{ border-color:rgba(22,163,74,.35); }
+:root.day .lad-step.over  { border-color:rgba(37,99,235,.3); }
+:root.day .lad-step.active{ background:rgba(234,179,8,.1); border-color:var(–yellow)!important; }
+:root.day .lad-step.won  { background:rgba(22,163,74,.08); border-color:rgba(22,163,74,.4); }
+:root.day .lad-num       { color:var(–dim); }
+:root.day .lad-arrow     { color:var(–dim); }
+
+/* ── Bot log ── */
+:root.day .ai-log        { background:var(–surface); border-color:var(–border); }
+:root.day .ai-log-line   { color:var(–sub); border-bottom-color:rgba(0,0,0,.05); }
+:root.day .ai-log-line.info    { color:var(–blue); }
+:root.day .ai-log-line.success { color:var(–green); }
+:root.day .ai-log-line.warn    { color:var(–yellow); }
+:root.day .ai-log-line.danger  { color:var(–red); }
+:root.day .ai-log-line .ts     { color:var(–dim); }
+
+/* ── Trade statement table ── */
+:root.day #tradeLog      { background:var(–surface); border-color:var(–border); }
+:root.day .dtable thead tr { background:var(–card2); }
+:root.day .dtable thead th { color:var(–sub); border-bottom-color:var(–border2); }
+:root.day .dtable tbody tr { border-bottom-color:var(–border); }
+:root.day .dtable tbody tr:hover { background:rgba(0,0,0,.02); }
+:root.day .dtable td     { color:var(–text); }
+:root.day .dtable td.dim { color:var(–sub); }
+:root.day .drow-win      { border-left-color:#16a34a!important; background:rgba(22,163,74,.03)!important; }
+:root.day .drow-loss     { border-left-color:#dc2626!important; background:rgba(220,38,38,.03)!important; }
+
+/* ── Analysis page ── */
+:root.day .tbl           { background:var(–surface); }
+:root.day .tbl tr        { border-bottom-color:var(–border); }
+:root.day .tbl th        { background:var(–card2); color:var(–sub); border-bottom-color:var(–border2); }
+:root.day .tbl td        { color:var(–text); }
+:root.day .pill          { background:var(–card2); border-color:var(–border); color:var(–text); }
+:root.day .rec-badge     { border-color:var(–border); }
+:root.day .ms-badge.cy   { background:rgba(22,163,74,.1); color:var(–green); }
+:root.day .ms-badge.cn   { background:rgba(220,38,38,.1); color:var(–red); }
+:root.day .ms-badge.cw   { background:rgba(234,179,8,.1); color:var(–yellow); }
+
+/* ── Digit frequency cards ── */
+:root.day .dbar          { background:rgba(0,0,0,.06); }
+:root.day .dtitle        { color:var(–text); }
+:root.day .ddig          { color:var(–dim); }
+:root.day .dpct          { color:var(–sub); }
+
+/* ── Current trade overlay ── */
+:root.day #curTrade      { background:var(–surface); border-color:var(–border); }
+:root.day #ctIndex       { color:var(–text); }
+
+/* ── Error centre ── */
+:root.day #errCentre     { background:var(–err-bg)!important; border-bottom-color:var(–err-border)!important; }
+:root.day .err-msg       { color:var(–red)!important; }
+
+/* ── Login page ── */
+:root.day #pgLogin       { background:var(–bg)!important; }
+:root.day #pgLogin input { background:var(–surface)!important; color:var(–text)!important; border-color:var(–border)!important; }
+:root.day #pgLogin button#loginBtn { background:var(–red)!important; color:#fff!important; }
+
+/* ── Ping pill ── */
+:root.day .live-pill     { background:var(–card2); border-color:var(–border); }
+:root.day .tick-pill     { background:var(–card2); border-color:var(–border); color:var(–sub); }
+
+/* ── Score and rec badges in light mode ── */
+:root.day .rec-badge.sb  { background:rgba(22,163,74,.12); color:var(–green); border-color:rgba(22,163,74,.3); }
+:root.day .rec-badge.by  { background:rgba(2,132,199,.1); color:var(–accent); border-color:rgba(2,132,199,.25); }
+:root.day .rec-badge.nt  { background:rgba(0,0,0,.05); color:var(–sub); border-color:var(–border); }
+:root.day .rec-badge.av  { background:rgba(220,38,38,.1); color:var(–red); border-color:rgba(220,38,38,.25); }
+:root.day .rec-badge.wt  { background:rgba(234,179,8,.1); color:var(–yellow); border-color:rgba(234,179,8,.3); }
+:root.day .score-badge   { font-weight:700; }
+
+/* ── Scrollbars in light mode ── */
+:root.day ::-webkit-scrollbar-thumb { background:var(–border2); }
 
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 html{height:100%;}
@@ -877,6 +981,7 @@ letter-spacing:.5px;white-space:nowrap;margin-top:1px;
             <select class="cfg-select" id="cfgRecovery" onchange="refreshLadder()">
               <option value="O2U7" selected>OVER 2 / UNDER 7 (default · 70% base)</option>
               <option value="O1U8">OVER 1 / UNDER 8 (80% base · lower edge)</option>
+              <option value="O3U6">OVER 3 / UNDER 6 (60% base · tighter)</option>
               <option value="DIFF">DIFFERS (90% base · same as S1)</option>
             </select>
           </div>
@@ -1187,7 +1292,7 @@ function calcTpLevels(){
 // ── Pioneer ladder ──
 function refreshLadder(){
   const recMode=(document.getElementById('cfgRecovery')?document.getElementById('cfgRecovery').value:'O2U7')||'O2U7';
-  const recLabel=recMode==='O1U8'?'OV1/UN8':recMode==='DIFF'?'DIFFERS':'OV2/UN7';
+  const recLabel=recMode==='O1U8'?'OV1/UN8':recMode==='O3U6'?'OV3/UN6':recMode==='DIFF'?'DIFFERS':'OV2/UN7';
   const labels=['DIFFERS',recLabel,recLabel,recLabel,recLabel];
   const subs=['primary','recovery ×'+AI.mult,'recovery ×'+AI.mult+'²','recovery ×'+AI.mult+'³','recovery ×'+AI.mult+'⁴'];
   let totalExp=0;
@@ -1257,6 +1362,7 @@ function findBestRecoveryMarket(){
         }
       } else {
         const isO1U8=(recMode==='O1U8');
+        const isO3U6=(recMode==='O3U6');
         // Use blended probabilities (freq + Markov) for direction
         const blendOver=isO1U8?a.o2:a.blendO2;
         const blendUnder=isO1U8?a.u7:a.blendU7;
@@ -1267,13 +1373,16 @@ function findBestRecoveryMarket(){
         if(a.markov&&a.markov.contracts.bestDir!==bestDir) return;
         const recent=s.digits.slice(-RECENT_WINDOW);
         const rTot=recent.length||1;
-        const rO=recent.filter(d=>d>=(isO1U8?2:3)).length/rTot*100;
-        const rU=recent.filter(d=>d<=(isO1U8?7:6)).length/rTot*100;
+        // O1U8: ≥2 / ≤7  |  O3U6: ≥4 / ≤5  |  default O2U7: ≥3 / ≤6
+        const overMin=isO1U8?2:isO3U6?4:3;
+        const underMax=isO1U8?7:isO3U6?5:6;
+        const rO=recent.filter(d=>d>=overMin).length/rTot*100;
+        const rU=recent.filter(d=>d<=underMax).length/rTot*100;
         const recentPct=bestDir==='OVER'?rO:rU;
         if(recentPct<THRESHOLD_RECENT) return;
-        const barrier=bestDir==='OVER'?(isO1U8?1:2):(isO1U8?8:7);
+        const barrier=bestDir==='OVER'?(isO1U8?1:isO3U6?3:2):(isO1U8?8:isO3U6?6:7);
         const code=bestDir==='OVER'?'DIGITOVER':'DIGITUNDER';
-        const label=bestDir==='OVER'?(isO1U8?'OVER1':'OVER2'):(isO1U8?'UNDER8':'UNDER7');
+        const label=bestDir==='OVER'?(isO1U8?'OVER1':isO3U6?'OVER3':'OVER2'):(isO1U8?'UNDER8':isO3U6?'UNDER6':'UNDER7');
         const rankScore=fullPct+(a.score/100);
         if(rankScore>bestPct){
           bestPct=rankScore;
@@ -2505,7 +2614,9 @@ function onProposal(msg){}
 function toggleTheme(){
   const isDay=document.documentElement.classList.toggle('day');
   const btn=document.querySelector('.theme-btn');
-  if(btn) btn.textContent=isDay?'??':'☀';
+  if(btn) btn.textContent=isDay?'🌙':'☀';
+  // Redraw equity curves for new theme colours
+  drawEquity();drawPowerEquity();
 }
 
 function drawEquity(){
