@@ -909,9 +909,6 @@ letter-spacing:.5px;white-space:nowrap;margin-top:1px;
       <div id="aiLog" class="ai-log"><div class="ai-log-line info"><span class="ts">--:--:--</span>System ready. Waiting for connection…</div></div>
     </div>
 
-    <!-- 📈 TREND -->
-  </div><!-- end mode subpages wrapper -->
-
     <!-- ⚡ POWER MODE -->
     <div id="mpPower" class="mpage" style="display:none;flex-direction:column;">
       <!-- Equity -->
@@ -981,6 +978,8 @@ letter-spacing:.5px;white-space:nowrap;margin-top:1px;
       <div id="aiLogPW" class="ai-log"></div>
     </div>
 
+  </div><!-- end mode subpages wrapper -->
+
   <!-- ── UNIFIED STATEMENT TABLE — all modes ── -->
   <div style="flex-shrink:0;padding:10px 14px 0;display:flex;justify-content:space-between;align-items:center;">
     <div style="font-size:9px;color:var(--sub);font-family:var(--font-mono);letter-spacing:2px;">
@@ -994,15 +993,27 @@ letter-spacing:.5px;white-space:nowrap;margin-top:1px;
     </div>
   </div>
   <div id="tradeLog" style="flex:1;min-height:180px;margin:8px 14px 10px;border-radius:10px;border:1px solid var(--border);overflow:auto;background:var(--card);-webkit-overflow-scrolling:touch;">
-    <table class="dtable">
+    <table class="dtable" style="table-layout:fixed;min-width:600px;">
+      <colgroup>
+        <col style="width:68px;"/>
+        <col style="width:38px;"/>
+        <col style="width:70px;"/>
+        <col style="width:72px;"/>
+        <col style="width:90px;"/>
+        <col style="width:60px;"/>
+        <col style="width:60px;"/>
+        <col style="width:64px;"/>
+        <col style="width:72px;"/>
+        <col style="width:80px;"/>
+      </colgroup>
       <thead><tr>
         <th class="c" style="position:sticky;top:0;z-index:2;background:var(--card2);">STATUS</th>
-        <th style="position:sticky;top:0;z-index:2;background:var(--card2);">MODE</th>
-        <th style="position:sticky;top:0;z-index:2;background:var(--card2);">DATE/TIME</th>
+        <th class="c" style="position:sticky;top:0;z-index:2;background:var(--card2);">MODE</th>
+        <th style="position:sticky;top:0;z-index:2;background:var(--card2);">TIME</th>
         <th style="position:sticky;top:0;z-index:2;background:var(--card2);">MARKET</th>
         <th style="position:sticky;top:0;z-index:2;background:var(--card2);">CONTRACT</th>
-        <th class="r" style="position:sticky;top:0;z-index:2;background:var(--card2);">BUY</th>
-        <th class="r" style="position:sticky;top:0;z-index:2;background:var(--card2);">SELL</th>
+        <th class="r" style="position:sticky;top:0;z-index:2;background:var(--card2);">STAKE</th>
+        <th class="r" style="position:sticky;top:0;z-index:2;background:var(--card2);">PAYOUT</th>
         <th class="r" style="position:sticky;top:0;z-index:2;background:var(--card2);">P&amp;L</th>
         <th class="r" style="position:sticky;top:0;z-index:2;background:var(--card2);">BALANCE</th>
         <th style="position:sticky;top:0;z-index:2;background:var(--card2);">REF #</th>
@@ -1517,7 +1528,8 @@ function onPioneerContract(poc){
     if(AI.martStep<4){AI.martStep++;aiLog('❌ LOSS S'+(AI.martStep+1)+' $'+calcStake(AI.martStep).toFixed(2),'danger');}
     else{AI.recoveryRestUntil=Date.now()+60000;AI.recoveryRestSym=AI.activeSym;aiLog('❌ LOSS S5 — market resting 60s.','danger');}
   }
-  addTradeLog(AI.activeSym,AI.activeType,AI.activeDigit,stake,profit,won,'S'+(AI.martStep+1)+(AI.martStep===0?' DIFF':' REC'));
+  addTradeLog(AI.activeSym,AI.activeType,AI.activeDigit,stake,profit,won,
+    'S'+(AI.martStep+1)+(AI.martStep===0?' DIFF':' REC'),poc.contract_id);
   updateAIStats();drawEquity();
   setTimeout(()=>{
     const _ct=document.getElementById('curTrade');if(_ct){_ct.classList.remove('active');_ct.style.display='none';}
@@ -1947,7 +1959,8 @@ function onPowerContract(poc){
   }
   // addTradeLog accepts 7 args: sym,type,digit,stake,profit,won,label
   const prevSrc=AI.activeSource;AI.activeSource='power';
-  addTradeLog(AI.activeSym,AI.activeType,AI.activeDigit,stake,profit,won,'PW S'+(PW.step+1));
+  addTradeLog(AI.activeSym,AI.activeType,AI.activeDigit,stake,profit,won,
+    'PW S'+(PW.step+1),poc.contract_id);
   AI.activeSource=prevSrc;
   updateAIStats();drawEquity();drawPowerEquity();
   setTimeout(()=>{
@@ -2025,7 +2038,8 @@ function doLogin(){
 function doGuest(){isGuest=true;userToken=null;launchDash(null);}
 function doLogout(){
   stopAI();powerStop();
-  if(ws){ws.onclose=null;ws.close();}
+  if(ws){ws.onclose=null;ws.onerror=null;ws.close();}
+  _stopKeepalive();
   clearTimeout(rtimer);
   userToken=null;isGuest=false;
   IDX.forEach(i=>{ST[i.s]={prices:[],digits:[],freq:new Array(10).fill(0),last:null,conn:false,ticks:0,tickTimes:[]};});
@@ -2109,10 +2123,13 @@ function startConn(){
   catch(e){showErr(e.message);sched();return;}
   ws.onopen=()=>{
     updConn(true);hideErr();
+    _connectedAt=Date.now();
     if(userToken&&!isGuest) ws.send(JSON.stringify({authorize:userToken}));
     else subAll();
+    _startKeepalive();
   };
   ws.onmessage=e=>{
+    _lastMsgAt=Date.now();
     try{
       const m=JSON.parse(e.data);
       if(m.error&&m.error.code!=='MarketIsClosed'&&m.error.code!=='AuthorizationRequired')
@@ -2121,54 +2138,123 @@ function startConn(){
       if(m.msg_type==='tick'){try{onTick(m.tick);}catch(e){console.warn('tick err',e);}}
       if(m.msg_type==='balance')updBal(m.balance);
       if(m.msg_type==='buy')onBuy(m);
-      if(m.msg_type==='proposal'){} // trend removed
-      if(m.msg_type==='proposal_open_contract'){
-        const _p=m.proposal_open_contract;
-        onContract(_p);
-        return;
+      if(m.msg_type==='proposal_open_contract'){onContract(m.proposal_open_contract);return;}
+      // Ping/pong — measure round-trip for network strength display
+      if(m.msg_type==='ping'&&_pingTime>0){
+        const rtt=Date.now()-_pingTime;
+        _pingTime=0;
+        _updateNetStrength(rtt);
       }
     }catch(x){}
   };
-  ws.onclose=()=>{updConn(false);sched();};
-  ws.onerror=()=>{updConn(false);};
+  ws.onclose=()=>{updConn(false);_stopKeepalive();sched();};
+  ws.onerror=()=>{updConn(false);_stopKeepalive();
+    // onerror is always followed by onclose on real disconnects,
+    // but schedule reconnect here too as safety net
+    try{ws.close();}catch(ex){}
+  };
 }
-function subAll(){IDX.forEach(i=>ws.send(JSON.stringify({ticks:i.s,subscribe:1})));}
-function sched(){clearTimeout(rtimer);rtimer=setTimeout(startConn,4000);}
-function updBal(b){if(!b)return;document.getElementById('balVal').textContent=parseFloat(b.balance).toFixed(2);}
+function subAll(){IDX.forEach(i=>ws&&ws.readyState===1&&ws.send(JSON.stringify({ticks:i.s,subscribe:1})));}
+function sched(){
+  clearTimeout(rtimer);
+  // Exponential backoff: 2s → 4s → 8s → max 16s
+  const delay=Math.min(16000,2000*Math.pow(2,Math.min(_reconnectCount,3)));
+  _reconnectCount++;
+  rtimer=setTimeout(()=>{_reconnectCount=0;startConn();},delay);
+}
+function updBal(b){
+  if(!b)return;
+  const bal=parseFloat(b.balance);
+  document.getElementById('balVal').textContent=bal.toFixed(2);
+  _runningBalance=bal;
+}
+
+// ── Keepalive & network strength ──
+let _keepaliveTimer=null,_pingTime=0,_lastMsgAt=0,_connectedAt=0,_reconnectCount=0;
+let _watchdogTimer=null;
+
+function _startKeepalive(){
+  _stopKeepalive();
+  // Send ping every 20s — Deriv closes idle connections at ~30s
+  _keepaliveTimer=setInterval(()=>{
+    if(ws&&ws.readyState===1){
+      _pingTime=Date.now();
+      ws.send(JSON.stringify({ping:1}));
+    }
+  },20000);
+  // Watchdog: if no message in 45s, force reconnect
+  _watchdogTimer=setInterval(()=>{
+    if(_lastMsgAt>0&&Date.now()-_lastMsgAt>45000){
+      console.warn('WS watchdog: no message in 45s — reconnecting');
+      updConn(false);
+      _stopKeepalive();
+      try{ws.onclose=null;ws.close();}catch(ex){}
+      sched();
+    }
+  },10000);
+}
+function _stopKeepalive(){
+  clearInterval(_keepaliveTimer);_keepaliveTimer=null;
+  clearInterval(_watchdogTimer);_watchdogTimer=null;
+  _pingTime=0;
+}
+function _updateNetStrength(rtt){
+  const dot=document.getElementById('pingDot');
+  const val=document.getElementById('pingVal');
+  if(!dot||!val)return;
+  val.textContent=rtt+'ms';
+  if(rtt<150){
+    dot.style.background='var(--green)';val.style.color='var(--green)';
+  } else if(rtt<350){
+    dot.style.background='var(--yellow)';val.style.color='var(--yellow)';
+  } else {
+    dot.style.background='var(--red)';val.style.color='var(--red)';
+    if(AI.running||PW.running)
+      aiLog('⚠ High latency '+rtt+'ms — execution risk elevated','warn');
+  }
+}
 
 // ══ TICK ══
 function onTick(tk){
   const s=ST[tk.symbol];if(!s)return;
+  _lastMsgAt=Date.now();
   const p=parseFloat(tk.quote);
   const d=parseInt(String(Math.round(p*100)).slice(-1));
   const now=Date.now();
+
+  // Tick timing for speed display
   s.tickTimes.push(now);
   if(s.tickTimes.length>20)s.tickTimes.shift();
   if(s.tickTimes.length>=2)
     s.tickSpeed=Math.round((s.tickTimes[s.tickTimes.length-1]-s.tickTimes[0])/(s.tickTimes.length-1));
+
+  // Price buffer — per-index size
   s.last=p;s.prices.push(p);
-  if(s.prices.length>200)s.prices.shift();
+  const pBuf=s.priceBuf||200;
+  if(s.prices.length>pBuf)s.prices.shift();
+
+  // Digit buffer — per-index size
+  const dBuf=s.digitBuf||100;
   s.digits.push(d);
-  if(s.digits.length>100){const r=s.digits.shift();s.freq[r]=Math.max(0,s.freq[r]-1);}
+  if(s.digits.length>dBuf){const r=s.digits.shift();s.freq[r]=Math.max(0,s.freq[r]-1);}
   s.freq[d]++;s.ticks++;s.conn=true;
   total++;
+
+  // Update tick counter on every tick — never stops
+  const _stk=document.getElementById('STK');
+  if(_stk){
+    _stk.textContent=total.toLocaleString();
+    _stk.style.color=total<500?'var(--red)':total<1000?'var(--yellow)':'var(--green)';
+  }
+
   const onAnalysisPage=document.getElementById('pgAnalysis').classList.contains('active');
   if(onAnalysisPage){updateRow(tk.symbol);updateDC(tk.symbol);}
 
   updateSum();
-  if(total%10===0){
-    const _stk=document.getElementById('STK');
-    if(_stk){
-      _stk.textContent=total.toLocaleString();
-      _stk.style.color=total<500?'var(--red)':total<1000?'var(--yellow)':'var(--green)';
-    }
-    document.getElementById('TT').textContent=total;
-  }
+
   if(AI.running&&AI.mode==='pioneer') aiTick(tk.symbol);
   if(PW.running&&AI.mode==='power'&&!AI.inTrade&&!AI.pendingResult) powerTick();
   if(AI.mode==='power'&&total%5===0) updatePowerSignalDisplay();
-  
-  if(AI.mode==='trend'&&total%3===0) updateTrendDisplay(tk.symbol);
 }
 
 // ══ ANALYSIS ══
@@ -2222,6 +2308,7 @@ function ana(sym){
   }
   const result={isCon,ms,vl,ep,op,o4,u5,o2,u7,hotD,coldD,fr,tot,score,
     hotRecent,hotRecentPct,
+    marketGrade: score>=65?'A':score>=45?'B':score>=30?'C':'SKIP',
     eo:eoR(),o4r:o4R(),o2r:o2R(),dif:difR(),mat:matR()};
   _anaCache[sym]={tick:s.ticks,result};
   return result;
@@ -2556,24 +2643,73 @@ function onContract(poc){
 }
 
 // ══ TRADE LOG ══
-function addTradeLog(sym,type,digit,stake,profit,won,label){
+let _totalTrades=0,_runningBalance=null,_sessionPnlSum=0;
+
+function addTradeLog(sym,type,digit,stake,profit,won,label,contractId,balanceAfter){
   const ix=IDX.find(i=>i.s===sym);
   const now=new Date().toUTCString().slice(17,25);
-  const entryPrice=ST[sym]&&ST[sym].last?ST[sym].last.toFixed(2):'—';
-  const entry=document.createElement('div');
-  entry.className='log-entry '+(won?'win':profit===0?'pending':'loss');
-  const pnlCls=profit>0?'pnl-pos':profit<0?'pnl-neg':'pnl-zero';
-  entry.innerHTML=
-    '<div>'+now+'</div><div>'+(ix?ix.n:sym)+'</div><div>'+label+'</div>'+
-    '<div style="color:var(--sub);">'+entryPrice+'</div>'+
-    '<div>$'+stake.toFixed(2)+'</div>'+
-    '<div style="color:'+(won?'var(--green)':'var(--red)')+';">'+(won?'WIN':'LOSS')+'</div>'+
-    '<div class="'+pnlCls+'">'+(profit>=0?'+':'')+'$'+profit.toFixed(2)+'</div>';
-  const logMap={pioneer:'tradeLog'};
-  const logId=logMap[AI.activeSource||'pioneer']||'tradeLog';
-  const log=document.getElementById(logId);
-  if(log){log.appendChild(entry);log.scrollTop=log.scrollHeight;}
-  if(logId!=='tradeLog'){const ml=document.getElementById('tradeLog');if(ml){const e2=entry.cloneNode(true);ml.appendChild(e2);ml.scrollTop=ml.scrollHeight;}}
+
+  _totalTrades++;
+  _sessionPnlSum=Math.round((_sessionPnlSum+profit)*100)/100;
+  if(balanceAfter) _runningBalance=balanceAfter;
+
+  // Determine P&L class
+  const pnlCls=profit>0?'dpnl-pos':profit<0?'dpnl-neg':'dpnl-zero';
+
+  // Mode pill
+  const modePill=AI.activeSource==='power'
+    ?'<span class="dtype-pill" style="background:rgba(234,179,8,.12);color:var(--yellow);border:1px solid rgba(234,179,8,.3);">⚡</span>'
+    :'<span class="dtype-pill" style="background:rgba(56,189,248,.1);color:var(--accent);border:1px solid rgba(56,189,248,.2);">🚀</span>';
+
+  // Contract type pill — pick colour class from label
+  const lup=(label||'').toUpperCase();
+  let pillCls='differ';
+  if(lup.includes('OVER')) pillCls='over';
+  else if(lup.includes('UNDER')) pillCls='under';
+  else if(lup.includes('CALL')) pillCls='call';
+  else if(lup.includes('PUT'))  pillCls='put';
+  else pillCls='differ';
+
+  const contractPill='<span class="dtype-pill '+pillCls+'">'+label+'</span>';
+
+  // Payout = stake + profit when won, 0 when lost
+  const payout=won?(stake+profit).toFixed(2):'0.00';
+
+  // Balance column
+  const balText=_runningBalance!=null?'$'+parseFloat(_runningBalance).toFixed(2):'—';
+
+  // Ref #
+  const refText=contractId?'#'+String(contractId).slice(-6):'—';
+
+  const tr=document.createElement('tr');
+  tr.className='drow '+(won?'drow-win':'drow-loss');
+  tr.innerHTML=
+    '<td class="c"><span class="dstatus-badge '+(won?'won':'lost')+'">'+(won?'WIN':'LOSS')+'</span></td>'+
+    '<td class="c">'+modePill+'</td>'+
+    '<td class="dim" style="font-size:9px;">'+now+'</td>'+
+    '<td style="font-weight:600;">'+(ix?ix.n:sym||'—')+'</td>'+
+    '<td>'+contractPill+'</td>'+
+    '<td class="r">$'+stake.toFixed(2)+'</td>'+
+    '<td class="r">$'+payout+'</td>'+
+    '<td class="r"><span class="'+pnlCls+'">'+(profit>=0?'+':'')+profit.toFixed(2)+'</span></td>'+
+    '<td class="r dim">'+balText+'</td>'+
+    '<td class="dim" style="font-size:8px;overflow:hidden;text-overflow:ellipsis;">'+refText+'</td>';
+
+  const tbody=document.getElementById('tradeLogBody');
+  if(tbody){
+    tbody.appendChild(tr);
+    // Scroll the wrapper div, not the table
+    const wrapper=document.getElementById('tradeLog');
+    if(wrapper) wrapper.scrollTop=wrapper.scrollHeight;
+  }
+
+  const tc=document.getElementById('tradeCount');
+  if(tc) tc.textContent=_totalTrades+' trade'+(_totalTrades===1?'':'s');
+  const ps=document.getElementById('tradePnlSum');
+  if(ps){
+    ps.textContent='P&L: '+(_sessionPnlSum>=0?'+':'')+'$'+_sessionPnlSum.toFixed(2);
+    ps.style.color=_sessionPnlSum>0?'var(--green)':_sessionPnlSum<0?'var(--red)':'var(--sub)';
+  }
 }
 
 // ══ AI CONTROLS ══
@@ -2627,8 +2763,10 @@ function resetAI(){
   const eqSPW=document.getElementById('eqStatsPW');if(eqSPW){eqSPW.textContent='Now +0.00  Peak +0.00  Low +0.00';eqSPW.style.color='var(--sub)';}
   document.getElementById('curTrade').classList.remove('active');
   document.getElementById('curTrade').style.display='none';
-  document.getElementById('tradeLog').innerHTML=
-    '<div class="log-entry log-header"><div>TIME</div><div>INDEX</div><div>TYPE</div><div>ENTRY</div><div>STAKE</div><div>RESULT</div><div>P&L</div></div>';
+  const tbody=document.getElementById('tradeLogBody');if(tbody)tbody.innerHTML='';
+  _totalTrades=0;_runningBalance=null;_sessionPnlSum=0;
+  const tc=document.getElementById('tradeCount');if(tc)tc.textContent='0 trades';
+  const ps=document.getElementById('tradePnlSum');if(ps){ps.textContent='P&L: —';ps.style.color='var(--sub)';}
   for(let i=0;i<5;i++){const e=document.getElementById('lad'+i);if(e)e.classList.remove('won','lost','active');}
   for(let i=0;i<5;i++){const e=document.getElementById('plad'+i);if(e)e.classList.remove('won','lost','active');}
   refreshLadder();refreshPowerLadder();
@@ -2636,109 +2774,7 @@ function resetAI(){
 }
 
 // ══ STATS ══
-
-function bdg(r){return '<span class="b '+r.c+'" title="'+r.t+'">'+r.l+'</span>';}
-function initTable(){document.getElementById('TB').innerHTML=IDX.map(i=>'<tr id="R-'+i.s+'"></tr>').join('');}
-
-function updateRow(sym){
-  const row=document.getElementById('R-'+sym);if(!row)return;
-  const s=ST[sym];if(!s||!s.prices.length)return;
-  let a;try{a=ana(sym);}catch(e){return;}
-  const p=s.last;
-  const prev=s.prices.length>1?s.prices[s.prices.length-2]:p;
-  const dir=p>prev?'up':p<prev?'down':'flat';
-  const ix=IDX.find(i=>i.s===sym);
-  const isActive=AI.activeSym===sym&&AI.inTrade;
-  row.style.background=isActive?'rgba(176,106,255,.06)':'';
-  const cells=row.querySelectorAll('td');
-  if(!cells.length||!row.dataset.rendered){
-    row.dataset.rendered='1';
-    let spdBadge='';
-    if(s.tickSpeed){const sc=s.tickSpeed<1200?'fast':s.tickSpeed<3500?'med':'slow';spdBadge='<span class="tick-speed '+sc+'">'+s.tickSpeed+'ms</span>';}
-    const msCls=a.isCon?'cy':a.ms==='EXPANDING'?'cn':'cw';
-    const msIcon=a.isCon?'🟢':a.ms==='EXPANDING'?'🔴':'🟡';
-    const _tc=s.ticks||0;
-    const _tcCol=_tc<500?'var(--red)':_tc<1000?'var(--yellow)':'var(--green)';
-    const _tcBadge='<span style="font-family:monospace;font-size:7px;color:'+_tcCol+';margin-left:4px;">'+_tc+'tk</span>';
-    row.innerHTML=
-      '<td class="L"><div class="iname">'+ix.n+(isActive?' ⚡':'')+'</div><div class="isub">'+ix.sub+' '+spdBadge+_tcBadge+'</div></td>'+
-      '<td><div class="pcell '+dir+'">'+(p?p.toFixed(2):'—')+'</div></td>'+
-      '<td><span class="ms-badge '+msCls+'">'+msIcon+' '+a.ms+'</span></td>'+
-      '<td><span class="score-badge" style="color:'+(a.score>=65?'var(--green)':a.score>=45?'var(--yellow)':'var(--red)')+'">'+a.score+'</span></td>'+
-      '<td><span class="rec-badge '+a.dif.c+'">'+a.dif.l+'</span></td>'+
-      '<td><span class="rec-badge '+a.o2r.c+'">'+a.o2r.l+'</span></td>';
-    return;
-  }
-  const c1=cells[1];if(c1){const pc=c1.querySelector('.pcell');if(pc){pc.className='pcell '+dir;pc.textContent=p?p.toFixed(2):'—';}}
-  const c3=cells[3];if(c3){const sc=c3.querySelector('.score-badge');if(sc){sc.style.color=a.score>=65?'var(--green)':a.score>=45?'var(--yellow)':'var(--red)';sc.textContent=a.score;}}
-  const c2=cells[2];if(c2){
-    const ms=c2.querySelector('.ms-badge');
-    if(ms){
-      const msCls=a.isCon?'cy':a.ms==='EXPANDING'?'cn':'cw';
-      const msIcon=a.isCon?'🟢':a.ms==='EXPANDING'?'🔴':'🟡';
-      const newTxt=msIcon+' '+a.ms;
-      if(ms.textContent!==newTxt){ms.className='ms-badge '+msCls;ms.textContent=newTxt;}
-    }
-  }
-  const c0=cells[0];if(c0){
-    const tb=c0.querySelector('span[style*="tk"]');
-    if(tb){
-      const _t=s.ticks||0;
-      tb.textContent=_t+'tk';
-      tb.style.color=_t<500?'var(--red)':_t<1000?'var(--yellow)':'var(--green)';
-    }
-  }
-}
-
 let _sumTick=0;
-function updateSum(){
-  _sumTick++;if(_sumTick%15!==0)return;
-  const live=IDX.filter(i=>ST[i.s].conn).length;
-  const con=IDX.filter(i=>{try{return ana(i.s).isCon;}catch(e){return false;}}).length;
-  const exp=IDX.filter(i=>{try{return ana(i.s).ms==='EXPANDING';}catch(e){return false;}}).length;
-  const vals=IDX.filter(i=>ST[i.s].digits.length>10).map(i=>{try{return ana(i.s).ep;}catch(e){return 50;}});
-  const avg=vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:0;
-  document.getElementById('SL').textContent=live+'/10';
-  document.getElementById('SC').textContent=con;
-  document.getElementById('SE').textContent=exp;
-  document.getElementById('SEV').textContent=avg?avg.toFixed(1)+'%':'—';
-  document.getElementById('SB').textContent=con>0?'DIFF/OVER2':'WAIT';
-  let sb=0,bu=0,ne=0,wa=0,av=0;
-  IDX.forEach(i=>{
-    const s=ST[i.s];
-    if(!s||!s.conn||s.digits.length<30){av++;return;}
-    try{
-      const a=ana(i.s);
-      if(a.score>=65&&a.isCon)      sb++;
-      else if(a.score>=55&&a.score<65) bu++;
-      else if(a.score>=45&&a.score<55) ne++;
-      else if(a.score>=35&&a.score<45) wa++;
-      else                             av++;
-    }catch(e){av++;}
-  });
-  const _ps=document.getElementById('pSB');if(_ps)_ps.textContent=sb;
-  const _pb=document.getElementById('pBU');if(_pb)_pb.textContent=bu;
-  const _pn=document.getElementById('pNE');if(_pn)_pn.textContent=ne;
-  const _pw=document.getElementById('pWA');if(_pw)_pw.textContent=wa;
-  const _pa=document.getElementById('pAV');if(_pa)_pa.textContent=av;
-}
-
-function updateDC(sym){
-  const s=ST[sym],tot=s.freq.reduce((a,b)=>a+b,0)||1,mxF=Math.max(...s.freq)||1;
-  const a=ana(sym);
-  const st=document.getElementById('DCS-'+sym);
-  if(st){st.textContent=a.ms;st.style.color=a.isCon?'var(--green)':a.ms==='EXPANDING'?'var(--red)':'var(--yellow)';}
-  s.freq.forEach((f,d)=>{
-    const p=f/tot*100,hp=f/mxF*100;
-    const bar=document.getElementById('DCB-'+sym+'-'+d);
-    const lbl=document.getElementById('DCP-'+sym+'-'+d);
-    if(bar){bar.style.height=Math.max(2,hp*0.42)+'px';bar.style.background=p>13?'var(--green)':p<7&&f>0?'var(--red)':'var(--accent)';}
-    if(lbl)lbl.textContent=Math.round(p)+'%';
-  });
-}
-
-function initDC(){document.getElementById('DC').innerHTML=IDX.map(i=>'<div class="dcard"><div class="dtitle"><span>'+i.n+'</span><span style="font-size:8px;color:var(--sub);font-family:monospace" id="DCS-'+i.s+'">LOADING</span></div><div class="dbars">'+Array(10).fill(0).map((_,d)=>'<div class="dbw"><div class="dpct" id="DCP-'+i.s+'-'+d+'">0%</div><div class="dbar" id="DCB-'+i.s+'-'+d+'" style="height:2px;background:var(--accent)"></div><div class="ddig">'+d+'</div></div>').join('')+'</div></div>').join('');}
-
 // ══ INIT ══
 setInterval(()=>{document.getElementById('CLK').textContent=new Date().toUTCString().slice(17,25);},1000);
 setTimeout(calcTpLevels,500);
@@ -2794,6 +2830,53 @@ function initTable(){
     '<th style="padding:8px 7px;font-family:\'JetBrains Mono\',monospace;font-size:8px;font-weight:700;color:var(--sub);letter-spacing:1px;text-transform:uppercase;">OVER2/U7</th>'+
     '</tr></thead>'+
     '<tbody>'+IDX.map(i=>'<tr id="R-'+i.s+'"></tr>').join('')+'</tbody>';
+}
+
+// ── Score trend + digit acceleration metadata ──
+function scoreMeta(sym){
+  const s=ST[sym];
+  if(!s||s.prices.length<40) return{trend:'',trendCls:'flat',stability:50,
+    digitAccel:'→',digitAccelLabel:'STEADY',digitAccelCls:'flat',hotPctRecent:0,hotPctOlder:0};
+
+  // Score trend: compare score now vs 20 ticks ago (via price volatility proxy)
+  const pr=s.prices;
+  const r20=pr.slice(-20),mn20=r20.reduce((a,b)=>a+b,0)/r20.length;
+  const sd20=Math.sqrt(r20.reduce((a,b)=>a+(b-mn20)**2,0)/r20.length);
+  const r40=pr.slice(-40,-20),mn40=r40.reduce((a,b)=>a+b,0)/r40.length;
+  const sd40=Math.sqrt(r40.reduce((a,b)=>a+(b-mn40)**2,0)/r40.length);
+  let trend='',trendCls='flat';
+  if(sd40>0){
+    const delta=(sd20-sd40)/sd40*100;
+    if(delta<-15){trend='▲';trendCls='up';}
+    else if(delta>15){trend='▼';trendCls='dn';}
+    else{trend='→';trendCls='flat';}
+  }
+
+  // Stability: inverse of recent price variance (0–100)
+  const hist=[];
+  for(let i=1;i<Math.min(pr.length,21);i++) hist.push(Math.abs(pr[pr.length-i]-pr[pr.length-i-1]));
+  const mean=hist.reduce((a,b)=>a+b,0)/(hist.length||1);
+  const variance=hist.reduce((a,b)=>a+(b-mean)**2,0)/(hist.length||1);
+  const stability=Math.max(0,Math.round(100-Math.sqrt(variance)*5));
+
+  // Digit acceleration: hot digit % in last 20 vs prev 20
+  let digitAccel='→',digitAccelLabel='STEADY',digitAccelCls='flat',hotPctRecent=0,hotPctOlder=0;
+  if(s.digits.length>=40){
+    try{
+      const a=ana(sym);
+      const hotD=a.hotD;
+      const last20=s.digits.slice(-20);
+      const prev20=s.digits.slice(-40,-20);
+      hotPctRecent=last20.filter(d=>d===hotD).length/20*100;
+      hotPctOlder=prev20.filter(d=>d===hotD).length/20*100;
+      const delta=hotPctRecent-hotPctOlder;
+      if(delta>=3){digitAccel='↑';digitAccelLabel='ACCELERATING';digitAccelCls='up';}
+      else if(delta<=-3){digitAccel='↓';digitAccelLabel='FADING';digitAccelCls='dn';}
+    }catch(e){}
+  }
+
+  return{trend,trendCls,stability,digitAccel,digitAccelLabel,digitAccelCls,
+    hotPctRecent:Math.round(hotPctRecent),hotPctOlder:Math.round(hotPctOlder)};
 }
 
 function updateRow(sym){
@@ -3035,9 +3118,6 @@ function initDC(){
   ).join('');
 }
 
-// ══ TREND DISPLAY — single canonical definition ══
-// FIX #4 (partial): This is the ONLY updateTrendDisplay — duplicate removed.
-// Signal card IDs corrected: scEma, scRsi, scMom, scVel match HTML IDs exactly.
 // ══ INIT ══
 setInterval(()=>{document.getElementById('CLK').textContent=new Date().toUTCString().slice(17,25);},1000);
 setTimeout(calcTpLevels,500);
