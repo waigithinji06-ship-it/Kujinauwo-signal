@@ -579,6 +579,7 @@ const AI={
   prevRecovery:null,sessionStart:0,recoveryRestUntil:0,recoveryRestSym:null,lastLostDigit:null,
   circuitPausedUntil:0,recoveryCanFireAt:0,waitingSince:0,noSignalPauseUntil:0,
   lastWaitReason:'',lastWaitLogTime:0,lastBuyTime:0,
+  _recoveryDirection:null,_recoveryConfirmCount:0,_lastRecoveryCandidate:null,
 };
 // ============================================================
 // SIL - Session Intelligence Layer v1.0
@@ -653,7 +654,7 @@ function silGate(sym,step){
   if(step===0){
     if(SIL.regime==='cluster')return{ok:false,reason:'SIL CLUSTER - entropy suppressed'};
     if(SIL.regime==='streak')return{ok:false,reason:'SIL STREAK - digit dominating'};
-    if(sym){const ev=silGetEV(sym);if(ev.suspended)return{ok:false,reason:'SIL EV suspended: '+sym};}
+    if(sym){const ev=silGetEV(sym);if(ev.suspended||ev.ev<-0.5)return{ok:false,reason:'SIL EV negative ('+ev.ev+'): '+sym};}
   }
   return{ok:true,reason:'ok'};
 }
@@ -746,23 +747,57 @@ function ana(sym){
   const result={isCon,ms,vl,ep,op,o4,u5,o2,u7,hotD:bestDiffDigit,coldD,fr,tot,score,hotRecent,hotRecentPct,marketGrade:score>=65?'A':score>=45?'B':score>=30?'C':'SKIP',eo:eoR(),o4r:o4R(),o2r:o2R(),dif:difR(),mat:matR(),chi2,hotDSig,markov:markov?{pred:markovPred,contracts:markovCP,lastDigit}:null,blendO2,blendU7,bestDiffDigit,diffConfidence};
   _anaCache[sym]={tick:s.ticks,result};return result;
 }
+function checkDirectionFreshness(sym,dir,recMode){
+  // Check if OVER/UNDER signal is fresh (accelerating) or fading
+  const s=ST[sym];if(!s||s.digits.length<40)return{fresh:false,trend:'unknown',recentPct:0,olderPct:0};
+  const isO1U8=(recMode==='O1U8');const isO3U6=(recMode==='O3U6');
+  const overMin=isO1U8?2:isO3U6?4:3;const underMax=isO1U8?7:isO3U6?5:6;
+  const last20=s.digits.slice(-20);const prev20=s.digits.slice(-40,-20);
+  const l20t=last20.length||1;const p20t=prev20.length||1;
+  let recentPct,olderPct;
+  if(dir==='OVER'){recentPct=last20.filter(d=>d>=overMin).length/l20t*100;olderPct=prev20.filter(d=>d>=overMin).length/p20t*100;}
+  else{recentPct=last20.filter(d=>d<=underMax).length/l20t*100;olderPct=prev20.filter(d=>d<=underMax).length/p20t*100;}
+  const delta=recentPct-olderPct;
+  // Fresh = recent window is at least as strong as older window (not declining)
+  const fresh=recentPct>=65&&delta>=-5;
+  const trend=delta>=3?'accelerating':delta<=-5?'fading':'steady';
+  return{fresh,trend,recentPct:Math.round(recentPct*10)/10,olderPct:Math.round(olderPct*10)/10,delta:Math.round(delta*10)/10};
+}
 function findBestRecoveryMarket(){
   const recMode=(document.getElementById('cfgRecovery')?document.getElementById('cfgRecovery').value:'O2U7')||'O2U7';
-  const THRESHOLD_FULL=72,THRESHOLD_RECENT=68,RECENT_WINDOW=20;let best=null,bestPct=0;
+  const THRESHOLD_FULL=72,THRESHOLD_RECENT=65,RECENT_WINDOW=20;
+  // Respect direction locked from S1 if we are in S3+
+  const lockedDir=AI.martStep>=2?AI._recoveryDirection:null;
+  let best=null,bestScore=0;
   IDX.forEach(i=>{
     const s=ST[i.s];const minT=i.minTicks||60;if(!s||!s.conn||s.digits.length<minT)return;
     try{
       const a=ana(i.s);if(!a.isCon)return;if(a.marketGrade==='SKIP')return;
+      // EV check - block markets with bad EV
+      const ev=silGetEV(i.s);if(ev.ev!==null&&ev.ev<-0.5){return;}
       if(recMode==='DIFF'){
-        const hotD=a.bestDiffDigit;const fullHotPct=(a.fr[hotD]||0)/a.tot*100;if(fullHotPct<14)return;if(!a.hotDSig.significant)return;if(!a.hotRecent)return;
+        const hotD=a.bestDiffDigit;const fullHotPct=(a.fr[hotD]||0)/a.tot*100;
+        if(fullHotPct<14)return;if(!a.hotDSig.significant)return;if(!a.hotRecent)return;
         const recent=s.digits.slice(-RECENT_WINDOW);const recHot=recent.filter(d=>d===hotD).length/recent.length*100;if(recHot<10)return;
-        const eff=a.score+(a.marketGrade==='A'?20:0)+fullHotPct;
-        if(eff>bestPct){bestPct=eff;best={sym:i.s,a,hotD,barrier:hotD,contractCode:'DIGITDIFF',typeLabel:'DIFFERS d.'+hotD,pct:Math.round(fullHotPct*10)/10,recentPct:Math.round(recHot*10)/10,grade:a.marketGrade,score:a.score};}
+        // Check freshness - is hot digit still accelerating or fading?
+        const last20=s.digits.slice(-20);const prev20=s.digits.slice(-40,-20);
+        const recentHot=last20.filter(d=>d===hotD).length/20*100;const olderHot=prev20.filter(d=>d===hotD).length/20*100;
+        if(recentHot<olderHot-5)return; // fading - skip
+        const eff=a.score+(a.marketGrade==='A'?20:0)+fullHotPct+(recentHot>olderHot?10:0);
+        if(eff>bestScore){bestScore=eff;best={sym:i.s,a,hotD,barrier:hotD,contractCode:'DIGITDIFF',typeLabel:'DIFFERS d.'+hotD,pct:Math.round(fullHotPct*10)/10,recentPct:Math.round(recHot*10)/10,grade:a.marketGrade,score:a.score,freshness:'diff'};}
       }else{
         const isO1U8=(recMode==='O1U8');const isO3U6=(recMode==='O3U6');
         const blendOver=isO1U8?a.o2:a.blendO2;const blendUnder=isO1U8?a.u7:a.blendU7;
-        const bestDir=blendOver>=blendUnder?'OVER':'UNDER';const fullPct=bestDir==='OVER'?blendOver:blendUnder;
-        if(fullPct<THRESHOLD_FULL)return;if(a.markov&&a.markov.contracts.bestDir!==bestDir)return;
+        const bestDir=blendOver>=blendUnder?'OVER':'UNDER';
+        // If direction is locked from previous steps, must match
+        if(lockedDir&&bestDir!==lockedDir)return;
+        const fullPct=bestDir==='OVER'?blendOver:blendUnder;
+        if(fullPct<THRESHOLD_FULL)return;
+        // Markov must agree with direction
+        if(a.markov&&a.markov.contracts.bestDir!==bestDir)return;
+        // Check freshness - is signal still fresh or fading?
+        const fresh=checkDirectionFreshness(i.s,bestDir,recMode);
+        if(!fresh.fresh){return;} // signal fading - skip this market
         const recent=s.digits.slice(-RECENT_WINDOW);const rTot=recent.length||1;
         const overMin=isO1U8?2:isO3U6?4:3;const underMax=isO1U8?7:isO3U6?5:6;
         const rO=recent.filter(d=>d>=overMin).length/rTot*100;const rU=recent.filter(d=>d<=underMax).length/rTot*100;
@@ -770,8 +805,11 @@ function findBestRecoveryMarket(){
         const barrier=bestDir==='OVER'?(isO1U8?1:isO3U6?3:2):(isO1U8?8:isO3U6?6:7);
         const code=bestDir==='OVER'?'DIGITOVER':'DIGITUNDER';
         const label=bestDir==='OVER'?(isO1U8?'OVER1':isO3U6?'OVER3':'OVER2'):(isO1U8?'UNDER8':isO3U6?'UNDER6':'UNDER7');
-        const rankScore=fullPct+(a.score/100);
-        if(rankScore>bestPct){bestPct=rankScore;best={sym:i.s,a,direction:bestDir,barrier,contractCode:code,typeLabel:label,pct:Math.round(fullPct*10)/10,recentPct:Math.round(recentPct*10)/10,grade:a.marketGrade,score:a.score};}
+        // Score = full edge + recency bonus + acceleration bonus + grade bonus
+        const gradeBonus=a.marketGrade==='A'?20:a.marketGrade==='B'?10:0;
+        const accelBonus=fresh.trend==='accelerating'?15:fresh.trend==='steady'?5:0;
+        const rankScore=fullPct+recentPct*0.3+gradeBonus+accelBonus+(a.score/10);
+        if(rankScore>bestScore){bestScore=rankScore;best={sym:i.s,a,direction:bestDir,barrier,contractCode:code,typeLabel:label,pct:Math.round(fullPct*10)/10,recentPct:Math.round(recentPct*10)/10,grade:a.marketGrade,score:a.score,freshness:fresh};}
       }
     }catch(e){}
   });
@@ -855,15 +893,32 @@ function aiTick(sym){
     if(AI.recoveryCanFireAt>0&&Date.now()<AI.recoveryCanFireAt){const rem=Math.ceil((AI.recoveryCanFireAt-Date.now())/1000);if(rem%5===0)aiLog('S'+(AI.martStep+1)+' - settling '+rem+'s','warn');setAIState('waiting');return;}
     AI.recoveryCanFireAt=0;
     const recovery=findBestRecoveryMarket();
-    if(!recovery){setAIState('waiting');AI.prevRecovery=null;_logWaitReason(_diagnoseRecoveryWait());return;}
-    const needsConfirm=AI.martStep<=2;const _prev=AI.prevRecovery;
-    const _confirmed=!needsConfirm||(_prev&&_prev.sym===recovery.sym&&(recovery.hotD!==undefined?_prev.hotD===recovery.hotD:_prev.direction===recovery.direction));
-    AI.prevRecovery={sym:recovery.sym,direction:recovery.direction,hotD:recovery.hotD};
-    if(!_confirmed){setAIState('waiting');const _rx=IDX.find(i=>i.s===recovery.sym);aiLog('S'+(AI.martStep+1)+' | '+(_rx?_rx.n:recovery.sym)+' | '+recovery.typeLabel+' buf:'+recovery.pct.toFixed(0)+'% - confirming...','warn');return;}
+    if(!recovery){
+      setAIState('waiting');AI._lastRecoveryCandidate=null;AI._recoveryConfirmCount=0;
+      _logWaitReason(_diagnoseRecoveryWait());return;
+    }
+    // Direction lock - once S2 sets direction, S3-S5 must follow same direction
+    if(AI.martStep===1&&recovery.direction){AI._recoveryDirection=recovery.direction;}
+    // Freshness log
+    const _rx=IDX.find(i=>i.s===recovery.sym);
+    const _freshLabel=recovery.freshness&&recovery.freshness.trend?(' ['+recovery.freshness.trend+' '+recovery.freshness.recentPct+'%]'):'';
+    // Confirmation logic - must see same market+direction on 2 consecutive scans
+    const _prev=AI._lastRecoveryCandidate;
+    const _sameCandidate=_prev&&_prev.sym===recovery.sym&&(recovery.direction?_prev.direction===recovery.direction:_prev.hotD===recovery.hotD);
+    if(_sameCandidate){AI._recoveryConfirmCount++;}else{AI._recoveryConfirmCount=1;}
+    AI._lastRecoveryCandidate={sym:recovery.sym,direction:recovery.direction,hotD:recovery.hotD};
+    const _needConfirms=AI.martStep<=3?2:1;
+    if(AI._recoveryConfirmCount<_needConfirms){
+      setAIState('waiting');
+      aiLog('S'+(AI.martStep+1)+' | '+(_rx?_rx.n:recovery.sym)+' | '+recovery.typeLabel+_freshLabel+' buf:'+recovery.pct.toFixed(0)+'% rec:'+recovery.recentPct+'% - confirming ('+AI._recoveryConfirmCount+'/'+_needConfirms+')...','warn');
+      return;
+    }
+    // All checks passed - fire
+    AI._recoveryConfirmCount=0;AI._lastRecoveryCandidate=null;
     tradeSym=recovery.sym;a=recovery.a;ix=IDX.find(i=>i.s===tradeSym);stake=calcStake(AI.martStep);
     contractCode=recovery.contractCode;barrierDigit=recovery.hotD!==undefined?recovery.hotD:recovery.barrier;typeLabel=recovery.typeLabel;
-    AI.prevRecovery=null;AI.lastBuyTime=Date.now();
-    aiLog('S'+(AI.martStep+1)+' | '+ix.n+' | '+typeLabel+' buf:'+recovery.pct.toFixed(0)+'% | Grade:'+recovery.grade+' | $'+stake.toFixed(2)+' OK','warn');
+    AI.lastBuyTime=Date.now();
+    aiLog('S'+(AI.martStep+1)+' | '+ix.n+' | '+typeLabel+_freshLabel+' buf:'+recovery.pct.toFixed(0)+'% rec:'+recovery.recentPct+'% | Grade:'+recovery.grade+' | $'+stake.toFixed(2)+' FIRING','warn');
   }
   lastTradeTime=Date.now();placeTrade(tradeSym,contractCode,stake,barrierDigit,typeLabel,'pioneer');
 }
@@ -877,7 +932,7 @@ function onPioneerContract(poc){
     AI.wins++;AI.consecLoss=0;if(stepEl){stepEl.classList.remove('active');stepEl.classList.add('won');}
     if(AI.martStep>0){AI.recoveryRestUntil=Date.now()+45000;AI.recoveryRestSym=AI.activeSym;aiLog((IDX.find(i=>i.s===AI.activeSym)||{n:AI.activeSym}).n+' resting 45s','info');}
     aiLog('WIN +$'+profit.toFixed(2)+' S'+(AI.martStep+1)+' | Reset to S1','success');
-    AI.martStep=0;AI.prevRecovery=null;AI.lastLostDigit=null;
+    AI.martStep=0;AI.prevRecovery=null;AI.lastLostDigit=null;AI._recoveryDirection=null;AI._recoveryConfirmCount=0;AI._lastRecoveryCandidate=null;
     setTimeout(()=>{for(let i=0;i<5;i++){const e=document.getElementById('lad'+i);if(e)e.classList.remove('won','lost','active');}updateLadderUI();},1000);
   }else{
     AI.losses++;AI.consecLoss++;if(stepEl){stepEl.classList.remove('active');stepEl.classList.add('lost');}
@@ -889,7 +944,7 @@ function onPioneerContract(poc){
   updateAIStats();drawEquity();silUpdateBar();
   setTimeout(()=>{
     const _ct=document.getElementById('curTrade');if(_ct){_ct.classList.remove('active');_ct.style.display='none';}
-    if(AI.consecLoss>=5){AI.circuitPausedUntil=Date.now()+180000;AI.martStep=0;AI.consecLoss=0;AI.prevRecovery=null;AI.lastLostDigit=null;pushError('circuit','Pioneer circuit breaker - 5 losses. Auto-resuming in 3 min.','');setAIState('waiting');aiLog('CIRCUIT BREAKER - pausing 3 minutes','warn');}
+    if(AI.consecLoss>=5){AI.circuitPausedUntil=Date.now()+180000;AI.martStep=0;AI.consecLoss=0;AI.prevRecovery=null;AI.lastLostDigit=null;AI._recoveryDirection=null;AI._recoveryConfirmCount=0;AI._lastRecoveryCandidate=null;pushError('circuit','Pioneer circuit breaker - 5 losses. Auto-resuming in 3 min.','');setAIState('waiting');aiLog('CIRCUIT BREAKER - pausing 3 minutes','warn');}
     else{setAIState('scanning');updateLadderUI();}
   },600);
 }
@@ -1117,7 +1172,7 @@ function stopAI(){
 }
 function resetAI(){
   stopAI();powerStop();
-  AI.wins=0;AI.losses=0;AI.totalPnl=0;AI.sessPnl=0;AI.consecLoss=0;AI.martStep=0;AI.activeCid=null;AI.equityPoints=[0];AI.sessionStart=0;AI.tp1Hit=false;AI.tp2Hit=false;AI.recoveryRestUntil=0;AI.recoveryRestSym=null;
+  AI.wins=0;AI.losses=0;AI.totalPnl=0;AI.sessPnl=0;AI.consecLoss=0;AI.martStep=0;AI.activeCid=null;AI.equityPoints=[0];AI.sessionStart=0;AI.tp1Hit=false;AI.tp2Hit=false;AI.recoveryRestUntil=0;AI.recoveryRestSym=null;AI._recoveryDirection=null;AI._recoveryConfirmCount=0;AI._lastRecoveryCandidate=null;
   PW.step=0;PW.consecLoss=0;PW.direction=null;PW.sessPnl=0;PW.wins=0;PW.losses=0;PW.equityPoints=[0];PW.prevRecovery=null;PW.circuitPausedUntil=0;PW.lastLostSym=null;PW.waitingSince=0;
   silReset();setAIState('idle');updateAIStats();drawEquity();drawPowerEquity();
   const eqS=document.getElementById('eqStats');if(eqS){eqS.textContent='Now +0.00  Peak +0.00  Low +0.00';eqS.style.color='var(--sub)';}
