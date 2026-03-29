@@ -393,7 +393,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-ui);font-size
               <div class="cfg-block"><div class="cfg-label">MULT &times;</div><input class="cfg-input" id="cfgMult" type="number" value="3.6" min="1.5" max="10" step="0.1"/></div>
               <div class="cfg-block"><div class="cfg-label">TAKE PROFIT ($)</div><input class="cfg-input" id="cfgTP" type="number" value="30" min="1" step="1" oninput="calcTpLevels()"/><div style="font-size:8px;color:var(--dim);margin-top:4px;font-family:var(--font-mono);line-height:1.7;">TP1 <span id="tp1val" style="color:var(--yellow);">$10</span> &times;0.75 &nbsp;TP2 <span id="tp2val" style="color:var(--accent);">$20</span> &times;0.50 &nbsp;TP3 <span id="tp3val" style="color:var(--green);">$30</span> stop</div></div>
               <div class="cfg-block"><div class="cfg-label">STOP LOSS ($)</div><input class="cfg-input" id="cfgSL" type="number" value="50" min="1" step="1"/></div>
-              <div class="cfg-block"><div class="cfg-label">MIN SCORE</div><input class="cfg-input" id="cfgMinScore" type="number" value="65" min="45" max="85" step="5"/><div style="font-size:8px;color:var(--sub);margin-top:3px;">65=default &middot; 75=selective</div></div>
+              <div class="cfg-block"><div class="cfg-label">MIN SCORE</div><input class="cfg-input" id="cfgMinScore" type="number" value="55" min="45" max="85" step="5"/><div style="font-size:8px;color:var(--sub);margin-top:3px;">55=default &middot; 65=selective</div></div>
               <div class="cfg-block"><div class="cfg-label">SESSION LIMIT</div><input class="cfg-input" id="cfgTimeLimit" type="number" value="120" min="15" max="480" step="15"/><div style="font-size:8px;color:var(--sub);margin-top:3px;">mins &middot; 0=unlimited</div></div>
               <div class="cfg-block" style="grid-column:1/-1;"><div class="cfg-label">RECOVERY CONTRACT</div><select class="cfg-select" id="cfgRecovery" onchange="refreshLadder()"><option value="O2U7" selected>OVER 2 / UNDER 7 (default &middot; 70% base)</option><option value="O1U8">OVER 1 / UNDER 8 (80% base &middot; lower edge)</option><option value="O3U6">OVER 3 / UNDER 6 (60% base &middot; tighter)</option><option value="DIFF">DIFFERS (90% base &middot; same as S1)</option></select></div>
               <div class="cfg-block" style="grid-column:1/-1;"><div class="cfg-label">INDEX</div><select class="cfg-select" id="cfgIndex"><option value="AUTO">AUTO (AI picks best)</option><option value="R_10">V10</option><option value="R_25">V25</option><option value="R_50">V50</option><option value="R_75">V75</option><option value="R_100">V100</option><option value="1HZ10V">V10 1s</option><option value="1HZ25V">V25 1s</option><option value="1HZ50V">V50 1s</option><option value="1HZ75V">V75 1s</option><option value="1HZ100V">V100 1s</option></select></div>
@@ -746,7 +746,7 @@ function ana(sym){
     const prevHot=prev20.length?prev20.filter(d=>d===bestDiffDigit).length:0;
     const notFading=rc>=prevHot-1; // not declining
     // Must be 16%+ in full window AND 2+ in last 10 AND not fading
-    hotRecent=hotRecentPct>=13&&hotIn10>=2&&notFading&&(_hotPctRaw||((fr[bestDiffDigit]||0)/tot*100))>=16;
+    hotRecent=hotRecentPct>=13&&hotIn10>=2&&notFading&&(_hotPctRaw||((fr[bestDiffDigit]||0)/tot*100))>=15;
   }
   let score=0;
   if(isCon)score+=25;
@@ -761,7 +761,7 @@ function ana(sym){
   // Hot digit strength bonus
   const _hotPctRaw=(fr[bestDiffDigit]||0)/tot*100;
   if(_hotPctRaw>=18)score+=10;
-  else if(_hotPctRaw>=16)score+=5;
+  else if(_hotPctRaw>=15)score+=5;
   score=Math.min(100,score);
   const eoR=()=>{if(!isCon)return{l:'AVOID',c:'av',t:'Expanding'};const b=Math.abs(ep-50);if(b>8)return{l:(ep>50?'EVEN':'ODD')+' ^',c:'sb',t:Math.round(Math.max(ep,op))+'%'};if(b>4)return{l:ep>50?'EVEN':'ODD',c:'by',t:Math.round(Math.max(ep,op))+'%'};return{l:'NEUTRAL',c:'nt',t:'~50%'};};
   const o4R=()=>{if(!isCon)return{l:'AVOID',c:'av',t:''};const b=Math.abs(o4-50);if(b>8)return{l:(o4>50?'OVER4':'UNDER5')+' ^',c:'sb',t:Math.round(Math.max(o4,u5))+'%'};if(b>3)return{l:o4>50?'OVER4':'UNDER5',c:'by',t:Math.round(Math.max(o4,u5))+'%'};return{l:'NEUTRAL',c:'nt',t:'~50%'};};
@@ -854,7 +854,7 @@ function findBestMarket(){
       const a=ana(i.s);if(a.marketGrade==='SKIP'||a.marketGrade==='C')return;
       if(!a.chi2.significant)return;
       // Require hot digit 16%+ minimum
-      const _hp=(a.fr[a.hotD]||0)/a.tot*100;if(_hp<16)return;
+      const _hp=(a.fr[a.hotD]||0)/a.tot*100;if(_hp<15)return;
       // Require recent confirmation - 2+ in last 10 ticks
       const _s=ST[i.s];const _l10=_s.digits.slice(-10);if(_l10.filter(d=>d===a.hotD).length<2)return;
       // Require signal not fading
@@ -909,7 +909,7 @@ function aiTick(sym){
   let tradeSym,a,ix,stake,contractCode,barrierDigit,typeLabel;
   if(AI.martStep===0){
     const waitMs=AI.waitingSince>0?Date.now()-AI.waitingSince:0;const requireGradeA=waitMs>60000;
-    const minScore=parseInt(document.getElementById('cfgMinScore')?document.getElementById('cfgMinScore').value:45)||45;
+    const minScore=parseInt(document.getElementById('cfgMinScore')?document.getElementById('cfgMinScore').value:55)||55;
     const market=findBestMarket();
     if(market&&requireGradeA&&market.a.marketGrade!=='A'){_logWaitReason(Math.round(waitMs/1000)+'s wait - escalating Grade A. Best: '+(IDX.find(i=>i.s===market.sym)||{n:market.sym}).n+' Grade:'+market.a.marketGrade);setAIState('waiting');return;}
     if(!market){const _reason=_diagnosWait(minScore);_logWaitReason(_reason);if(AI.waitingSince===0)AI.waitingSince=Date.now();if(Date.now()-AI.waitingSince>90000){AI.noSignalPauseUntil=Date.now()+300000;AI.waitingSince=0;aiLog('No qualifying market in 90s - pausing 5min','warn');pushError('info','Pioneer paused - no qualifying market','Auto-resuming in 5 minutes');}setAIState('waiting');return;}
