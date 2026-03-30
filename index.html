@@ -279,13 +279,13 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-ui);font-size
       </div>
       <div id="LE" class="lerr"></div>
       <div style="position:relative;margin-bottom:8px;">
-        <input id="tokenInput" type="password" placeholder="Paste your API token here..." style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:13px 44px 13px 14px;font-family:var(--font-mono);font-size:12px;color:var(--text);outline:none;-webkit-appearance:none;" onkeydown="if(event.key==='Enter')doLogin();"/>
+        <input id="tokenInput" type="password" placeholder="Paste your API token here..." style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:13px 44px 13px 14px;font-family:var(--font-mono);font-size:12px;color:var(--text);outline:none;-webkit-appearance:none;" onkeydown="if(event.key==='Enter'){document.getElementById('loginBtn').click();}"/>
         <button onclick="const i=document.getElementById('tokenInput');i.type=i.type==='password'?'text':'password';" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--dim);cursor:pointer;font-size:16px;padding:4px;">&#128065;</button>
       </div>
       <div style="font-size:10px;color:var(--dim);font-family:var(--font-mono);margin-bottom:20px;text-align:center;line-height:1.6;">Token sent only to Deriv&rsquo;s WebSocket API &middot; Never stored</div>
-      <button id="loginBtn" onclick="doLogin()" style="width:100%;padding:13px;background:#ef4444;border:none;border-radius:10px;font-family:var(--font-ui);font-size:13px;font-weight:600;color:#fff;cursor:pointer;margin-bottom:14px;transition:all .2s;letter-spacing:.2px;box-shadow:0 4px 18px rgba(239,68,68,.35);">&#128308; CONNECT TO DERIV</button>
+      <button id="loginBtn" style="width:100%;padding:13px;background:#ef4444;border:none;border-radius:10px;font-family:var(--font-ui);font-size:13px;font-weight:600;color:#fff;cursor:pointer;margin-bottom:14px;transition:all .2s;letter-spacing:.2px;box-shadow:0 4px 18px rgba(239,68,68,.35);" onclick="(function(){const t=document.getElementById('tokenInput').value.trim();if(!t){const e=document.getElementById('LE');e.textContent='Please enter your API token';e.style.display='block';return;}if(t.length<10){const e=document.getElementById('LE');e.textContent='Token too short';e.style.display='block';return;}document.getElementById('loginBtn').textContent='VERIFYING...';document.getElementById('loginBtn').style.opacity='0.6';document.getElementById('LE').style.display='none';userToken=t;verifyToken(t);})();">&#128308; CONNECT TO DERIV</button>
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;color:var(--dim);font-size:10px;font-family:var(--font-mono);"><div style="flex:1;height:1px;background:var(--border);"></div>or<div style="flex:1;height:1px;background:var(--border);"></div></div>
-      <button onclick="doGuest()" style="width:100%;padding:12px;background:transparent;border:1px solid var(--border);border-radius:10px;font-family:var(--font-ui);font-size:12px;font-weight:500;color:var(--sub);cursor:pointer;transition:all .2s;">Continue without token (analysis only)</button>
+      <button style="width:100%;padding:12px;background:transparent;border:1px solid var(--border);border-radius:10px;font-family:var(--font-ui);font-size:12px;font-weight:500;color:var(--sub);cursor:pointer;transition:all .2s;" onclick="(function(){isGuest=true;userToken=null;launchDash(null);})();">Continue without token (analysis only)</button>
     </div>
     <div style="text-align:center;margin-top:16px;font-size:10px;color:var(--dim);font-family:var(--font-mono);line-height:1.7;">Not financial advice &middot; Use a valid token &middot; Use demo account first</div>
   </div>
@@ -821,7 +821,7 @@ function ana(sym){
     const prevHot=prev20.length?prev20.filter(d=>d===bestDiffDigit).length:0;
     const notFading=rc>=prevHot-1; // not declining
     // Must be 16%+ in full window AND 2+ in last 10 AND not fading
-    hotRecent=hotRecentPct>=13&&hotIn10>=2&&notFading&&(_hotPctRaw||((fr[bestDiffDigit]||0)/tot*100))>=15;
+    hotRecent=hotRecentPct>=13&&hotIn10>=1&&notFading&&(_hotPctRaw||((fr[bestDiffDigit]||0)/tot*100))>=15;
   }
   let score=0;
   if(isCon)score+=25;
@@ -930,8 +930,8 @@ function findBestMarket(){
       if(!a.chi2.significant)return;
       // Require hot digit 16%+ minimum
       const _hp=(a.fr[a.hotD]||0)/a.tot*100;if(_hp<15)return;
-      // Require recent confirmation - 2+ in last 10 ticks
-      const _s=ST[i.s];const _l10=_s.digits.slice(-10);if(_l10.filter(d=>d===a.hotD).length<2)return;
+      // Require recent confirmation - 1+ in last 10 ticks
+      const _s=ST[i.s];const _l10=_s.digits.slice(-10);if(_l10.filter(d=>d===a.hotD).length<1)return;
       // Require signal not fading
       if(!a.hotRecent)return;
       const gradeBoost=a.marketGrade==='A'?20:0;const consensusBoost=a.diffConfidence==='consensus'?10:0;
@@ -983,10 +983,8 @@ function aiTick(sym){
   setAIState('scanning');
   let tradeSym,a,ix,stake,contractCode,barrierDigit,typeLabel;
   if(AI.martStep===0){
-    const waitMs=AI.waitingSince>0?Date.now()-AI.waitingSince:0;const requireGradeA=waitMs>60000;
     const minScore=parseInt(document.getElementById('cfgMinScore')?document.getElementById('cfgMinScore').value:55)||55;
     const market=findBestMarket();
-    if(market&&requireGradeA&&market.a.marketGrade!=='A'){_logWaitReason(Math.round(waitMs/1000)+'s wait - escalating Grade A. Best: '+(IDX.find(i=>i.s===market.sym)||{n:market.sym}).n+' Grade:'+market.a.marketGrade);setAIState('waiting');return;}
     if(!market){const _reason=_diagnosWait(minScore);_logWaitReason(_reason);if(AI.waitingSince===0)AI.waitingSince=Date.now();if(Date.now()-AI.waitingSince>90000){AI.noSignalPauseUntil=Date.now()+300000;AI.waitingSince=0;aiLog('No qualifying market in 90s - pausing 5min','warn');pushError('info','Pioneer paused - no qualifying market','Auto-resuming in 5 minutes');}setAIState('waiting');return;}
     AI.waitingSince=0;
     if(AI.recoveryRestSym&&AI.recoveryRestUntil>Date.now()&&market.sym===AI.recoveryRestSym){setAIState('waiting');return;}
@@ -995,7 +993,6 @@ function aiTick(sym){
     const _rawStake=calcStake(0,a.score);stake=silAdjustStake(_rawStake,0);
     if(stake<_rawStake)aiLog('[SIL] Stake: $'+_rawStake.toFixed(2)+' -> $'+stake.toFixed(2)+' (DD '+Math.round(SIL.currentDrawdown*100)+'%)','warn');
     contractCode='DIGITDIFF';barrierDigit=a.hotD;typeLabel='DIFFER';
-    if(a.hotRecent===false){setAIState('waiting');return;}
     AI.lastBuyTime=Date.now();
     const _fullHp=Math.round((a.fr[barrierDigit]||0)/a.tot*100);
     const _l10c=ST[tradeSym].digits.slice(-10).filter(d=>d===barrierDigit).length;
@@ -1533,8 +1530,8 @@ const awwEl=document.getElementById(‘acctW’);if(awwEl)awwEl.textContent=w;co
 let bestSym=null,bestScore=0;IDX.forEach(i=>{const s=ST[i.s];if(s.conn&&s.digits.length>10){try{const a=ana(i.s);if(a.score>bestScore){bestScore=a.score;bestSym=i.s;}}catch(e){}}});
 if(bestSym&&ST[bestSym].tickSpeed){const spd=ST[bestSym].tickSpeed,el=document.getElementById(‘astTS’);const ix=IDX.find(i=>i.s===bestSym);if(spd<1200){el.textContent=(ix?ix.n:bestSym)+’ ‘+spd+‘ms fast’;el.style.color=‘var(–green)’;}else if(spd<3500){el.textContent=(ix?ix.n:bestSym)+’ ‘+spd+‘ms OK’;el.style.color=‘var(–accent)’;}else{el.textContent=(ix?ix.n:bestSym)+’ ‘+spd+‘ms’;el.style.color=‘var(–sub)’;}}
 }
-function doLogin(){const t=document.getElementById(‘tokenInput’).value.trim();if(!t){showLE(‘Please enter your API token’);return;}if(t.length<10){showLE(‘Token too short’);return;}const btn=document.getElementById(‘loginBtn’);btn.classList.add(‘ld’);btn.textContent=‘VERIFYING…’;hideLE();userToken=t;verifyToken(t);}
-function doGuest(){isGuest=true;userToken=null;launchDash(null);}
+function doLogin(){const t=document.getElementById(‘tokenInput’).value.trim();const e=document.getElementById(‘LE’);if(!t){if(e){e.textContent=‘Please enter your API token’;e.style.display=‘block’;}return;}if(t.length<10){if(e){e.textContent=‘Token too short’;e.style.display=‘block’;}return;}const btn=document.getElementById(‘loginBtn’);if(btn){btn.textContent=‘VERIFYING…’;btn.style.opacity=‘0.6’;}if(e)e.style.display=‘none’;userToken=t;verifyToken(t);}
+function doGuest(){try{isGuest=true;userToken=null;launchDash(null);}catch(err){console.error(‘doGuest error:’,err);}}
 function showLE(m){const e=document.getElementById(‘LE’);e.textContent=’! ‘+m;e.style.display=‘block’;}
 function hideLE(){document.getElementById(‘LE’).style.display=‘none’;}
 function doLogout(){
@@ -1545,13 +1542,13 @@ document.getElementById(‘appShell’).style.display=‘none’;document.getEle
 const lb=document.getElementById(‘loginBtn’);if(lb){lb.classList.remove(‘ld’);lb.textContent=‘CONNECT TO DERIV’;}hideLE();
 }
 function verifyToken(token){
-let vws;try{vws=new WebSocket(‘wss://ws.binaryws.com/websockets/v3?app_id=1089’);}catch(e){loginFail(’Connection failed: ’+e.message);return;}
+let vws;try{vws=new WebSocket(‘wss://ws.binaryws.com/websockets/v3?app_id=1089’);}catch(e){loginFail(’Connection failed: ‘+e.message);return;}
 let ok=false;const to=setTimeout(()=>{if(!ok){vws.close();loginFail(‘Timed out.’);}},8000);
 vws.onopen=()=>vws.send(JSON.stringify({authorize:token}));
 vws.onmessage=e=>{try{const m=JSON.parse(e.data);if(m.msg_type===‘authorize’){clearTimeout(to);if(m.error){vws.close();loginFail(m.error.message||‘Invalid token’);return;}ok=true;vws.close();launchDash(m.authorize);}}catch(x){}};
 vws.onerror=()=>{clearTimeout(to);loginFail(‘WebSocket error’);};
 }
-function loginFail(m){showLE(m);document.getElementById(‘loginBtn’).classList.remove(‘ld’);document.getElementById(‘loginBtn’).textContent=‘CONNECT TO DERIV’;}
+function loginFail(m){const e=document.getElementById(‘LE’);if(e){e.textContent=’! ’+m;e.style.display=‘block’;}const btn=document.getElementById(‘loginBtn’);if(btn){btn.textContent=‘CONNECT TO DERIV’;btn.style.opacity=‘1’;}userToken=null;}
 function launchDash(auth){
 if(userToken){const expiry=Date.now()+(24*60*60*1000);try{sessionStorage.setItem(‘ds_token’,userToken);sessionStorage.setItem(‘ds_expiry’,String(expiry));}catch(e){}}
 document.getElementById(‘pgLogin’).style.display=‘none’;document.getElementById(‘appShell’).style.display=‘flex’;navTo(‘ai’);
