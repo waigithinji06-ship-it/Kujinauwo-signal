@@ -1528,10 +1528,10 @@ const apEl=document.getElementById(‘acctPnl’);if(apEl){apEl.textContent=(AI.
 const awEl=document.getElementById(‘acctWR’);if(awEl)awEl.textContent=tot>0?Math.round(w/tot*100)+’%’:’–’;
 const awwEl=document.getElementById(‘acctW’);if(awwEl)awwEl.textContent=w;const alEl=document.getElementById(‘acctL’);if(alEl)alEl.textContent=l;
 let bestSym=null,bestScore=0;IDX.forEach(i=>{const s=ST[i.s];if(s.conn&&s.digits.length>10){try{const a=ana(i.s);if(a.score>bestScore){bestScore=a.score;bestSym=i.s;}}catch(e){}}});
-if(bestSym&&ST[bestSym].tickSpeed){const spd=ST[bestSym].tickSpeed,el=document.getElementById(‘astTS’);const ix=IDX.find(i=>i.s===bestSym);if(spd<1200){el.textContent=(ix?ix.n:bestSym)+’ ‘+spd+‘ms fast’;el.style.color=‘var(–green)’;}else if(spd<3500){el.textContent=(ix?ix.n:bestSym)+’ ‘+spd+‘ms OK’;el.style.color=‘var(–accent)’;}else{el.textContent=(ix?ix.n:bestSym)+’ ‘+spd+‘ms’;el.style.color=‘var(–sub)’;}}
+if(bestSym&&ST[bestSym].tickSpeed){const spd=ST[bestSym].tickSpeed,el=document.getElementById(‘astTS’);const ix=IDX.find(i=>i.s===bestSym);if(spd<1200){el.textContent=(ix?ix.n:bestSym)+’ ‘+spd+‘ms fast’;el.style.color=‘var(–green)’;}else if(spd<3500){el.textContent=(ix?ix.n:bestSym)+’ ‘+spd+‘ms OK’;el.style.color=‘var(–accent)’;}else{el.textContent=(ix?ix.n:bestSym)+’ ’+spd+‘ms’;el.style.color=‘var(–sub)’;}}
 }
 function doLogin(){const t=document.getElementById(‘tokenInput’).value.trim();const e=document.getElementById(‘LE’);if(!t){if(e){e.textContent=‘Please enter your API token’;e.style.display=‘block’;}return;}if(t.length<10){if(e){e.textContent=‘Token too short’;e.style.display=‘block’;}return;}const btn=document.getElementById(‘loginBtn’);if(btn){btn.textContent=‘VERIFYING…’;btn.style.opacity=‘0.6’;}if(e)e.style.display=‘none’;userToken=t;verifyToken(t);}
-function doGuest(){try{isGuest=true;userToken=null;launchDash(null);}catch(err){console.error(‘doGuest error:’,err);}}
+function doGuest(){try{isGuest=true;userToken=null;launchDash(null);}catch(err){console.error(‘Guest launch error:’,err);alert(‘Error launching: ‘+err.message);}}
 function showLE(m){const e=document.getElementById(‘LE’);e.textContent=’! ‘+m;e.style.display=‘block’;}
 function hideLE(){document.getElementById(‘LE’).style.display=‘none’;}
 function doLogout(){
@@ -1542,13 +1542,74 @@ document.getElementById(‘appShell’).style.display=‘none’;document.getEle
 const lb=document.getElementById(‘loginBtn’);if(lb){lb.classList.remove(‘ld’);lb.textContent=‘CONNECT TO DERIV’;}hideLE();
 }
 function verifyToken(token){
-let vws;try{vws=new WebSocket(‘wss://ws.binaryws.com/websockets/v3?app_id=1089’);}catch(e){loginFail(’Connection failed: ‘+e.message);return;}
-let ok=false;const to=setTimeout(()=>{if(!ok){vws.close();loginFail(‘Timed out.’);}},8000);
-vws.onopen=()=>vws.send(JSON.stringify({authorize:token}));
-vws.onmessage=e=>{try{const m=JSON.parse(e.data);if(m.msg_type===‘authorize’){clearTimeout(to);if(m.error){vws.close();loginFail(m.error.message||‘Invalid token’);return;}ok=true;vws.close();launchDash(m.authorize);}}catch(x){}};
-vws.onerror=()=>{clearTimeout(to);loginFail(‘WebSocket error’);};
+// Show progress to user
+const btn=document.getElementById(‘loginBtn’);
+const le=document.getElementById(‘LE’);
+let countdown=12;
+if(btn)btn.textContent=’CONNECTING… ’+countdown+‘s’;
+const countTimer=setInterval(()=>{
+countdown–;
+if(btn&&btn.textContent.includes(‘CONNECTING’))btn.textContent=’CONNECTING… ’+countdown+‘s’;
+if(countdown<=0)clearInterval(countTimer);
+},1000);
+
+let vws;
+try{
+vws=new WebSocket(‘wss://ws.binaryws.com/websockets/v3?app_id=1089’);
+}catch(e){
+clearInterval(countTimer);
+loginFail(‘Cannot open WebSocket: ‘+e.message+’. Check your internet connection.’);
+return;
 }
-function loginFail(m){const e=document.getElementById(‘LE’);if(e){e.textContent=’! ’+m;e.style.display=‘block’;}const btn=document.getElementById(‘loginBtn’);if(btn){btn.textContent=‘CONNECT TO DERIV’;btn.style.opacity=‘1’;}userToken=null;}
+
+let ok=false;
+const to=setTimeout(()=>{
+clearInterval(countTimer);
+if(!ok){
+try{vws.close();}catch(x){}
+loginFail(‘Connection timed out. Check your internet and try again.’);
+}
+},12000);
+
+vws.onopen=()=>{
+if(btn)btn.textContent=‘AUTHORIZING…’;
+vws.send(JSON.stringify({authorize:token}));
+};
+
+vws.onmessage=e=>{
+try{
+const m=JSON.parse(e.data);
+if(m.msg_type===‘authorize’){
+clearTimeout(to);clearInterval(countTimer);
+if(m.error){
+try{vws.close();}catch(x){}
+loginFail(m.error.message||‘Invalid token. Check your token has Read + Trade scope.’);
+return;
+}
+ok=true;
+try{vws.close();}catch(x){}
+launchDash(m.authorize);
+}
+}catch(x){}
+};
+
+vws.onerror=()=>{
+clearTimeout(to);clearInterval(countTimer);
+try{vws.close();}catch(x){}
+loginFail(‘WebSocket error. Make sure you have internet access and try again.’);
+};
+
+vws.onclose=()=>{
+if(!ok){
+clearTimeout(to);clearInterval(countTimer);
+// Only show error if not already handled
+if(btn&&btn.textContent.includes(‘CONNECTING’)){
+loginFail(‘Connection closed. Check internet and try again.’);
+}
+}
+};
+}
+function loginFail(m){const e=document.getElementById(‘LE’);if(e){e.textContent=’! ‘+m;e.style.display=‘block’;}const btn=document.getElementById(‘loginBtn’);if(btn){btn.textContent=‘CONNECT TO DERIV’;btn.style.opacity=‘1’;}userToken=null;}
 function launchDash(auth){
 if(userToken){const expiry=Date.now()+(24*60*60*1000);try{sessionStorage.setItem(‘ds_token’,userToken);sessionStorage.setItem(‘ds_expiry’,String(expiry));}catch(e){}}
 document.getElementById(‘pgLogin’).style.display=‘none’;document.getElementById(‘appShell’).style.display=‘flex’;navTo(‘ai’);
@@ -1572,7 +1633,7 @@ function hideErr(){const e=document.getElementById(‘ERR’);if(e)e.style.displ
 let _keepaliveTimer=null,_pingTime=0,_lastMsgAt=0,_connectedAt=0,_reconnectCount=0,_watchdogTimer=null;
 function startConn(){
 try{ws=new WebSocket(‘wss://ws.binaryws.com/websockets/v3?app_id=1089’);}catch(e){showErr(e.message);sched();return;}
-ws.onopen=()=>{updConn(true);hideErr();_connectedAt=Date.now();if(userToken&&!isGuest)ws.send(JSON.stringify({authorize:userToken}));else subAll();_startKeepalive();};
+ws.onopen=()=>{updConn(true);_connectedAt=Date.now();if(userToken&&!isGuest){ws.send(JSON.stringify({authorize:userToken}));}else{subAll();if(!isGuest&&userToken)ws.send(JSON.stringify({balance:1,subscribe:1}));}  _startKeepalive();};
 ws.onmessage=e=>{_lastMsgAt=Date.now();try{const m=JSON.parse(e.data);if(m.error&&m.error.code!==‘MarketIsClosed’&&m.error.code!==‘AuthorizationRequired’)showErr(m.error.message||m.error.code);if(m.msg_type===‘authorize’&&!m.error){subAll();ws.send(JSON.stringify({balance:1,subscribe:1}));}if(m.msg_type===‘tick’){try{onTick(m.tick);}catch(e){console.warn(‘tick err’,e);}}if(m.msg_type===‘balance’)updBal(m.balance);if(m.msg_type===‘buy’)onBuy(m);if(m.msg_type===‘proposal_open_contract’){onContract(m.proposal_open_contract);return;}if(m.msg_type===‘ping’&&_pingTime>0){const rtt=Date.now()-_pingTime;_pingTime=0;_updateNetStrength(rtt);}}catch(x){}};
 ws.onclose=()=>{updConn(false);_stopKeepalive();sched();};ws.onerror=()=>{updConn(false);_stopKeepalive();try{ws.close();}catch(ex){}};
 }
