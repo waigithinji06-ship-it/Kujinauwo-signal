@@ -642,6 +642,8 @@ IDX.forEach(i=>{
   const digitBuf=i.tickScale===2?200:100;const priceBuf=i.tickScale===2?400:200;
   ST[i.s]={prices:[],digits:[],freq:new Array(10).fill(0),last:null,conn:false,ticks:0,tickTimes:[],digitBuf,priceBuf};
 });
+const PW={running:false,step:0,baseStake:1,mult:2.1,direction:null,sessPnl:0,wins:0,losses:0,consecLoss:0,equityPoints:[0],prevRecovery:null,circuitPausedUntil:0,lastLostSym:null,waitingSince:0};
+const BB={running:false,step:0,baseStake:1,mult:3.6,direction:null,sessPnl:0,wins:0,losses:0,consecLoss:0,equityPoints:[0],circuitPausedUntil:0,lastDigit:null,activeSym:null};
 let total=0,ws=null,rtimer=null,userToken=null,isGuest=false,lastTradeTime=0;
 const AI={
   running:false,state:'idle',mode:'pioneer',
@@ -760,7 +762,7 @@ function silUpdateBar(){
 }
 // ============ END SIL ============
 function setMode(m){
-  if(AI.running||PW.running||BB.running)return;AI.mode=m;
+  if(AI.running||PW.running||(typeof BB!=='undefined'&&BB.running))return;AI.mode=m;
   ['pioneer','power','boyboy'].forEach(x=>{const el=document.getElementById('chip'+x.charAt(0).toUpperCase()+x.slice(1));if(el)el.classList.toggle('active',x===m);});
   const mpMap={pioneer:'mpPioneer',power:'mpPower',boyboy:'mpBoyboy'};
   Object.values(mpMap).forEach(id=>{const el=document.getElementById(id);if(el){el.classList.remove('active');el.style.display='none';}});
@@ -1057,8 +1059,6 @@ function onPioneerContract(poc){
     else{setAIState('scanning');updateLadderUI();}
   },600);
 }
-const PW={running:false,step:0,baseStake:1,mult:2.1,direction:null,sessPnl:0,wins:0,losses:0,consecLoss:0,equityPoints:[0],prevRecovery:null,circuitPausedUntil:0,lastLostSym:null,waitingSince:0};
-const BB={running:false,step:0,baseStake:1,mult:3.6,direction:null,sessPnl:0,wins:0,losses:0,consecLoss:0,equityPoints:[0],circuitPausedUntil:0,lastDigit:null,activeSym:null};
 function powerAna(sym){
   const s=ST[sym];const ix=IDX.find(i=>i.s===sym);const minT=ix?ix.minTicks:60;if(!s||!s.conn||s.digits.length<minT)return null;
   const a=ana(sym);if(!a.isCon)return null;if(a.marketGrade==='SKIP'||a.marketGrade==='C')return null;
@@ -1484,7 +1484,7 @@ const tc=document.getElementById(‘tradeCount’);if(tc)tc.textContent=_totalTr
 const ps=document.getElementById(‘tradePnlSum’);if(ps){ps.textContent=‘P&L: ‘+(_sessionPnlSum>=0?’+’:’’)+’$’+_sessionPnlSum.toFixed(2);ps.style.color=_sessionPnlSum>0?‘var(–green)’:_sessionPnlSum<0?‘var(–red)’:‘var(–sub)’;}
 }
 function startAI(){
-if(!userToken||isGuest){aiLog(‘Token required.’,‘danger’);return;}if(AI.mode===‘power’){powerStart();return;}if(AI.mode===‘boyboy’){bbStart();return;}if(PW.running||BB.running){aiLog(‘Stop other mode first.’,‘warn’);return;}
+if(!userToken||isGuest){aiLog(‘Token required.’,‘danger’);return;}if(AI.mode===‘power’){powerStart();return;}if(AI.mode===‘boyboy’){bbStart();return;}if(PW.running||(typeof BB!==‘undefined’&&BB.running)){aiLog(‘Stop other mode first.’,‘warn’);return;}
 AI.baseStake=parseFloat(document.getElementById(‘cfgStake’).value)||5;AI.mult=parseFloat(document.getElementById(‘cfgMult’).value)||3.6;AI.tp=parseFloat(document.getElementById(‘cfgTP’).value)||15;AI.sl=parseFloat(document.getElementById(‘cfgSL’).value)||10;
 AI.tp1Hit=false;AI.tp2Hit=false;AI.consecLoss=0;AI.sessionStart=Date.now();AI.prevRecovery=null;
 silReset();refreshLadder();AI.running=true;
@@ -1496,14 +1496,14 @@ aiLog(’[SIL] Active - calibrating first ‘+SIL.calibTarget+’ ticks (session
 aiLog(‘Max exposure: $’+[0,1,2,3,4].reduce((s,i)=>s+calcStake(i),0).toFixed(2),‘warn’);
 }
 function stopAI(){
-if(AI.mode===‘power’&&PW.running){powerStop();return;}if(AI.mode===‘boyboy’&&BB.running){bbStop();return;}if(!AI.running)return;
+if(AI.mode===‘power’&&PW.running){powerStop();return;}if(AI.mode===‘boyboy’&&typeof BB!==‘undefined’&&BB.running){bbStop();return;}if(!AI.running)return;
 AI.running=false;AI.inTrade=false;AI.pendingResult=false;clearTimeout(AI.tradeTimer);clearTimeout(AI.lateTimer);
 document.getElementById(‘startBtn’).disabled=false;document.getElementById(‘stopBtn’).disabled=true;
 [‘cfgStake’,‘cfgMult’,‘cfgTP’,‘cfgSL’,‘cfgIndex’,‘cfgMinScore’,‘cfgTimeLimit’].forEach(id=>{const el=document.getElementById(id);if(el)el.disabled=false;});
 if(!PW.running)setAIState(‘idle’);aiLog(‘Pioneer stopped.’,‘warn’);
 }
 function resetAI(){
-stopAI();powerStop();bbStop();
+stopAI();powerStop();if(typeof bbStop!==‘undefined’)bbStop();
 AI.wins=0;AI.losses=0;AI.totalPnl=0;AI.sessPnl=0;AI.consecLoss=0;AI.martStep=0;AI.activeCid=null;AI.equityPoints=[0];AI.sessionStart=0;AI.tp1Hit=false;AI.tp2Hit=false;AI.recoveryRestUntil=0;AI.recoveryRestSym=null;AI._recoveryDirection=null;AI._recoveryConfirmCount=0;AI._lastRecoveryCandidate=null;
 PW.step=0;PW.consecLoss=0;PW.direction=null;PW.sessPnl=0;PW.wins=0;PW.losses=0;PW.equityPoints=[0];PW.prevRecovery=null;PW.circuitPausedUntil=0;PW.lastLostSym=null;PW.waitingSince=0;
 BB.step=0;BB.consecLoss=0;BB.direction=null;BB.sessPnl=0;BB.wins=0;BB.losses=0;BB.equityPoints=[0];BB.circuitPausedUntil=0;BB.lastDigit=null;BB.activeSym=null;
@@ -1607,7 +1607,7 @@ const onAnalysisPage=document.getElementById(‘pgAnalysis’).classList.contain
 updateSum();
 if(AI.running&&AI.mode===‘pioneer’)aiTick(tk.symbol);
 if(PW.running&&AI.mode===‘power’&&!AI.inTrade&&!AI.pendingResult)powerTick();
-if(BB.running&&AI.mode===‘boyboy’&&!AI.inTrade&&!AI.pendingResult)bbTick(tk.symbol);
+if(typeof BB!==‘undefined’&&BB.running&&AI.mode===‘boyboy’&&!AI.inTrade&&!AI.pendingResult)bbTick(tk.symbol);
 if(AI.mode===‘power’&&total%5===0)updatePowerSignalDisplay();
 }
 (function(){try{const saved=sessionStorage.getItem(‘ds_token’);const expiry=parseInt(sessionStorage.getItem(‘ds_expiry’)||‘0’);if(saved&&Date.now()<expiry){document.getElementById(‘tokenInput’).value=saved;userToken=saved;verifyToken(saved);}}catch(e){}})();
