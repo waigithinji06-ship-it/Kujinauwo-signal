@@ -4,98 +4,66 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>JS Test</title>
+<title>Connection Test</title>
 <style>
 body{background:#0a0f1e;color:#f1f5f9;font-family:sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:20px;box-sizing:border-box;text-align:center;}
-button{padding:14px 28px;background:#38bdf8;border:none;border-radius:10px;color:#000;font-size:16px;font-weight:700;cursor:pointer;margin:8px;width:280px;}
-button.red{background:#ef4444;color:#fff;}
-#status{margin-top:20px;padding:14px;border-radius:10px;font-size:14px;display:none;width:280px;}
-#status.ok{background:rgba(34,197,94,.2);border:1px solid #22c55e;color:#22c55e;}
-#status.err{background:rgba(239,68,68,.2);border:1px solid #ef4444;color:#ef4444;}
-#status.info{background:rgba(56,189,248,.2);border:1px solid #38bdf8;color:#38bdf8;}
+button{padding:14px 28px;background:#38bdf8;border:none;border-radius:10px;color:#000;font-size:15px;font-weight:700;cursor:pointer;margin:6px;width:300px;}
+#log{margin-top:20px;width:300px;text-align:left;}
+.line{padding:8px 12px;border-radius:8px;margin-bottom:6px;font-size:13px;}
+.ok{background:rgba(34,197,94,.2);border:1px solid #22c55e;color:#22c55e;}
+.err{background:rgba(239,68,68,.2);border:1px solid #ef4444;color:#ef4444;}
+.info{background:rgba(56,189,248,.2);border:1px solid #38bdf8;color:#38bdf8;}
 </style>
 </head>
 <body>
 <h2>DerivAI Connection Test</h2>
-<p style="color:#94a3b8;margin-bottom:24px;">Tap each button to test</p>
-
-<button onclick="testJS()">TEST 1: JS Working?</button>
-<button onclick="testWS()">TEST 2: WebSocket Working?</button>
-<button class="red" onclick="testDeriv()">TEST 3: Deriv Connection?</button>
-
-<div id="status"></div>
-
+<p style="color:#94a3b8;margin-bottom:20px;">Testing all connection methods</p>
+<button onclick="runAll()">RUN ALL TESTS</button>
+<div id="log"></div>
 <script>
-function show(msg, type) {
-  var el = document.getElementById('status');
-  el.textContent = msg;
-  el.className = type;
-  el.style.display = 'block';
+function log(msg, type) {
+  var d = document.createElement('div');
+  d.className = 'line ' + (type||'info');
+  d.textContent = msg;
+  document.getElementById('log').appendChild(d);
 }
-
-function testJS() {
-  show('JS IS WORKING', 'ok');
-}
-
-function testWS() {
-  show('Opening WebSocket...', 'info');
-  try {
-    var ws = new WebSocket('wss://echo.websocket.org');
-    ws.onopen = function() {
-      show('WebSocket WORKS - connection opened', 'ok');
-      ws.close();
+function runAll() {
+  document.getElementById('log').innerHTML = '';
+  log('Starting tests...', 'info');
+  // Test 1: JS
+  log('TEST 1: JS is working ✓', 'ok');
+  // Test 2: Try each app ID
+  var ids = [36544, 16929, 1169, 1089];
+  var idx = 0;
+  function tryNext() {
+    if (idx >= ids.length) {
+      log('All app IDs tested', 'info');
+      return;
+    }
+    var id = ids[idx++];
+    log('TEST ' + (idx+1) + ': Trying app_id=' + id + '...', 'info');
+    var ws;
+    try { ws = new WebSocket('wss://ws.binaryws.com/websockets/v3?app_id=' + id); }
+    catch(e) { log('app_id=' + id + ' ERROR: ' + e.message, 'err'); tryNext(); return; }
+    var done = false;
+    var t = setTimeout(function(){ if(!done){done=true;log('app_id='+id+' TIMEOUT','err');try{ws.close();}catch(e){}tryNext();}}, 8000);
+    ws.onopen = function(){ ws.send(JSON.stringify({ping:1})); };
+    ws.onmessage = function(e){
+      if(done)return; done=true; clearTimeout(t);
+      var d=JSON.parse(e.data);
+      log('app_id=' + id + ' WORKS ✓ Response: ' + JSON.stringify(d), 'ok');
+      try{ws.close();}catch(ex){}
+      tryNext();
     };
-    ws.onerror = function() {
-      show('WebSocket BLOCKED by browser or network', 'err');
+    ws.onerror = function(){ if(done)return; };
+    ws.onclose = function(ev){
+      if(done)return; done=true; clearTimeout(t);
+      log('app_id=' + id + ' CLOSED: code=' + ev.code, 'err');
+      tryNext();
     };
-    ws.onclose = function(e) {
-      if (e.code !== 1000) {
-        show('WebSocket closed: code=' + e.code, 'err');
-      }
-    };
-    setTimeout(function() {
-      if (ws.readyState !== 1 && ws.readyState !== 3) {
-        show('WebSocket TIMEOUT - no response in 8s', 'err');
-        try { ws.close(); } catch(e) {}
-      }
-    }, 8000);
-  } catch(e) {
-    show('WebSocket ERROR: ' + e.message, 'err');
   }
-}
-
-function testDeriv() {
-  show('Connecting to Deriv...', 'info');
-  try {
-    var ws = new WebSocket('wss://ws.binaryws.com/websockets/v3?app_id=1089');
-    ws.onopen = function() {
-      show('Deriv CONNECTED - sending ping...', 'info');
-      ws.send(JSON.stringify({ping: 1}));
-    };
-    ws.onmessage = function(e) {
-      var data = JSON.parse(e.data);
-      show('Deriv RESPONDED: ' + JSON.stringify(data), 'ok');
-      ws.close();
-    };
-    ws.onerror = function() {
-      show('Deriv CONNECTION BLOCKED', 'err');
-    };
-    ws.onclose = function(e) {
-      if (e.code !== 1000 && e.code !== 1001) {
-        show('Deriv connection closed: code=' + e.code + ' reason=' + (e.reason||'none'), 'err');
-      }
-    };
-    setTimeout(function() {
-      if (ws.readyState !== 3) {
-        show('Deriv TIMEOUT - no response in 10s', 'err');
-        try { ws.close(); } catch(ex) {}
-      }
-    }, 10000);
-  } catch(e) {
-    show('Deriv ERROR: ' + e.message, 'err');
-  }
+  tryNext();
 }
 </script>
-
 </body>
 </html>
