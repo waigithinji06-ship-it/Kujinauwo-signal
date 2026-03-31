@@ -3,6 +3,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' wss://ws.binaryws.com https://fonts.googleapis.com https://fonts.gstatic.com data: blob:;">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
 <title>Deriv AI Trader</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
@@ -622,6 +623,10 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-ui);font-size
 <div id="SEV" style="display:none;">&mdash;</div>
 <div id="SB" style="display:none;">&mdash;</div>
 <script>
+window.onerror = function(msg, src, line, col, err) {
+  alert('JS ERROR: ' + msg + ' | Line: ' + line);
+  return false;
+};
 const IDX=[
   {s:'R_10',n:'V10',sub:'Volatility 10',v:10,dp:3,tickScale:1,conThresh:0.015,minTicks:60},
   {s:'R_25',n:'V25',sub:'Volatility 25',v:25,dp:3,tickScale:1,conThresh:0.015,minTicks:60},
