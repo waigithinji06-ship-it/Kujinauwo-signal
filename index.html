@@ -1649,50 +1649,49 @@ var token = document.getElementById(‘tokenInput’).value.trim();
 var errEl = document.getElementById(‘LE’);
 var btn = document.getElementById(‘loginBtn’);
 
-if (!token) {
-errEl.textContent = ‘Please paste your API token first’;
+function showErr(msg) {
+errEl.textContent = msg;
 errEl.style.display = ‘block’;
-return;
-}
-if (token.length < 10) {
-errEl.textContent = ‘Token too short - make sure you copied the full token’;
-errEl.style.display = ‘block’;
-return;
+btn.textContent = ‘CONNECT TO DERIV’;
+btn.disabled = false;
+btn.style.opacity = ‘1’;
 }
 
+if (!token) { showErr(‘Please paste your API token first’); return; }
+if (token.length < 10) { showErr(‘Token too short - check you copied it fully’); return; }
+
 errEl.style.display = ‘none’;
-btn.textContent = ‘CONNECTING…’;
+btn.textContent = ‘STEP 1: Opening connection…’;
 btn.disabled = true;
-btn.style.opacity = ‘0.6’;
+btn.style.opacity = ‘0.7’;
 
 var socket;
 var done = false;
 
 try {
 socket = new WebSocket(‘wss://ws.binaryws.com/websockets/v3?app_id=1089’);
+btn.textContent = ‘STEP 2: Socket created…’;
 } catch (e) {
-errEl.textContent = ’Cannot connect: ’ + e.message;
-errEl.style.display = ‘block’;
-btn.textContent = ‘CONNECT TO DERIV’;
-btn.disabled = false;
-btn.style.opacity = ‘1’;
+showErr(’STEP 1 FAILED: Cannot open WebSocket - ’ + e.message);
 return;
 }
 
 var timer = setTimeout(function() {
 if (done) return;
 done = true;
-try { socket.close(); } catch(e) {}
-errEl.textContent = ‘Timed out. Check your internet and try again.’;
-errEl.style.display = ‘block’;
-btn.textContent = ‘CONNECT TO DERIV’;
-btn.disabled = false;
-btn.style.opacity = ‘1’;
+try { socket.close(); } catch(e2) {}
+showErr(‘STEP 3 FAILED: Timed out after 15s - check internet’);
 }, 15000);
 
 socket.onopen = function() {
-btn.textContent = ‘AUTHORIZING…’;
+if (done) return;
+btn.textContent = ‘STEP 3: Connected - authorizing…’;
+try {
 socket.send(JSON.stringify({ authorize: token }));
+} catch(e) {
+clearTimeout(timer); done = true;
+showErr(’STEP 3 FAILED: Cannot send - ’ + e.message);
+}
 };
 
 socket.onmessage = function(event) {
@@ -1701,40 +1700,31 @@ try { data = JSON.parse(event.data); } catch(e) { return; }
 if (data.msg_type !== ‘authorize’) return;
 clearTimeout(timer);
 done = true;
-try { socket.close(); } catch(e) {}
+try { socket.close(); } catch(e2) {}
 if (data.error) {
-errEl.textContent = ’Token error: ’ + (data.error.message || ‘Invalid token. Check Read + Trade scope.’);
-errEl.style.display = ‘block’;
-btn.textContent = ‘CONNECT TO DERIV’;
-btn.disabled = false;
-btn.style.opacity = ‘1’;
+showErr(’STEP 4 FAILED: ’ + (data.error.message || ‘Invalid token’));
 return;
 }
+btn.textContent = ‘STEP 4: Authorized! Loading…’;
 userToken = token;
+try {
 launchDash(data.authorize);
+} catch(e) {
+showErr(’STEP 5 FAILED: App crashed - ’ + e.message);
+}
 };
 
-socket.onerror = function() {
+socket.onerror = function(ev) {
 if (done) return;
-clearTimeout(timer);
-done = true;
-try { socket.close(); } catch(e) {}
-errEl.textContent = ‘Connection error. Check your internet and try again.’;
-errEl.style.display = ‘block’;
-btn.textContent = ‘CONNECT TO DERIV’;
-btn.disabled = false;
-btn.style.opacity = ‘1’;
+clearTimeout(timer); done = true;
+try { socket.close(); } catch(e2) {}
+showErr(‘STEP 2 FAILED: WebSocket error - browser blocked connection’);
 };
 
-socket.onclose = function() {
+socket.onclose = function(ev) {
 if (done) return;
-clearTimeout(timer);
-done = true;
-errEl.textContent = ‘Connection closed. Try again.’;
-errEl.style.display = ‘block’;
-btn.textContent = ‘CONNECT TO DERIV’;
-btn.disabled = false;
-btn.style.opacity = ‘1’;
+clearTimeout(timer); done = true;
+showErr(‘STEP 2 FAILED: Connection closed immediately (code:’ + ev.code + ’ reason:’ + (ev.reason||‘none’) + ‘)’);
 };
 }
 
