@@ -1532,7 +1532,7 @@ IDX.forEach(i=>{ST[i.s]={prices:[],digits:[],freq:new Array(10).fill(0),last:nul
 document.getElementById(‘tokenInput’).value=’’;try{sessionStorage.removeItem(‘ds_token’);sessionStorage.removeItem(‘ds_expiry’);}catch(e){}
 document.getElementById(‘appShell’).style.display=‘none’;document.getElementById(‘pgLogin’).style.display=‘flex’;
 const lb=document.getElementById(‘loginBtn’);if(lb){lb.classList.remove(‘ld’);lb.textContent=‘CONNECT TO DERIV’;}hideLE();
-}function launchDash(auth){
+}function launchDash(auth){ try {
 if(userToken){const expiry=Date.now()+(24*60*60*1000);try{sessionStorage.setItem(‘ds_token’,userToken);sessionStorage.setItem(‘ds_expiry’,String(expiry));}catch(e){}}
 document.getElementById(‘pgLogin’).style.display=‘none’;document.getElementById(‘appShell’).style.display=‘flex’;navTo(‘ai’);
 if(auth){
@@ -1540,7 +1540,7 @@ const name=auth.fullname||auth.email||‘Trader’;const lid=auth.loginid||’�
 document.getElementById(‘acctBadge’).style.display=‘flex’;document.getElementById(‘acctAvatar’).textContent=name.charAt(0).toUpperCase();
 document.getElementById(‘acctName’).textContent=name.length>18?name.slice(0,18)+’…’:name;document.getElementById(‘acctId’).textContent=lid;
 document.getElementById(‘balRow’).style.display=‘block’;document.getElementById(‘balVal’).textContent=auth.balance!==undefined?parseFloat(auth.balance).toFixed(2):’–’;
-document.getElementById(‘balCur’).textContent=(auth.currency||‘USD’)+’ ‘+(auth.is_virtual?‘Demo’:‘Real’);document.getElementById(‘balAcct’).textContent=lid;
+document.getElementById(‘balCur’).textContent=(auth.currency||‘USD’)+’ ’+(auth.is_virtual?‘Demo’:‘Real’);document.getElementById(‘balAcct’).textContent=lid;
 document.getElementById(‘balType’).textContent=auth.is_virtual?‘Demo Account’:‘Real Account’;
 }
 AI.baseStake=parseFloat(document.getElementById(‘cfgStake’).value)||5;AI.mult=parseFloat(document.getElementById(‘cfgMult’).value)||3.6;
@@ -1548,6 +1548,7 @@ IDX.forEach(i=>{SIL.calibData[i.s]={digits:[],entropies:[]};});silUpdateBar();
 initTable();initDC();refreshLadder();refreshPowerLadder();refreshBBLadder();drawEquity();drawPowerEquity();drawBBEquity();startConn();
 setInterval(()=>{const n=new Date();document.getElementById(‘CLK’).textContent=n.toUTCString().slice(17,25);},1000);
 setInterval(()=>{if(SIL.calibrated)silUpdateBar();},5000);
+} catch(err) { alert(‘Launch error: ’ + err.message + ’ | ’ + err.stack); }
 }
 function updConn(live){const cl=document.getElementById(‘CL’);const cd=document.getElementById(‘CD’);if(cl)cl.textContent=live?‘LIVE’:‘CONNECTING’;if(cd){cd.style.background=live?‘var(–green)’:‘var(–red)’;if(live)cd.classList.add(‘on’);else cd.classList.remove(‘on’);}}
 function showErr(msg){const e=document.getElementById(‘ERR’);if(e){e.textContent=’! ’+msg;e.style.display=‘block’;}}
