@@ -14,6 +14,14 @@
   --text:#f1f5f9;--sub:#94a3b8;--dim:#475569;
   --font:'Inter',system-ui,sans-serif;--mono:'JetBrains Mono','Courier New',monospace;
 }
+:root.day{
+  --bg:#f0f4f8;--surface:#ffffff;--card:#ffffff;--card2:#f1f5f9;
+  --border:#e2e8f0;--border2:#cbd5e1;
+  --accent:#0284c7;--accent2:#ea580c;
+  --green:#16a34a;--red:#dc2626;--yellow:#b45309;--blue:#2563eb;--purple:#7c3aed;
+  --text:#0f172a;--sub:#64748b;--dim:#94a3b8;
+}
+:root.day body{background:var(--bg);color:var(--text);color-scheme:light;}
 *{box-sizing:border-box;margin:0;padding:0;}
 html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;-webkit-font-smoothing:antialiased;}
 ::-webkit-scrollbar{width:3px;height:3px;}
@@ -350,7 +358,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 </div>
 
 <!-- AI PAGE -->
-<div id="pgAI" class="page" style="flex-direction:column;">
+<div id="pgAI" class="page active" style="flex-direction:column;">
   <div style="flex-shrink:0;padding:8px 12px 0;">
     <div class="cstat-row">
       <div class="cstat"><div class="cstat-l">SESSION P&amp;L</div><div class="cstat-v" id="sessPnl" style="color:var(--green)">+0.00</div><div style="font-size:7px;color:var(--dim);font-family:var(--mono)" id="sessPnlSub">0 trades</div></div>
@@ -2023,21 +2031,18 @@ function setMode(m) {
 }
 
 function navTo(page) {
+  var pageMap={'analysis':'pgAnalysis','ai':'pgAI','account':'pgAccount'};
+  var tabMap={'analysis':'bnAna','ai':'bnAI','account':'bnAcct'};
   ['analysis','ai','account'].forEach(function(p){
-    var pg=document.getElementById('pg'+p.charAt(0).toUpperCase()+p.slice(1));
-    if(pg)pg.classList.remove('active');
-    var tab=document.getElementById('bn'+p.charAt(0).toUpperCase()+p.slice(1));
-    if(tab)tab.classList.remove('active');
+    var pg=document.getElementById(pageMap[p]);if(pg)pg.classList.remove('active');
+    var tab=document.getElementById(tabMap[p]);if(tab)tab.classList.remove('active');
   });
-  var pg=document.getElementById('pg'+page.charAt(0).toUpperCase()+page.slice(1));
-  if(pg)pg.classList.add('active');
-  var tab=document.getElementById('bn'+page.charAt(0).toUpperCase()+page.slice(1));
-  if(tab)tab.classList.add('active');
-  if(page==='account')silUpdateBar();
-  if(page==='analysis'){
-    IDX.forEach(function(ix){if(ST[ix.s].prices.length>0){try{updateRow(ix.s);updateDC(ix.s);}catch(e){}}});
-    _sumTick=14;updateSum();
-  }
+  var pg=document.getElementById(pageMap[page]);if(pg)pg.classList.add('active');
+  var tab=document.getElementById(tabMap[page]);if(tab)tab.classList.add('active');
+  var _navPage=page; // capture for use below
+  if(_navPage==='account')silUpdateBar();
+  if(_navPage==='analysis'){IDX.forEach(function(ix){if(ST[ix.s].prices.length>0){try{updateRow(ix.s);updateDC(ix.s);}catch(e){}}});_sumTick=14;updateSum();}
+  return;
 }
 
 // ─────────────────────────────────────────────
@@ -2312,8 +2317,9 @@ function doLogout() {
 }
 
 function toggleTheme() {
-  var isDay=document.documentElement.classList.toggle('day');
-  document.getElementById('themeBtn').textContent=isDay?'&#9790;':'&#9728;';
+  var isDay = document.documentElement.classList.toggle('day');
+  var btn = document.getElementById('themeBtn');
+  if (btn) btn.innerHTML = isDay ? '&#9790;' : '&#9728;';
   drawAllEquity();
 }
 
