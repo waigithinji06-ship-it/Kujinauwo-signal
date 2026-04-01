@@ -359,6 +359,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-ui);font-size
         <div class="mchip active" id="chipPioneer" onclick="setMode('pioneer')"><span class="mci">&#128640;</span>PIONEER</div>
         <div class="mchip" id="chipPower" onclick="setMode('power')"><span class="mci">&#9889;</span>POWER</div>
         <div class="mchip" id="chipBoyboy" onclick="setMode('boyboy')"><span class="mci">&#128293;</span>BOY BOY</div>
+        <div class="mchip" id="chipEvenodd" onclick="setMode('evenodd')"><span class="mci">&#9889;</span>E/O</div>
       </div>
       <div style="flex:1 1 0;min-height:0;overflow:hidden;display:flex;flex-direction:column;">
         <div id="mpPioneer" class="mpage active">
@@ -499,76 +500,138 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-ui);font-size
           <div style="font-size:9px;color:var(--sub);font-family:var(--font-mono);letter-spacing:2px;margin-bottom:6px;">BOY BOY LOG</div>
           <div id="aiLogBB" class="ai-log"></div>
         </div>
+
+```
+    <!-- EVEN/ODD MODE -->
+    <div id="mpEvenodd" class="mpage" style="display:none;flex-direction:column;">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:8px;margin-bottom:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+          <div style="font-size:7px;color:var(--sub);font-family:var(--font-mono);letter-spacing:2px;">&#9889; EVEN/ODD &middot; EQUITY</div>
+          <div style="font-size:8px;font-family:var(--font-mono);" id="eqStatsEO">Now +0.00&nbsp;&nbsp;Peak +0.00&nbsp;&nbsp;Low +0.00</div>
+        </div>
+        <canvas id="eqCanvasEO" style="width:100%;height:70px;display:block;min-height:70px;"></canvas>
       </div>
-      <div style="flex-shrink:0;padding:10px 14px 0;display:flex;justify-content:space-between;align-items:center;">
-        <div style="font-size:9px;color:var(--sub);font-family:var(--font-mono);letter-spacing:2px;">&#128203; STATEMENT &mdash; ALL TRADES</div>
-        <div style="display:flex;gap:10px;align-items:center;">
-          <span id="tradeCount" style="color:var(--dim);font-size:8px;font-family:var(--font-mono);">0 trades</span>
-          <span id="tradePnlSum" style="font-size:9px;font-family:var(--font-mono);color:var(--sub);">P&amp;L: &mdash;</span>
-          <button onclick="document.getElementById('tradeLogBody').innerHTML='';_totalTrades=0;_runningBalance=null;_sessionPnlSum=0;document.getElementById('tradeCount').textContent='0 trades';document.getElementById('tradePnlSum').textContent='P&L: --';" style="font-size:8px;font-family:var(--font-mono);background:none;border:1px solid var(--border);color:var(--dim);padding:2px 7px;border-radius:4px;cursor:pointer;">CLEAR</button>
+      <div style="background:rgba(96,165,250,.06);border:1px solid rgba(96,165,250,.2);border-radius:8px;padding:8px 12px;margin-bottom:8px;font-family:var(--font-mono);font-size:9px;color:var(--sub);line-height:1.7;">
+        <span style="color:var(--blue);font-weight:700;">HOW IT WORKS</span> &mdash; Trades <strong style="color:var(--text);">EVEN or ODD</strong> when 57%+ lean is confirmed with chi-square p&lt;0.05 AND signal is on momentum not declining. S2 same stake as S1. S3-S5 multiply at 2.1x. Direction locked for full chain.
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px;">
+        <div class="cstat"><div class="cstat-l">SIGNAL</div><div class="cstat-v" id="eoSignal" style="color:var(--yellow);">SCAN</div></div>
+        <div class="cstat"><div class="cstat-l">EVEN %</div><div class="cstat-v" id="eoEvenPct" style="color:var(--blue);">--</div></div>
+        <div class="cstat"><div class="cstat-l">MOMENTUM</div><div class="cstat-v" id="eoMomentum" style="color:var(--dim);">--</div></div>
+        <div class="cstat"><div class="cstat-l">MARKET</div><div class="cstat-v" id="eoMarket" style="font-size:10px;">&mdash;</div></div>
+      </div>
+      <div style="margin-bottom:8px;">
+        <div onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'grid':'none'" style="font-size:9px;color:var(--sub);font-family:var(--font-mono);letter-spacing:2px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:var(--surface);border:1px solid var(--border);border-radius:8px;"><span>&#9881; CONFIG</span><span>&#9660;</span></div>
+        <div style="display:none;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-top:8px;">
+          <div class="cfg-block"><div class="cfg-label">&#128176; BASE STAKE ($)</div><input class="cfg-input" id="eoStake" type="number" value="1" min="0.35" step="0.35"/></div>
+          <div class="cfg-block"><div class="cfg-label">MULT &times; (2.1 default)</div><input class="cfg-input" id="eoMult" type="number" value="2.1" min="1.5" max="5" step="0.1"/></div>
+          <div class="cfg-block"><div class="cfg-label">TAKE PROFIT ($)</div><input class="cfg-input" id="eoTP" type="number" value="20" min="1" step="1"/></div>
+          <div class="cfg-block"><div class="cfg-label">STOP LOSS ($)</div><input class="cfg-input" id="eoSL" type="number" value="30" min="1" step="1"/></div>
+          <div class="cfg-block"><div class="cfg-label">MIN LEAN % (57 default)</div><input class="cfg-input" id="eoMinLean" type="number" value="57" min="54" max="70" step="1"/></div>
+          <div class="cfg-block" style="grid-column:1/-1;"><div class="cfg-label">INDEX</div><select class="cfg-select" id="eoIndex"><option value="AUTO">AUTO (AI picks best)</option><option value="R_10">V10</option><option value="R_25">V25</option><option value="R_50">V50</option><option value="R_75">V75</option><option value="R_100">V100</option><option value="1HZ10V">V10 1s</option><option value="1HZ25V">V25 1s</option><option value="1HZ50V">V50 1s</option><option value="1HZ75V">V75 1s</option><option value="1HZ100V">V100 1s</option></select></div>
         </div>
       </div>
-      <div id="tradeLog" style="flex:1;min-height:180px;margin:8px 14px 10px;border-radius:10px;border:1px solid var(--border);overflow:auto;background:var(--card);-webkit-overflow-scrolling:touch;">
-        <table class="dtable" style="table-layout:fixed;min-width:600px;">
-          <colgroup><col style="width:68px;"/><col style="width:38px;"/><col style="width:70px;"/><col style="width:72px;"/><col style="width:90px;"/><col style="width:60px;"/><col style="width:60px;"/><col style="width:64px;"/><col style="width:72px;"/><col style="width:80px;"/></colgroup>
-          <thead><tr>
-            <th class="c" style="position:sticky;top:0;z-index:2;background:var(--card2);">STATUS</th>
-            <th class="c" style="position:sticky;top:0;z-index:2;background:var(--card2);">MODE</th>
-            <th style="position:sticky;top:0;z-index:2;background:var(--card2);">TIME</th>
-            <th style="position:sticky;top:0;z-index:2;background:var(--card2);">MARKET</th>
-            <th style="position:sticky;top:0;z-index:2;background:var(--card2);">CONTRACT</th>
-            <th class="r" style="position:sticky;top:0;z-index:2;background:var(--card2);">STAKE</th>
-            <th class="r" style="position:sticky;top:0;z-index:2;background:var(--card2);">PAYOUT</th>
-            <th class="r" style="position:sticky;top:0;z-index:2;background:var(--card2);">P&amp;L</th>
-            <th class="r" style="position:sticky;top:0;z-index:2;background:var(--card2);">BALANCE</th>
-            <th style="position:sticky;top:0;z-index:2;background:var(--card2);">REF #</th>
-          </tr></thead>
-          <tbody id="tradeLogBody"></tbody>
-        </table>
+      <div style="margin-bottom:8px;">
+        <div style="font-size:9px;color:var(--sub);font-family:var(--font-mono);letter-spacing:2px;margin-bottom:6px;display:flex;justify-content:space-between;">
+          <span>&#9889; S1=S2=BASE &rarr; S3-S5 &times;2.1 &middot; direction locked</span>
+          <span id="eoExposure" style="color:var(--red);"></span>
+        </div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center;">
+          <div class="lad-step differ" id="eolad0"><div class="lad-num">S1</div><div class="lad-type" id="eoladt0">EVEN</div><div class="lad-stake" id="eolads0">$1.00</div></div>
+          <div class="lad-arrow">&rarr;</div>
+          <div class="lad-step differ" id="eolad1"><div class="lad-num">S2</div><div class="lad-type" id="eoladt1">EVEN</div><div class="lad-stake" id="eolads1">$1.00</div></div>
+          <div class="lad-arrow">&rarr;</div>
+          <div class="lad-step over" id="eolad2"><div class="lad-num">S3</div><div class="lad-type" id="eoladt2">EVEN</div><div class="lad-stake" id="eolads2">$2.10</div></div>
+          <div class="lad-arrow">&rarr;</div>
+          <div class="lad-step over" id="eolad3"><div class="lad-num">S4</div><div class="lad-type" id="eoladt3">EVEN</div><div class="lad-stake" id="eolads3">$4.41</div></div>
+          <div class="lad-arrow">&rarr;</div>
+          <div class="lad-step over final" id="eolad4"><div class="lad-num">S5</div><div class="lad-type" id="eoladt4">EVEN</div><div class="lad-stake" id="eolads4">$9.26</div></div>
+        </div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 12px;margin-bottom:10px;font-family:var(--font-mono);font-size:9px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;">
+        <span style="color:var(--sub);">STEP <span id="eoStepDisp" style="color:var(--accent);font-weight:700;">S1</span></span>
+        <span style="color:var(--sub);">NEXT <span id="eoNextStake" style="color:var(--text);font-weight:700;">$1.00</span></span>
+        <span style="color:var(--sub);">DIR <span id="eoDir" style="color:var(--yellow);font-weight:700;">&mdash;</span></span>
+        <span style="color:var(--sub);">DELTA <span id="eoDelta" style="color:var(--dim);font-weight:700;">&mdash;</span></span>
+        <span id="eoRunning" style="color:var(--dim);">&#9208; IDLE</span>
+      </div>
+      <div style="font-size:9px;color:var(--sub);font-family:var(--font-mono);letter-spacing:2px;margin-bottom:6px;">EVEN/ODD LOG</div>
+      <div id="aiLogEO" class="ai-log"></div>
+    </div>
+    <!-- END EVEN/ODD -->
+
+  </div>
+  <div style="flex-shrink:0;padding:10px 14px 0;display:flex;justify-content:space-between;align-items:center;">
+    <div style="font-size:9px;color:var(--sub);font-family:var(--font-mono);letter-spacing:2px;">&#128203; STATEMENT &mdash; ALL TRADES</div>
+    <div style="display:flex;gap:10px;align-items:center;">
+      <span id="tradeCount" style="color:var(--dim);font-size:8px;font-family:var(--font-mono);">0 trades</span>
+      <span id="tradePnlSum" style="font-size:9px;font-family:var(--font-mono);color:var(--sub);">P&amp;L: &mdash;</span>
+      <button onclick="document.getElementById('tradeLogBody').innerHTML='';_totalTrades=0;_runningBalance=null;_sessionPnlSum=0;document.getElementById('tradeCount').textContent='0 trades';document.getElementById('tradePnlSum').textContent='P&amp;L: --';" style="font-size:8px;font-family:var(--font-mono);background:none;border:1px solid var(--border);color:var(--dim);padding:2px 7px;border-radius:4px;cursor:pointer;">CLEAR</button>
+    </div>
+  </div>
+  <div id="tradeLog" style="flex:1;min-height:180px;margin:8px 14px 10px;border-radius:10px;border:1px solid var(--border);overflow:auto;background:var(--card);-webkit-overflow-scrolling:touch;">
+    <table class="dtable" style="table-layout:fixed;min-width:600px;">
+      <colgroup><col style="width:68px;"/><col style="width:38px;"/><col style="width:70px;"/><col style="width:72px;"/><col style="width:90px;"/><col style="width:60px;"/><col style="width:60px;"/><col style="width:64px;"/><col style="width:72px;"/><col style="width:80px;"/></colgroup>
+      <thead><tr>
+        <th class="c" style="position:sticky;top:0;z-index:2;background:var(--card2);">STATUS</th>
+        <th class="c" style="position:sticky;top:0;z-index:2;background:var(--card2);">MODE</th>
+        <th style="position:sticky;top:0;z-index:2;background:var(--card2);">TIME</th>
+        <th style="position:sticky;top:0;z-index:2;background:var(--card2);">MARKET</th>
+        <th style="position:sticky;top:0;z-index:2;background:var(--card2);">CONTRACT</th>
+        <th class="r" style="position:sticky;top:0;z-index:2;background:var(--card2);">STAKE</th>
+        <th class="r" style="position:sticky;top:0;z-index:2;background:var(--card2);">PAYOUT</th>
+        <th class="r" style="position:sticky;top:0;z-index:2;background:var(--card2);">P&amp;L</th>
+        <th class="r" style="position:sticky;top:0;z-index:2;background:var(--card2);">BALANCE</th>
+        <th style="position:sticky;top:0;z-index:2;background:var(--card2);">REF #</th>
+      </tr></thead>
+      <tbody id="tradeLogBody"></tbody>
+    </table>
+  </div>
+</div>
+<div id="pgAccount" class="page" style="flex-direction:column;">
+  <div class="pscroll">
+    <div style="font-size:9px;color:var(--sub);font-family:var(--font-mono);letter-spacing:2px;margin-bottom:12px;padding-top:4px;">ACCOUNT</div>
+    <div class="acct-section" id="acctBadge" style="display:none;">
+      <div class="acct-section-title">PROFILE</div>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
+        <div id="acctAvatar" style="width:42px;height:42px;border-radius:50%;background:var(--accent);color:#000;font-size:18px;font-weight:700;display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);"></div>
+        <div><div id="acctName" style="font-size:14px;font-weight:700;color:var(--text);"></div><div id="acctId" style="font-size:10px;color:var(--sub);font-family:var(--font-mono);"></div></div>
       </div>
     </div>
-    <div id="pgAccount" class="page" style="flex-direction:column;">
-      <div class="pscroll">
-        <div style="font-size:9px;color:var(--sub);font-family:var(--font-mono);letter-spacing:2px;margin-bottom:12px;padding-top:4px;">ACCOUNT</div>
-        <div class="acct-section" id="acctBadge" style="display:none;">
-          <div class="acct-section-title">PROFILE</div>
-          <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
-            <div id="acctAvatar" style="width:42px;height:42px;border-radius:50%;background:var(--accent);color:#000;font-size:18px;font-weight:700;display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);"></div>
-            <div><div id="acctName" style="font-size:14px;font-weight:700;color:var(--text);"></div><div id="acctId" style="font-size:10px;color:var(--sub);font-family:var(--font-mono);"></div></div>
-          </div>
-        </div>
-        <div class="acct-section" id="balRow" style="display:none;">
-          <div class="acct-section-title">BALANCE</div>
-          <div style="display:flex;justify-content:space-between;align-items:center;">
-            <div><div style="font-size:24px;font-weight:700;color:var(--text);font-family:var(--font-mono);"><span id="balVal">&mdash;</span></div><div style="font-size:10px;color:var(--sub);font-family:var(--font-mono);margin-top:2px;"><span id="balCur"></span> &middot; <span id="balAcct"></span></div></div>
-            <div id="balType" style="font-size:9px;color:var(--green);font-family:var(--font-mono);background:rgba(0,230,118,.1);padding:6px 10px;border-radius:20px;border:1px solid rgba(0,230,118,.3);"></div>
-          </div>
-        </div>
-        <div class="acct-section">
-          <div class="acct-section-title">SESSION STATS</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-            <div><div style="font-size:8px;color:var(--sub);font-family:var(--font-mono);">TOTAL P&amp;L</div><div style="font-size:16px;font-weight:700;font-family:var(--font-mono);" id="acctPnl">$0.00</div></div>
-            <div><div style="font-size:8px;color:var(--sub);font-family:var(--font-mono);">WIN RATE</div><div style="font-size:16px;font-weight:700;font-family:var(--font-mono);" id="acctWR">&mdash;</div></div>
-            <div><div style="font-size:8px;color:var(--sub);font-family:var(--font-mono);">WINS</div><div style="font-size:16px;font-weight:700;color:var(--green);font-family:var(--font-mono);" id="acctW">0</div></div>
-            <div><div style="font-size:8px;color:var(--sub);font-family:var(--font-mono);">LOSSES</div><div style="font-size:16px;font-weight:700;color:var(--red);font-family:var(--font-mono);" id="acctL">0</div></div>
-          </div>
-        </div>
-        <div class="acct-section">
-          <div class="acct-section-title">SESSION INTELLIGENCE</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-family:var(--font-mono);font-size:11px;">
-            <div><div style="font-size:8px;color:var(--sub);">REGIME</div><div id="silAcctRegime" style="font-weight:700;color:var(--text);">&mdash;</div></div>
-            <div><div style="font-size:8px;color:var(--sub);">ENTROPY</div><div id="silAcctEntropy" style="font-weight:700;color:var(--text);">&mdash;</div></div>
-            <div><div style="font-size:8px;color:var(--sub);">DRAWDOWN</div><div id="silAcctDD" style="font-weight:700;color:var(--text);">&mdash;</div></div>
-            <div><div style="font-size:8px;color:var(--sub);">GATE</div><div id="silAcctGate" style="font-weight:700;color:var(--text);">&mdash;</div></div>
-          </div>
-        </div>
-        <div class="acct-section">
-          <div class="acct-section-title">INFO</div>
-          <div style="font-size:11px;color:var(--dim);font-family:var(--font-mono);line-height:1.8;">Token never stored &middot; Sent only to Deriv WebSocket API<br>AI trades only with valid token &middot; Use demo account first<br>Educational &amp; demo use recommended &middot; Trade at your own risk</div>
-        </div>
-        <button onclick="doLogout()" style="width:100%;padding:14px;background:rgba(255,61,90,.15);color:var(--red);border:1px solid rgba(255,61,90,.3);border-radius:10px;font-size:12px;font-weight:700;font-family:var(--font-mono);cursor:pointer;margin-bottom:24px;">LOGOUT</button>
+    <div class="acct-section" id="balRow" style="display:none;">
+      <div class="acct-section-title">BALANCE</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div><div style="font-size:24px;font-weight:700;color:var(--text);font-family:var(--font-mono);"><span id="balVal">&mdash;</span></div><div style="font-size:10px;color:var(--sub);font-family:var(--font-mono);margin-top:2px;"><span id="balCur"></span> &middot; <span id="balAcct"></span></div></div>
+        <div id="balType" style="font-size:9px;color:var(--green);font-family:var(--font-mono);background:rgba(0,230,118,.1);padding:6px 10px;border-radius:20px;border:1px solid rgba(0,230,118,.3);"></div>
       </div>
     </div>
+    <div class="acct-section">
+      <div class="acct-section-title">SESSION STATS</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div><div style="font-size:8px;color:var(--sub);font-family:var(--font-mono);">TOTAL P&amp;L</div><div style="font-size:16px;font-weight:700;font-family:var(--font-mono);" id="acctPnl">$0.00</div></div>
+        <div><div style="font-size:8px;color:var(--sub);font-family:var(--font-mono);">WIN RATE</div><div style="font-size:16px;font-weight:700;font-family:var(--font-mono);" id="acctWR">&mdash;</div></div>
+        <div><div style="font-size:8px;color:var(--sub);font-family:var(--font-mono);">WINS</div><div style="font-size:16px;font-weight:700;color:var(--green);font-family:var(--font-mono);" id="acctW">0</div></div>
+        <div><div style="font-size:8px;color:var(--sub);font-family:var(--font-mono);">LOSSES</div><div style="font-size:16px;font-weight:700;color:var(--red);font-family:var(--font-mono);" id="acctL">0</div></div>
+      </div>
+    </div>
+    <div class="acct-section">
+      <div class="acct-section-title">SESSION INTELLIGENCE</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-family:var(--font-mono);font-size:11px;">
+        <div><div style="font-size:8px;color:var(--sub);">REGIME</div><div id="silAcctRegime" style="font-weight:700;color:var(--text);">&mdash;</div></div>
+        <div><div style="font-size:8px;color:var(--sub);">ENTROPY</div><div id="silAcctEntropy" style="font-weight:700;color:var(--text);">&mdash;</div></div>
+        <div><div style="font-size:8px;color:var(--sub);">DRAWDOWN</div><div id="silAcctDD" style="font-weight:700;color:var(--text);">&mdash;</div></div>
+        <div><div style="font-size:8px;color:var(--sub);">GATE</div><div id="silAcctGate" style="font-weight:700;color:var(--text);">&mdash;</div></div>
+      </div>
+    </div>
+    <div class="acct-section">
+      <div class="acct-section-title">INFO</div>
+      <div style="font-size:11px;color:var(--dim);font-family:var(--font-mono);line-height:1.8;">Token never stored &middot; Sent only to Deriv WebSocket API<br>AI trades only with valid token &middot; Use demo account first<br>Educational &amp; demo use recommended &middot; Trade at your own risk</div>
+    </div>
+    <button onclick="doLogout()" style="width:100%;padding:14px;background:rgba(255,61,90,.15);color:var(--red);border:1px solid rgba(255,61,90,.3);border-radius:10px;font-size:12px;font-weight:700;font-family:var(--font-mono);cursor:pointer;margin-bottom:24px;">LOGOUT</button>
+  </div>
+</div>
+```
+
   </div>
   <nav class="bnav">
     <button class="bntab" id="bnAnalysis" onclick="navTo('analysis')"><span class="bni">&#128202;</span>ANALYSIS</button>
@@ -596,6 +659,7 @@ IDX.forEach(i=>{
 });
 let total=0,ws=null,rtimer=null,userToken=null,isGuest=false,lastTradeTime=0;
 const AI={running:false,state:'idle',mode:'pioneer',tp1Hit:false,tp2Hit:false,baseStake:5,mult:3.6,tp:15,sl:10,martStep:0,consecLoss:0,wins:0,losses:0,totalPnl:0,sessPnl:0,equityPoints:[0],activeCid:null,activeSym:null,activeType:null,activeDigit:null,activeSource:null,inTrade:false,pendingResult:false,tradeTimer:null,lateTimer:null,prevRecovery:null,sessionStart:0,recoveryRestUntil:0,recoveryRestSym:null,lastLostDigit:null,circuitPausedUntil:0,recoveryCanFireAt:0,waitingSince:0,noSignalPauseUntil:0,lastWaitReason:'',lastWaitLogTime:0,lastBuyTime:0,_recoveryDirection:null,_recoveryConfirmCount:0,_lastRecoveryCandidate:null};
+const EO={running:false,step:0,baseStake:1,mult:2.1,direction:null,sessPnl:0,wins:0,losses:0,consecLoss:0,equityPoints:[0],circuitPausedUntil:0,activeSym:null,waitingSince:0,_lastTradeTime:0,_confirmCount:0,_lastCandidate:null};
 const SIL={calibrated:false,calibTicks:0,calibTarget:50,calibData:{},baseline:{entropy:3.1,digitDeviation:0.10},thresholds:{entropyGate:2.95,digitHotGate:0.14,recentGate:0.65},regime:'calibrating',prevRegime:'calibrating',regimeChangedAt:0,evRecord:{},evWindow:200,currentDrawdown:0,_lastRegimeLog:'',_lastRegimeLogTime:0};
 IDX.forEach(i=>{SIL.evRecord[i.s]=[];SIL.calibData[i.s]={digits:[],entropies:[]};});
 function silReset(){SIL.calibrated=false;SIL.calibTicks=0;SIL.calibData={};IDX.forEach(i=>{SIL.calibData[i.s]={digits:[],entropies:[]};});SIL.baseline={entropy:3.1,digitDeviation:0.10};SIL.thresholds={entropyGate:2.95,digitHotGate:0.14,recentGate:0.65};SIL.regime='calibrating';SIL.prevRegime='calibrating';SIL.regimeChangedAt=0;SIL.currentDrawdown=0;silUpdateBar();}
@@ -614,7 +678,7 @@ function silGate(sym,step){if(!SIL.calibrated)return{ok:true,reason:'calibrating
 function silAdjustStake(base,step){if(step>0)return base;return Math.max(0.35,Math.round(base*silDrawdownMultiplier()*100)/100);}
 function silLogRegimeChange(r){const now=Date.now();if(r===SIL._lastRegimeLog&&now-SIL._lastRegimeLogTime<60000)return;SIL._lastRegimeLog=r;SIL._lastRegimeLogTime=now;const m={normal:'[SIL] NORMAL - entries open',streak:'[SIL] STREAK - S1 paused',cluster:'[SIL] CLUSTER - entropy suppressed',reset:'[SIL] RESET - high opportunity'};if(m[r])aiLog(m[r],r==='normal'||r==='reset'?'info':'warn');}
 function silUpdateBar(){const bar=document.getElementById('silBar');if(!bar)return;const r=SIL.calibrated?SIL.regime:'calibrating';bar.className='sil-bar '+r;const rl=document.getElementById('silRegimeLabel');if(rl){const rm={calibrating:'CALIBRATING',normal:'NORMAL',streak:'STREAK',cluster:'CLUSTER',reset:'RESET'};rl.textContent=rm[r]||r.toUpperCase();rl.className='sil-regime '+r;}const pr=document.getElementById('silCalibProgress');if(pr){if(!SIL.calibrated)pr.textContent='calibrating... '+Math.min(100,Math.round(SIL.calibTicks/SIL.calibTarget*100))+'%';else pr.textContent='base:'+SIL.baseline.entropy+' gate:'+SIL.thresholds.entropyGate;}const pe=document.getElementById('silPillEntropy');if(pe){const e=silBestEntropy(),g=SIL.thresholds.entropyGate;pe.textContent='ENT '+e;pe.className='sil-pill '+(e>=g+0.1?'on':e>=g?'warn':'off');}const pd=document.getElementById('silPillDrawdown');if(pd){const dd=Math.round(SIL.currentDrawdown*100);pd.textContent='DD '+dd+'%';pd.className='sil-pill '+(dd<5?'on':dd<10?'warn':'off');}const pev=document.getElementById('silPillEV');if(pev){let bev=null;IDX.forEach(i=>{const ev=silGetEV(i.s);if(ev.ev!==null&&(bev===null||ev.ev>bev))bev=ev.ev;});pev.textContent=bev!==null?'EV '+(bev>=0?'+':'')+bev.toFixed(3):'EV --';pev.className='sil-pill '+(bev!==null&&bev>=0?'on':bev!==null?'off':'');}const pg=document.getElementById('silPillGate');if(pg){const g=silGate(null,0);pg.textContent=g.ok?'GATE OK':'GATE X';pg.className='sil-pill '+(g.ok?'on':'off');}const sar=document.getElementById('silAcctRegime');if(sar)sar.textContent=r.toUpperCase();const sae=document.getElementById('silAcctEntropy');if(sae)sae.textContent=String(silBestEntropy());const sad=document.getElementById('silAcctDD');if(sad)sad.textContent=Math.round(SIL.currentDrawdown*100)+'%';const sag=document.getElementById('silAcctGate');if(sag){const g=silGate(null,0);sag.textContent=g.ok?'OPEN':'BLOCKED';sag.style.color=g.ok?'var(--green)':'var(--red)';}}
-function setMode(m){if(AI.running||PW.running||BB.running)return;AI.mode=m;['pioneer','power','boyboy'].forEach(x=>{const el=document.getElementById('chip'+x.charAt(0).toUpperCase()+x.slice(1));if(el)el.classList.toggle('active',x===m);});const mpMap={pioneer:'mpPioneer',power:'mpPower',boyboy:'mpBoyboy'};Object.values(mpMap).forEach(id=>{const el=document.getElementById(id);if(el){el.classList.remove('active');el.style.display='none';}});const active=document.getElementById(mpMap[m]);if(active){active.classList.add('active');active.style.display='flex';}if(m==='pioneer')refreshLadder();if(m==='power')refreshPowerLadder();if(m==='boyboy')refreshBBLadder();}
+function setMode(m){if(AI.running||PW.running||BB.running||EO.running)return;AI.mode=m;['pioneer','power','boyboy','evenodd'].forEach(x=>{const el=document.getElementById('chip'+x.charAt(0).toUpperCase()+x.slice(1));if(el)el.classList.toggle('active',x===m);});const mpMap={pioneer:'mpPioneer',power:'mpPower',boyboy:'mpBoyboy',evenodd:'mpEvenodd'};Object.values(mpMap).forEach(id=>{const el=document.getElementById(id);if(el){el.classList.remove('active');el.style.display='none';}});const active=document.getElementById(mpMap[m]);if(active){active.classList.add('active');active.style.display='flex';}if(m==='pioneer')refreshLadder();if(m==='power')refreshPowerLadder();if(m==='boyboy')refreshBBLadder();if(m==='evenodd')refreshEOLadder();}
 function calcStake(step,score){const base=AI.baseStake||parseFloat(document.getElementById('cfgStake').value)||5;const mult=AI.mult||parseFloat(document.getElementById('cfgMult').value)||3.6;let s=base;if(step===0&&score){const minScore=parseInt(document.getElementById('cfgMinScore')?document.getElementById('cfgMinScore').value:45)||45;const conf=Math.min(1.5,1.0+Math.max(0,(score-minScore)/40)*0.5);s=Math.round(base*conf*100)/100;}for(let i=0;i<step;i++)s=Math.round(s*mult*100)/100;return s;}
 function calcTpLevels(){const tp=parseFloat(document.getElementById('cfgTP').value)||30;const t1=Math.round(tp*0.333*100)/100,t2=Math.round(tp*0.666*100)/100;const e1=document.getElementById('tp1val');if(e1)e1.textContent='$'+t1.toFixed(2);const e2=document.getElementById('tp2val');if(e2)e2.textContent='$'+t2.toFixed(2);const e3=document.getElementById('tp3val');if(e3)e3.textContent='$'+tp.toFixed(2);return{t1,t2,t3:tp};}
 function refreshLadder(){const recMode=(document.getElementById('cfgRecovery')?document.getElementById('cfgRecovery').value:'O2U7')||'O2U7';const recLabel=recMode==='O1U8'?'OV1/UN8':recMode==='O3U6'?'OV3/UN6':recMode==='DIFF'?'DIFFERS':'OV2/UN7';const labels=['DIFFERS',recLabel,recLabel,recLabel,recLabel];let totalExp=0;for(let i=0;i<5;i++){const stake=calcStake(i);totalExp+=stake;const el=document.getElementById('lad'+i);if(el){el.className='lad-step '+(i===0?'differ':i===4?'over final':'over');el.querySelector('.lad-type').textContent=labels[i];el.querySelector('.lad-stake').textContent='$'+stake.toFixed(2);}}const exp=document.getElementById('ladExposure');if(exp)exp.textContent='Max exposure: $'+totalExp.toFixed(2);}
@@ -741,12 +805,12 @@ function drawEquity(){const canvas=document.getElementById('eqCanvas');if(!canva
 function drawPowerEquity(){const canvas=document.getElementById('eqCanvasPW');if(!canvas)return;const ctx=canvas.getContext('2d');const W=canvas.offsetWidth||500;canvas.width=W;canvas.height=70;ctx.clearRect(0,0,W,70);const pts=PW.equityPoints||[];if(pts.length<2){ctx.strokeStyle='rgba(234,179,8,.15)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(0,35);ctx.lineTo(W,35);ctx.stroke();return;}const mn=Math.min(...pts),mx=Math.max(...pts),range=mx-mn||1;const toY=v=>5+(60*(1-(v-mn)/range));const last=pts[pts.length-1];const grad=ctx.createLinearGradient(0,0,0,70);if(last>=0){grad.addColorStop(0,'rgba(234,179,8,.25)');grad.addColorStop(1,'rgba(234,179,8,.02)');}else{grad.addColorStop(0,'rgba(239,68,68,.02)');grad.addColorStop(1,'rgba(239,68,68,.2)');}ctx.beginPath();pts.forEach((v,i)=>{const x=i/(pts.length-1)*W,y=toY(v);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});ctx.lineTo(W,70);ctx.lineTo(0,70);ctx.closePath();ctx.fillStyle=grad;ctx.fill();ctx.strokeStyle=last>=0?'var(--yellow)':'var(--red)';ctx.lineWidth=2;ctx.beginPath();pts.forEach((v,i)=>{const x=i/(pts.length-1)*W,y=toY(v);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});ctx.stroke();const es=document.getElementById('eqStatsPW');if(es){const peak=Math.max(...pts),trough=Math.min(...pts);es.textContent='Now '+(last>=0?'+':'')+last.toFixed(2)+'  Peak '+(peak>=0?'+':'')+peak.toFixed(2)+'  Low '+(trough>=0?'+':'')+trough.toFixed(2);es.style.color=last>=0?'var(--yellow)':'var(--red)';}}
 function placeTrade(sym,code,stake,barrier,typeLabel,source){if(!userToken||isGuest){aiLog('Token required.','danger');setAIState('idle');return;}if(!ws||ws.readyState!==1){aiLog('WS not connected - skipping.','warn');return;}const s=ST[sym];if(s&&s.tickTimes&&s.tickTimes.length>0){const lastTick=s.tickTimes[s.tickTimes.length-1];if(Date.now()-lastTick>5000){aiLog(sym+' feed stale - skipping','warn');return;}}AI.inTrade=true;AI.activeSym=sym;AI.activeType=typeLabel;AI.activeDigit=barrier;AI.activeSource=source;setAIState('trading');const ix=IDX.find(i=>i.s===sym);const _ct=document.getElementById('curTrade');if(_ct){_ct.style.display='block';_ct.classList.add('active');}document.getElementById('ctIndex').textContent=(ix?ix.n:sym);document.getElementById('ctContract').textContent=typeLabel+(typeof barrier==='number'&&barrier>=0?' d.'+barrier:'');document.getElementById('ctStake').textContent='$'+stake.toFixed(2);document.getElementById('ctDigit').textContent=typeLabel==='DIFFER'?'Avoid d.'+barrier:typeLabel.includes('OVER')?'Last > '+barrier:typeLabel.includes('UNDER')?'Last < '+barrier:typeLabel;document.getElementById('ctId').textContent='Placing...';document.getElementById('ctPayout').textContent='--';document.getElementById('ctStatus').textContent='SENDING...';document.getElementById('ctStatus').style.color='var(--yellow)';const isDigit=['DIGITDIFF','DIGITOVER','DIGITUNDER','DIGITEVEN','DIGITODD'].includes(code);const params={amount:stake,basis:'stake',contract_type:code,currency:'USD',duration:1,duration_unit:'t',symbol:sym};if(isDigit&&code!=='DIGITEVEN'&&code!=='DIGITODD')params.barrier=parseInt(barrier);const order={buy:1,price:stake,parameters:params};AI.pendingResult=true;ws.send(JSON.stringify(order));AI.tradeTimer=setTimeout(()=>{if(AI.pendingResult&&AI.activeCid){aiLog('No result in 15s - resubscribing #'+AI.activeCid,'warn');document.getElementById('ctStatus').textContent='RECHECK...';document.getElementById('ctStatus').style.color='var(--yellow)';if(ws&&ws.readyState===1)ws.send(JSON.stringify({proposal_open_contract:1,contract_id:AI.activeCid,subscribe:1}));AI.lateTimer=setTimeout(()=>{if(AI.pendingResult&&AI.activeCid){const lostStake=parseFloat((document.getElementById('ctStake').textContent||'0').replace('$',''))||0;aiLog('Timeout - recording as loss ($'+lostStake.toFixed(2)+')','danger');AI.pendingResult=false;AI.inTrade=false;AI.losses++;AI.consecLoss++;const lostAmt=-lostStake;const src=AI.activeSource||'pioneer';AI.totalPnl=Math.round((AI.totalPnl+lostAmt)*100)/100;AI.sessPnl=Math.round((AI.sessPnl+lostAmt)*100)/100;AI.equityPoints.push(AI.sessPnl);addTradeLog(AI.activeSym,AI.activeType,'timeout',lostStake,lostAmt,false,src==='pioneer'?'S'+(AI.martStep+1)+' T/O':'PW T/O');AI.activeCid=null;if(src==='pioneer'&&AI.martStep<4)AI.martStep++;updateAIStats();drawEquity();document.getElementById('curTrade').classList.remove('active');setAIState(AI.running||PW.running?'scanning':'idle');}},30000);}},15000);}
 function onBuy(msg){if(!AI.pendingResult)return;if(msg.error){clearTimeout(AI.tradeTimer);aiLog('Buy error: '+(msg.error.message||msg.error.code),'danger');AI.inTrade=false;AI.pendingResult=false;if(msg.error.code==='InsufficientBalance'){aiLog('Insufficient balance - stopping.','danger');stopAI();powerStop();}setAIState(AI.running||PW.running?'scanning':'idle');return;}if(!msg.buy)return;AI.activeCid=msg.buy.contract_id;document.getElementById('ctId').textContent='#'+AI.activeCid;const grossPay=parseFloat(msg.buy.payout||0);const buyPrice=parseFloat(msg.buy.buy_price||0);const estNet=grossPay-buyPrice;document.getElementById('ctPayout').textContent=(estNet>=0?'+':'')+estNet.toFixed(2);document.getElementById('ctStatus').textContent='ACTIVE';document.getElementById('ctStatus').style.color='var(--green)';aiLog('#'+AI.activeCid+' open - Payout: $'+grossPay.toFixed(2),'success');ws.send(JSON.stringify({proposal_open_contract:1,contract_id:AI.activeCid,subscribe:1}));}
-function onContract(poc){if(!poc)return;if(poc.contract_id!==AI.activeCid)return;if(poc.status==='open')return;clearTimeout(AI.tradeTimer);clearTimeout(AI.lateTimer);AI.activeCid=null;const source=AI.activeSource||'pioneer';AI.pendingResult=false;AI.inTrade=false;document.getElementById('ctStatus').textContent=(poc.is_sold&&poc.profit>0)?'WON':'LOST';document.getElementById('ctStatus').style.color=(poc.is_sold&&poc.profit>0)?'var(--green)':'var(--red)';if(source==='power'){onPowerContract(poc);return;}if(source==='boyboy'){onBBContract(poc);return;}onPioneerContract(poc);}
+function onContract(poc){if(!poc)return;if(poc.contract_id!==AI.activeCid)return;if(poc.status==='open')return;clearTimeout(AI.tradeTimer);clearTimeout(AI.lateTimer);AI.activeCid=null;const source=AI.activeSource||'pioneer';AI.pendingResult=false;AI.inTrade=false;document.getElementById('ctStatus').textContent=(poc.is_sold&&poc.profit>0)?'WON':'LOST';document.getElementById('ctStatus').style.color=(poc.is_sold&&poc.profit>0)?'var(--green)':'var(--red)';if(source==='power'){onPowerContract(poc);return;}if(source==='boyboy'){onBBContract(poc);return;}if(source==='evenodd'){onEOContract(poc);return;}onPioneerContract(poc);}
 let _totalTrades=0,_runningBalance=null,_sessionPnlSum=0;
 function addTradeLog(sym,type,digit,stake,profit,won,label,contractId){const ix=IDX.find(i=>i.s===sym);const now=new Date().toUTCString().slice(17,25);_totalTrades++;_sessionPnlSum=Math.round((_sessionPnlSum+profit)*100)/100;const pnlCls=profit>0?'dpnl-pos':profit<0?'dpnl-neg':'dpnl-zero';const src=AI.activeSource;const modePill=src==='power'?'<span class="dtype-pill" style="background:rgba(234,179,8,.12);color:var(--yellow);border:1px solid rgba(234,179,8,.3);">PW</span>':src==='boyboy'?'<span class="dtype-pill" style="background:rgba(249,115,22,.12);color:var(--accent2);border:1px solid rgba(249,115,22,.3);">BB</span>':'<span class="dtype-pill" style="background:rgba(56,189,248,.1);color:var(--accent);border:1px solid rgba(56,189,248,.2);">PI</span>';const lup=(label||'').toUpperCase();let pillCls='differ';if(lup.includes('OVER'))pillCls='over';else if(lup.includes('UNDER'))pillCls='under';const contractPill='<span class="dtype-pill '+pillCls+'">'+label+'</span>';const payout=won?(stake+profit).toFixed(2):'0.00';const balText=_runningBalance!=null?'$'+parseFloat(_runningBalance).toFixed(2):'--';const refText=contractId?'#'+String(contractId).slice(-6):'--';const tr=document.createElement('tr');tr.className='drow '+(won?'drow-win':'drow-loss');tr.innerHTML='<td class="c"><span class="dstatus-badge '+(won?'won':'lost')+'">'+(won?'WIN':'LOSS')+'</span></td><td class="c">'+modePill+'</td><td class="dim" style="font-size:9px;">'+now+'</td><td style="font-weight:600;">'+(ix?ix.n:sym||'--')+'</td><td>'+contractPill+'</td><td class="r">$'+stake.toFixed(2)+'</td><td class="r">$'+payout+'</td><td class="r"><span class="'+pnlCls+'">'+(profit>=0?'+':'')+profit.toFixed(2)+'</span></td><td class="r dim">'+balText+'</td><td class="dim" style="font-size:8px;overflow:hidden;text-overflow:ellipsis;">'+refText+'</td>';const tbody=document.getElementById('tradeLogBody');if(tbody){tbody.appendChild(tr);const wrapper=document.getElementById('tradeLog');if(wrapper)wrapper.scrollTop=wrapper.scrollHeight;}const tc=document.getElementById('tradeCount');if(tc)tc.textContent=_totalTrades+' trade'+(_totalTrades===1?'':'s');const ps=document.getElementById('tradePnlSum');if(ps){ps.textContent='P&L: '+(_sessionPnlSum>=0?'+':'')+'$'+_sessionPnlSum.toFixed(2);ps.style.color=_sessionPnlSum>0?'var(--green)':_sessionPnlSum<0?'var(--red)':'var(--sub)';}}
-function startAI(){if(!userToken||isGuest){aiLog('Token required.','danger');return;}if(AI.mode==='power'){powerStart();return;}if(AI.mode==='boyboy'){bbStart();return;}if(PW.running||BB.running){aiLog('Stop other mode first.','warn');return;}AI.baseStake=parseFloat(document.getElementById('cfgStake').value)||5;AI.mult=parseFloat(document.getElementById('cfgMult').value)||3.6;AI.tp=parseFloat(document.getElementById('cfgTP').value)||15;AI.sl=parseFloat(document.getElementById('cfgSL').value)||10;AI.tp1Hit=false;AI.tp2Hit=false;AI.consecLoss=0;AI.sessionStart=Date.now();AI.prevRecovery=null;silReset();refreshLadder();AI.running=true;document.getElementById('startBtn').disabled=true;document.getElementById('stopBtn').disabled=false;['cfgStake','cfgMult','cfgTP','cfgSL','cfgIndex','cfgMinScore','cfgTimeLimit'].forEach(id=>{const el=document.getElementById(id);if(el)el.disabled=true;});updateLadderUI();setAIState('scanning');aiLog('PIONEER STARTED - Base:$'+AI.baseStake+' Mult:x'+AI.mult+' TP:$'+AI.tp+' SL:$'+AI.sl,'success');aiLog('[SIL] Active - calibrating first '+SIL.calibTarget+' ticks...','info');aiLog('Max exposure: $'+[0,1,2,3,4].reduce((s,i)=>s+calcStake(i),0).toFixed(2),'warn');}
-function stopAI(){if(AI.mode==='power'&&PW.running){powerStop();return;}if(AI.mode==='boyboy'&&BB.running){bbStop();return;}if(!AI.running)return;AI.running=false;AI.inTrade=false;AI.pendingResult=false;clearTimeout(AI.tradeTimer);clearTimeout(AI.lateTimer);document.getElementById('startBtn').disabled=false;document.getElementById('stopBtn').disabled=true;['cfgStake','cfgMult','cfgTP','cfgSL','cfgIndex','cfgMinScore','cfgTimeLimit'].forEach(id=>{const el=document.getElementById(id);if(el)el.disabled=false;});if(!PW.running)setAIState('idle');aiLog('Pioneer stopped.','warn');}
-function resetAI(){stopAI();powerStop();bbStop();AI.wins=0;AI.losses=0;AI.totalPnl=0;AI.sessPnl=0;AI.consecLoss=0;AI.martStep=0;AI.activeCid=null;AI.equityPoints=[0];AI.sessionStart=0;AI.tp1Hit=false;AI.tp2Hit=false;AI.recoveryRestUntil=0;AI.recoveryRestSym=null;AI._recoveryDirection=null;AI._recoveryConfirmCount=0;AI._lastRecoveryCandidate=null;PW.step=0;PW.consecLoss=0;PW.direction=null;PW.sessPnl=0;PW.wins=0;PW.losses=0;PW.equityPoints=[0];PW.prevRecovery=null;PW.circuitPausedUntil=0;PW.lastLostSym=null;PW.waitingSince=0;BB.step=0;BB.consecLoss=0;BB.direction=null;BB.sessPnl=0;BB.wins=0;BB.losses=0;BB.equityPoints=[0];BB.circuitPausedUntil=0;BB.lastDigit=null;BB.activeSym=null;silReset();setAIState('idle');updateAIStats();drawEquity();drawPowerEquity();drawBBEquity();['eqStats','eqStatsPW','eqStatsBB'].forEach(id=>{const el=document.getElementById(id);if(el){el.textContent='Now +0.00  Peak +0.00  Low +0.00';el.style.color='var(--sub)';}});const ct=document.getElementById('curTrade');if(ct){ct.classList.remove('active');ct.style.display='none';}const tbody=document.getElementById('tradeLogBody');if(tbody)tbody.innerHTML='';_totalTrades=0;_runningBalance=null;_sessionPnlSum=0;const tc=document.getElementById('tradeCount');if(tc)tc.textContent='0 trades';const ps=document.getElementById('tradePnlSum');if(ps){ps.textContent='P&L: --';ps.style.color='var(--sub)';}for(let i=0;i<5;i++){const e=document.getElementById('lad'+i);if(e)e.classList.remove('won','lost','active');}for(let i=0;i<5;i++){const e=document.getElementById('plad'+i);if(e)e.classList.remove('won','lost','active');}refreshLadder();refreshPowerLadder();refreshBBLadder();aiLog('Reset complete. SIL re-calibrating. Ready.','info');}
+function startAI(){if(!userToken||isGuest){aiLog('Token required.','danger');return;}if(AI.mode==='power'){powerStart();return;}if(AI.mode==='boyboy'){bbStart();return;}if(AI.mode==='evenodd'){eoStart();return;}if(PW.running||BB.running||EO.running){aiLog('Stop other mode first.','warn');return;}AI.baseStake=parseFloat(document.getElementById('cfgStake').value)||5;AI.mult=parseFloat(document.getElementById('cfgMult').value)||3.6;AI.tp=parseFloat(document.getElementById('cfgTP').value)||15;AI.sl=parseFloat(document.getElementById('cfgSL').value)||10;AI.tp1Hit=false;AI.tp2Hit=false;AI.consecLoss=0;AI.sessionStart=Date.now();AI.prevRecovery=null;silReset();refreshLadder();AI.running=true;document.getElementById('startBtn').disabled=true;document.getElementById('stopBtn').disabled=false;['cfgStake','cfgMult','cfgTP','cfgSL','cfgIndex','cfgMinScore','cfgTimeLimit'].forEach(id=>{const el=document.getElementById(id);if(el)el.disabled=true;});updateLadderUI();setAIState('scanning');aiLog('PIONEER STARTED - Base:$'+AI.baseStake+' Mult:x'+AI.mult+' TP:$'+AI.tp+' SL:$'+AI.sl,'success');aiLog('[SIL] Active - calibrating first '+SIL.calibTarget+' ticks...','info');aiLog('Max exposure: $'+[0,1,2,3,4].reduce((s,i)=>s+calcStake(i),0).toFixed(2),'warn');}
+function stopAI(){if(AI.mode==='power'&&PW.running){powerStop();return;}if(AI.mode==='boyboy'&&BB.running){bbStop();return;}if(AI.mode==='evenodd'&&EO.running){eoStop();return;}if(!AI.running)return;AI.running=false;AI.inTrade=false;AI.pendingResult=false;clearTimeout(AI.tradeTimer);clearTimeout(AI.lateTimer);document.getElementById('startBtn').disabled=false;document.getElementById('stopBtn').disabled=true;['cfgStake','cfgMult','cfgTP','cfgSL','cfgIndex','cfgMinScore','cfgTimeLimit'].forEach(id=>{const el=document.getElementById(id);if(el)el.disabled=false;});if(!PW.running)setAIState('idle');aiLog('Pioneer stopped.','warn');}
+function resetAI(){stopAI();powerStop();bbStop();eoStop();AI.wins=0;AI.losses=0;AI.totalPnl=0;AI.sessPnl=0;AI.consecLoss=0;AI.martStep=0;AI.activeCid=null;AI.equityPoints=[0];AI.sessionStart=0;AI.tp1Hit=false;AI.tp2Hit=false;AI.recoveryRestUntil=0;AI.recoveryRestSym=null;AI._recoveryDirection=null;AI._recoveryConfirmCount=0;AI._lastRecoveryCandidate=null;PW.step=0;PW.consecLoss=0;PW.direction=null;PW.sessPnl=0;PW.wins=0;PW.losses=0;PW.equityPoints=[0];PW.prevRecovery=null;PW.circuitPausedUntil=0;PW.lastLostSym=null;PW.waitingSince=0;BB.step=0;BB.consecLoss=0;BB.direction=null;BB.sessPnl=0;BB.wins=0;BB.losses=0;BB.equityPoints=[0];BB.circuitPausedUntil=0;BB.lastDigit=null;BB.activeSym=null;EO.step=0;EO.consecLoss=0;EO.direction=null;EO.sessPnl=0;EO.wins=0;EO.losses=0;EO.equityPoints=[0];EO.circuitPausedUntil=0;EO.activeSym=null;EO.waitingSince=0;EO._confirmCount=0;EO._lastCandidate=null;silReset();setAIState('idle');updateAIStats();drawEquity();drawPowerEquity();drawBBEquity();drawEOEquity();['eqStats','eqStatsPW','eqStatsBB','eqStatsEO'].forEach(id=>{const el=document.getElementById(id);if(el){el.textContent='Now +0.00  Peak +0.00  Low +0.00';el.style.color='var(--sub)';}});const ct=document.getElementById('curTrade');if(ct){ct.classList.remove('active');ct.style.display='none';}const tbody=document.getElementById('tradeLogBody');if(tbody)tbody.innerHTML='';_totalTrades=0;_runningBalance=null;_sessionPnlSum=0;const tc=document.getElementById('tradeCount');if(tc)tc.textContent='0 trades';const ps=document.getElementById('tradePnlSum');if(ps){ps.textContent='P&L: --';ps.style.color='var(--sub)';}for(let i=0;i<5;i++){const e=document.getElementById('lad'+i);if(e)e.classList.remove('won','lost','active');}for(let i=0;i<5;i++){const e=document.getElementById('plad'+i);if(e)e.classList.remove('won','lost','active');}for(let i=0;i<5;i++){const e=document.getElementById('eolad'+i);if(e)e.classList.remove('won','lost','active');}refreshLadder();refreshPowerLadder();refreshBBLadder();refreshEOLadder();aiLog('Reset complete. SIL re-calibrating. Ready.','info');}
 function updateAIStats(){let w,l,sessPnl;if(PW.running){w=PW.wins;l=PW.losses;sessPnl=PW.sessPnl;}else if(BB.running){w=BB.wins;l=BB.losses;sessPnl=BB.sessPnl;}else{w=AI.wins;l=AI.losses;sessPnl=AI.sessPnl;}const tot=w+l;document.getElementById('astW').textContent=w;document.getElementById('astL').textContent=l;document.getElementById('astWR').textContent=tot>0?Math.round(w/tot*100)+'%':'--';const pe=document.getElementById('astPnl');pe.textContent=(AI.totalPnl>=0?'+':'')+AI.totalPnl.toFixed(2);pe.style.color=AI.totalPnl>=0?'var(--green)':'var(--red)';document.getElementById('astCL').textContent=AI.consecLoss;if(PW.running){document.getElementById('astMS').textContent='[PW] '+(PW.direction||'SCAN')+' S'+(PW.step+1);document.getElementById('astNS').textContent='$'+calcPowerStake(PW.step).toFixed(2);}else if(BB.running){document.getElementById('astMS').textContent='[BB] S'+(BB.step+1);document.getElementById('astNS').textContent='$'+calcBBStake(BB.step).toFixed(2);}else{document.getElementById('astMS').textContent=(AI.martStep===0?'DIFFERS':'OVER2')+' S'+(AI.martStep+1);document.getElementById('astNS').textContent='$'+calcStake(AI.martStep).toFixed(2);}const sp=document.getElementById('sessPnl');sp.textContent=(sessPnl>=0?'+':'')+sessPnl.toFixed(2);sp.style.color=sessPnl>=0?'var(--green)':'var(--red)';document.getElementById('sessPnlSub').textContent=tot+' trades';const apEl=document.getElementById('acctPnl');if(apEl){apEl.textContent=(AI.totalPnl>=0?'+':'')+AI.totalPnl.toFixed(2);apEl.style.color=AI.totalPnl>=0?'var(--green)':'var(--red)';}const awEl=document.getElementById('acctWR');if(awEl)awEl.textContent=tot>0?Math.round(w/tot*100)+'%':'--';const awwEl=document.getElementById('acctW');if(awwEl)awwEl.textContent=w;const alEl=document.getElementById('acctL');if(alEl)alEl.textContent=l;let bestSym=null,bestScore=0;IDX.forEach(i=>{const s=ST[i.s];if(s.conn&&s.digits.length>10){try{const a=ana(i.s);if(a.score>bestScore){bestScore=a.score;bestSym=i.s;}}catch(e){}}});if(bestSym&&ST[bestSym].tickSpeed){const spd=ST[bestSym].tickSpeed,el=document.getElementById('astTS');const ix=IDX.find(i=>i.s===bestSym);if(spd<1200){el.textContent=(ix?ix.n:bestSym)+' '+spd+'ms fast';el.style.color='var(--green)';}else if(spd<3500){el.textContent=(ix?ix.n:bestSym)+' '+spd+'ms OK';el.style.color='var(--accent)';}else{el.textContent=(ix?ix.n:bestSym)+' '+spd+'ms';el.style.color='var(--sub)';}}}
 function doLogin(){const t=document.getElementById('tokenInput').value.trim();if(!t){showLE('Please enter your API token');return;}if(t.length<10){showLE('Token too short');return;}const btn=document.getElementById('loginBtn');btn.classList.add('ld');btn.textContent='VERIFYING...';hideLE();userToken=t;verifyToken(t);}
 function doGuest(){isGuest=true;userToken=null;launchDash(null);}
@@ -768,7 +832,7 @@ function updBal(b){if(!b)return;const bal=parseFloat(b.balance);document.getElem
 function _startKeepalive(){_stopKeepalive();_keepaliveTimer=setInterval(()=>{if(ws&&ws.readyState===1){_pingTime=Date.now();ws.send(JSON.stringify({ping:1}));}},20000);_watchdogTimer=setInterval(()=>{if(_lastMsgAt>0&&Date.now()-_lastMsgAt>45000){updConn(false);_stopKeepalive();try{ws.onclose=null;ws.close();}catch(ex){}sched();}},10000);}
 function _stopKeepalive(){clearInterval(_keepaliveTimer);_keepaliveTimer=null;clearInterval(_watchdogTimer);_watchdogTimer=null;_pingTime=0;}
 function _updateNetStrength(rtt){const dot=document.getElementById('pingDot');const val=document.getElementById('pingVal');if(!dot||!val)return;val.textContent=rtt+'ms';if(rtt<150){dot.style.background='var(--green)';val.style.color='var(--green)';}else if(rtt<350){dot.style.background='var(--yellow)';val.style.color='var(--yellow)';}else{dot.style.background='var(--red)';val.style.color='var(--red)';if(AI.running||PW.running)aiLog('High latency '+rtt+'ms','warn');}}
-function onTick(tk){const s=ST[tk.symbol];if(!s)return;_lastMsgAt=Date.now();const p=parseFloat(tk.quote);const d=parseInt(String(Math.round(p*100)).slice(-1));const now=Date.now();s.tickTimes.push(now);if(s.tickTimes.length>20)s.tickTimes.shift();if(s.tickTimes.length>=2)s.tickSpeed=Math.round((s.tickTimes[s.tickTimes.length-1]-s.tickTimes[0])/(s.tickTimes.length-1));s.last=p;s.prices.push(p);const pBuf=s.priceBuf||200;if(s.prices.length>pBuf)s.prices.shift();const dBuf=s.digitBuf||100;s.digits.push(d);if(s.digits.length>dBuf){const r=s.digits.shift();s.freq[r]=Math.max(0,s.freq[r]-1);}s.freq[d]++;s.ticks++;s.conn=true;total++;const _stk=document.getElementById('STK');if(_stk){_stk.textContent=total.toLocaleString();_stk.style.color=total<500?'var(--red)':total<1000?'var(--yellow)':'var(--green)';}silCalibTick(tk.symbol);if(SIL.calibrated&&total%10===0){const _pr=SIL.regime;silUpdateRegime();if(SIL.regime!==_pr)silLogRegimeChange(SIL.regime);if(total%30===0)silUpdateBar();}const onAnalysisPage=document.getElementById('pgAnalysis').classList.contains('active');if(onAnalysisPage){updateRow(tk.symbol);updateDC(tk.symbol);}updateSum();if(AI.running&&AI.mode==='pioneer')aiTick(tk.symbol);if(PW.running&&AI.mode==='power'&&!AI.inTrade&&!AI.pendingResult)powerTick();if(BB.running&&AI.mode==='boyboy'&&!AI.inTrade&&!AI.pendingResult)bbTick(tk.symbol);if(AI.mode==='power'&&total%5===0)updatePowerSignalDisplay();}
+function onTick(tk){const s=ST[tk.symbol];if(!s)return;_lastMsgAt=Date.now();const p=parseFloat(tk.quote);const d=parseInt(String(Math.round(p*100)).slice(-1));const now=Date.now();s.tickTimes.push(now);if(s.tickTimes.length>20)s.tickTimes.shift();if(s.tickTimes.length>=2)s.tickSpeed=Math.round((s.tickTimes[s.tickTimes.length-1]-s.tickTimes[0])/(s.tickTimes.length-1));s.last=p;s.prices.push(p);const pBuf=s.priceBuf||200;if(s.prices.length>pBuf)s.prices.shift();const dBuf=s.digitBuf||100;s.digits.push(d);if(s.digits.length>dBuf){const r=s.digits.shift();s.freq[r]=Math.max(0,s.freq[r]-1);}s.freq[d]++;s.ticks++;s.conn=true;total++;const _stk=document.getElementById('STK');if(_stk){_stk.textContent=total.toLocaleString();_stk.style.color=total<500?'var(--red)':total<1000?'var(--yellow)':'var(--green)';}silCalibTick(tk.symbol);if(SIL.calibrated&&total%10===0){const _pr=SIL.regime;silUpdateRegime();if(SIL.regime!==_pr)silLogRegimeChange(SIL.regime);if(total%30===0)silUpdateBar();}const onAnalysisPage=document.getElementById('pgAnalysis').classList.contains('active');if(onAnalysisPage){updateRow(tk.symbol);updateDC(tk.symbol);}updateSum();if(AI.running&&AI.mode==='pioneer')aiTick(tk.symbol);if(PW.running&&AI.mode==='power'&&!AI.inTrade&&!AI.pendingResult)powerTick();if(BB.running&&AI.mode==='boyboy'&&!AI.inTrade&&!AI.pendingResult)bbTick(tk.symbol);if(EO.running&&AI.mode==='evenodd'&&!AI.inTrade&&!AI.pendingResult)eoTick(tk.symbol);if(AI.mode==='power'&&total%5===0)updatePowerSignalDisplay();if(AI.mode==='evenodd'&&total%5===0)updateEOSignalDisplay();}
 (function(){try{const saved=sessionStorage.getItem('ds_token');const expiry=parseInt(sessionStorage.getItem('ds_expiry')||'0');if(saved&&Date.now()<expiry){document.getElementById('tokenInput').value=saved;userToken=saved;verifyToken(saved);}}catch(e){}})();
 let _sumTick=0;
 function updateSum(){_sumTick++;if(_sumTick%15!==0)return;const live=IDX.filter(i=>ST[i.s].conn).length;const con=IDX.filter(i=>{try{return ana(i.s).isCon;}catch(e){return false;}}).length;const exp=IDX.filter(i=>{try{return ana(i.s).ms==='EXPANDING';}catch(e){return false;}}).length;document.getElementById('SL').textContent=live+'/10';document.getElementById('SC').textContent=con;document.getElementById('SE').textContent=exp;let sb=0,bu=0,ne=0,wa=0,av=0;IDX.forEach(i=>{const s=ST[i.s];const minT=i.minTicks||60;if(!s||!s.conn||s.digits.length<minT){av++;return;}try{const a=ana(i.s);const eff=a.score+(a.marketGrade==='A'?20:0);if(eff>=65&&a.isCon)sb++;else if(eff>=55)bu++;else if(eff>=45)ne++;else if(eff>=35)wa++;else av++;}catch(e){av++;}});const _ps=document.getElementById('pSB');if(_ps)_ps.textContent=sb;const _pb=document.getElementById('pBU');if(_pb)_pb.textContent=bu;const _pn=document.getElementById('pNE');if(_pn)_pn.textContent=ne;const _pw=document.getElementById('pWA');if(_pw)_pw.textContent=wa;const _pa=document.getElementById('pAV');if(_pa)_pa.textContent=av;const pick=getBestPioneerMarket();const pp=document.getElementById('pioneerPick');if(pp){if(pick){const ix=IDX.find(i=>i.s===pick);try{const a=ana(pick);pp.textContent=(ix?ix.n:pick)+' (Score:'+a.score+' Grade:'+a.marketGrade+')';}catch(e){pp.textContent=pick;}pp.style.color='var(--green)';}else{pp.textContent='SCANNING...';pp.style.color='var(--dim)';}}}
@@ -777,6 +841,271 @@ function initTable(){document.getElementById('TB').innerHTML='<thead><tr style="
 function updateRow(sym){const row=document.getElementById('R-'+sym);if(!row)return;const s=ST[sym];if(!s||!s.prices.length)return;let a;try{a=ana(sym);}catch(e){return;}const p=s.last;const prev=s.prices.length>1?s.prices[s.prices.length-2]:p;const dir=p>prev?'up':p<prev?'down':'flat';const ix=IDX.find(i=>i.s===sym);const isActive=AI.activeSym===sym&&AI.inTrade;row.style.background=isActive?'rgba(176,106,255,.06)':'';const cells=row.querySelectorAll('td');if(!cells.length||!row.dataset.rendered){row.dataset.rendered='1';let spdBadge='';if(s.tickSpeed){const sc=s.tickSpeed<1200?'fast':s.tickSpeed<3500?'med':'slow';spdBadge='<span class="tick-speed '+sc+'">'+s.tickSpeed+'ms</span>';}const msCls=a.isCon?'cy':a.ms==='EXPANDING'?'cn':'cw';const msIcon=a.isCon?'[C]':a.ms==='EXPANDING'?'[E]':'[T]';const _tc=s.ticks||0;const _tcCol=_tc<500?'var(--red)':_tc<1000?'var(--yellow)':'var(--green)';const _tcBadge='<span style="font-family:var(--font-mono);font-size:7px;color:'+_tcCol+';margin-left:4px;">'+_tc+'tk</span>';const scoreCol=a.score>=65?'var(--green)':a.score>=45?'var(--yellow)':'var(--red)';row.innerHTML='<td class="L"><div class="iname">'+ix.n+(isActive?' [T]':'')+'</div><div class="isub">'+ix.sub+' '+spdBadge+_tcBadge+'</div></td><td><div class="pcell '+dir+'">'+(p?p.toFixed(2):'--')+'</div></td><td><span class="ms-badge '+msCls+'">'+msIcon+' '+a.ms+'</span></td><td><span class="score-badge" style="color:'+scoreCol+'">'+a.score+'</span></td><td>'+bdg(a.dif)+'</td><td>'+bdg(a.o2r)+'</td>';return;}const c1=cells[1];if(c1){const pc=c1.querySelector('.pcell');if(pc){pc.className='pcell '+dir;pc.textContent=p?p.toFixed(2):'--';}}const c2=cells[2];if(c2){const ms=c2.querySelector('.ms-badge');if(ms){const msCls=a.isCon?'cy':a.ms==='EXPANDING'?'cn':'cw';const msIcon=a.isCon?'[C]':a.ms==='EXPANDING'?'[E]':'[T]';ms.className='ms-badge '+msCls;ms.textContent=msIcon+' '+a.ms;}}const c3=cells[3];if(c3){const sc=c3.querySelector('.score-badge');if(sc){sc.style.color=a.score>=65?'var(--green)':a.score>=45?'var(--yellow)':'var(--red)';sc.textContent=a.score;}}const c4=cells[4];if(c4){const db=c4.querySelector('.b');if(db){db.className='b '+a.dif.c;db.textContent=a.dif.l;db.title=a.dif.t;}}const c5=cells[5];if(c5){const ob=c5.querySelector('.b');if(ob){ob.className='b '+a.o2r.c;ob.textContent=a.o2r.l;ob.title=a.o2r.t;}}}
 function initDC(){const dc=document.getElementById('DC');if(!dc)return;dc.innerHTML='';IDX.forEach(i=>{const card=document.createElement('div');card.className='dcard';card.id='DC-'+i.s;card.innerHTML='<div class="dtitle"><span>'+i.n+'</span></div><div class="dbars" id="DB-'+i.s+'"></div>';dc.appendChild(card);});}
 function updateDC(sym){const s=ST[sym];if(!s||!s.freq)return;const bars=document.getElementById('DB-'+sym);if(!bars)return;const card=document.getElementById('DC-'+sym);const tot=s.freq.reduce((a,b)=>a+b,0)||1;let a;try{a=ana(sym);}catch(e){return;}const hotD=a.hotD;if(!bars.children.length){bars.innerHTML='';for(let d=0;d<10;d++){const pct=Math.round((s.freq[d]||0)/tot*100);const isHot=d===hotD;const bw=document.createElement('div');bw.className='dbw';const barColor=isHot?'var(--green)':'var(--accent)';bw.innerHTML='<div class="dpct" id="DPC-'+sym+'-'+d+'">'+pct+'%</div><div class="dbar" id="DB-'+sym+'-'+d+'" style="height:'+Math.max(2,pct*0.36)+'px;background:'+barColor+';"></div><div class="ddig">'+d+'</div>';bars.appendChild(bw);}}else{for(let d=0;d<10;d++){const pct=Math.round((s.freq[d]||0)/tot*100);const isHot=d===hotD;const bar=document.getElementById('DB-'+sym+'-'+d);const lbl=document.getElementById('DPC-'+sym+'-'+d);if(bar){bar.style.height=Math.max(2,pct*0.36)+'px';bar.style.background=isHot?'var(--green)':'var(--accent)';}if(lbl)lbl.textContent=pct+'%';}}if(card)card.classList.toggle('best-market',AI.activeSym===sym&&AI.inTrade);}
+// ============================================================
+// EVEN/ODD MODE - Statistical lean with momentum filter
+// S1=S2=base, S3-S5 use 2.1x multiplier, direction locked
+// ============================================================
+
+function eoLog(msg,cls){aiLogTo(‘aiLogEO’,msg,cls);aiLogTo(‘aiLog’,msg,cls);}
+
+function calcEOStake(step){
+const base=parseFloat(document.getElementById(‘eoStake’)?document.getElementById(‘eoStake’).value:1)||1;
+const mult=parseFloat(document.getElementById(‘eoMult’)?document.getElementById(‘eoMult’).value:2.1)||2.1;
+// S1 and S2 are same base stake, S3+ multiply
+if(step<=1)return base;
+let s=base;
+for(let i=0;i<step-1;i++)s=Math.round(s*mult*100)/100;
+return s;
+}
+
+function refreshEOLadder(){
+const base=parseFloat(document.getElementById(‘eoStake’)?document.getElementById(‘eoStake’).value:1)||1;
+const dir=EO.direction||‘EVEN’;
+let totalExp=0;
+for(let i=0;i<5;i++){
+const stake=calcEOStake(i);totalExp+=stake;
+const se=document.getElementById(‘eolads’+i);if(se)se.textContent=’$’+stake.toFixed(2);
+const lt=document.getElementById(‘eoladt’+i);if(lt)lt.textContent=dir;
+}
+const exp=document.getElementById(‘eoExposure’);if(exp)exp.textContent=‘Max: $’+totalExp.toFixed(2);
+}
+
+function updateEOLadderUI(){
+for(let i=0;i<5;i++){
+const el=document.getElementById(‘eolad’+i);if(!el)continue;
+el.classList.remove(‘active’,‘won’,‘lost’);
+if(i<EO.step)el.classList.add(‘lost’);
+else if(i===EO.step&&EO.running)el.classList.add(‘active’);
+}
+const sd=document.getElementById(‘eoStepDisp’);if(sd)sd.textContent=‘S’+(EO.step+1);
+const nd=document.getElementById(‘eoNextStake’);if(nd)nd.textContent=’$’+calcEOStake(EO.step).toFixed(2);
+const dd=document.getElementById(‘eoDir’);
+if(dd){dd.textContent=EO.direction||’–’;dd.style.color=EO.direction===‘EVEN’?‘var(–blue)’:EO.direction===‘ODD’?‘var(–purple)’:‘var(–yellow)’;}
+}
+
+function drawEOEquity(){
+const canvas=document.getElementById(‘eqCanvasEO’);if(!canvas)return;
+const ctx=canvas.getContext(‘2d’);const W=canvas.offsetWidth||500;canvas.width=W;canvas.height=70;ctx.clearRect(0,0,W,70);
+const pts=EO.equityPoints||[];
+if(pts.length<2){ctx.strokeStyle=‘rgba(96,165,250,.15)’;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(0,35);ctx.lineTo(W,35);ctx.stroke();return;}
+const mn=Math.min(…pts),mx=Math.max(…pts),range=mx-mn||1;const toY=v=>5+(60*(1-(v-mn)/range));
+const last=pts[pts.length-1];
+const grad=ctx.createLinearGradient(0,0,0,70);
+if(last>=0){grad.addColorStop(0,‘rgba(96,165,250,.25)’);grad.addColorStop(1,‘rgba(96,165,250,.02)’);}
+else{grad.addColorStop(0,‘rgba(239,68,68,.02)’);grad.addColorStop(1,‘rgba(239,68,68,.2)’);}
+ctx.beginPath();pts.forEach((v,i)=>{const x=i/(pts.length-1)*W,y=toY(v);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
+ctx.lineTo(W,70);ctx.lineTo(0,70);ctx.closePath();ctx.fillStyle=grad;ctx.fill();
+ctx.strokeStyle=last>=0?‘var(–blue)’:‘var(–red)’;ctx.lineWidth=2;
+ctx.beginPath();pts.forEach((v,i)=>{const x=i/(pts.length-1)*W,y=toY(v);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});ctx.stroke();
+const es=document.getElementById(‘eqStatsEO’);
+if(es){const peak=Math.max(…pts),trough=Math.min(…pts);es.textContent=‘Now ‘+(last>=0?’+’:’’)+last.toFixed(2)+’  Peak ‘+(peak>=0?’+’:’’)+peak.toFixed(2)+’  Low ‘+(trough>=0?’+’:’’)+trough.toFixed(2);es.style.color=last>=0?‘var(–blue)’:‘var(–red)’;}
+}
+
+function eoCheckMomentum(sym,direction){
+// Split last 40 ticks into two 20-tick windows and compare lean
+const s=ST[sym];if(!s||s.digits.length<40)return{momentum:false,delta:0,recentPct:0,olderPct:0};
+const last20=s.digits.slice(-20);
+const prev20=s.digits.slice(-40,-20);
+const countEven=arr=>arr.filter(d=>d%2===0).length;
+const rEven=countEven(last20)/20*100;
+const pEven=countEven(prev20)/20*100;
+const recentPct=direction===‘EVEN’?rEven:(100-rEven);
+const olderPct=direction===‘EVEN’?pEven:(100-pEven);
+const delta=Math.round((recentPct-olderPct)*10)/10;
+// Momentum = not declining more than 3 points
+const momentum=delta>=-3;
+return{momentum,delta,recentPct:Math.round(recentPct*10)/10,olderPct:Math.round(olderPct*10)/10};
+}
+
+function findEOMarket(){
+const minLean=parseFloat(document.getElementById(‘eoMinLean’)?document.getElementById(‘eoMinLean’).value:57)||57;
+const tgt=document.getElementById(‘eoIndex’)?document.getElementById(‘eoIndex’).value:‘AUTO’;
+let best=null,bestScore=0;
+
+const checkSym=(sym)=>{
+const s=ST[sym];const ix=IDX.find(i=>i.s===sym);const minT=ix?ix.minTicks:60;
+if(!s||!s.conn||s.digits.length<minT)return null;
+try{
+const a=ana(sym);
+if(!a.isCon)return null; // must be consolidating
+if(!a.chi2.significant)return null; // chi2 must be significant
+// Determine direction
+const direction=a.ep>=a.op?‘EVEN’:‘ODD’;
+const leanPct=Math.max(a.ep,a.op);
+if(leanPct<minLean)return null;
+// If in recovery, must match locked direction
+if(EO.step>0&&EO.direction&&direction!==EO.direction)return null;
+// Momentum check
+const mom=eoCheckMomentum(sym,direction);
+if(!mom.momentum)return null;
+// Recent 20 must also confirm lean (not just historical)
+if(mom.recentPct<minLean-3)return null;
+// EV check
+const ev=silGetEV(sym);if(ev.ev!==null&&ev.ev<-0.4)return null;
+const score=leanPct+(a.score/10)+(mom.delta>0?10:0)+(a.isCon?5:0);
+return{sym,direction,leanPct:Math.round(leanPct*10)/10,mom,a,score};
+}catch(e){return null;}
+};
+
+if(tgt!==‘AUTO’){return checkSym(tgt);}
+IDX.forEach(i=>{
+const r=checkSym(i.s);
+if(r&&r.score>bestScore){bestScore=r.score;best=r;}
+});
+return best;
+}
+
+function updateEOSignalDisplay(){
+if(AI.mode!==‘evenodd’)return;
+let bestEven=50,bestOdd=50,bestSig=‘SCAN’,bestMkt=’–’,bestDelta=0;
+IDX.forEach(i=>{
+try{
+const s=ST[i.s];if(!s||!s.conn||s.digits.length<30)return;
+const a=ana(i.s);if(!a.isCon)return;
+if(a.ep>bestEven){bestEven=a.ep;if(a.ep>=a.op){bestSig=‘EVEN’;bestMkt=i.n;}}
+if(a.op>bestOdd){bestOdd=a.op;if(a.op>a.ep){bestSig=‘ODD’;bestMkt=i.n;}}
+}catch(e){}
+});
+const sig=document.getElementById(‘eoSignal’);if(sig){sig.textContent=bestSig;sig.style.color=bestSig===‘EVEN’?‘var(–blue)’:bestSig===‘ODD’?‘var(–purple)’:‘var(–yellow)’;}
+const ep=document.getElementById(‘eoEvenPct’);if(ep)ep.textContent=Math.round(bestEven)+’%’;
+const mkt=document.getElementById(‘eoMarket’);if(mkt)mkt.textContent=bestMkt;
+}
+
+let _eoLastTradeTime=0;
+function eoTick(sym){
+if(!EO.running||AI.inTrade||AI.pendingResult)return;
+const now=Date.now();if(now-_eoLastTradeTime<1800)return;
+if(EO.circuitPausedUntil>0){if(now<EO.circuitPausedUntil){setAIState(‘waiting’);return;}EO.circuitPausedUntil=0;eoLog(‘Circuit pause over - resuming’,‘info’);}
+// SIL gate
+silUpdateDrawdown();const _sg=silGate(sym,0);if(!_sg.ok&&EO.step===0){setAIState(‘waiting’);return;}
+const tp=parseFloat(document.getElementById(‘eoTP’)?document.getElementById(‘eoTP’).value:20)||20;
+const sl=parseFloat(document.getElementById(‘eoSL’)?document.getElementById(‘eoSL’).value:30)||30;
+if(EO.sessPnl>=tp){eoLog(‘TP +$’+EO.sessPnl.toFixed(2)+’ - Target hit!’,‘success’);eoStop();return;}
+if(EO.sessPnl<=-Math.abs(sl)){eoLog(‘SL -$’+Math.abs(EO.sessPnl).toFixed(2),‘danger’);eoStop();return;}
+setAIState(‘scanning’);
+updateEOSignalDisplay();
+
+const market=findEOMarket();
+if(!market){
+if(EO.waitingSince===0)EO.waitingSince=now;
+if(now-EO.waitingSince>90000){
+EO.circuitPausedUntil=now+300000;EO.waitingSince=0;
+eoLog(‘No qualifying E/O signal in 90s - pausing 5min’,‘warn’);
+pushError(‘info’,‘E/O paused - no qualifying lean’,‘Auto-resuming in 5 minutes’);
+}
+setAIState(‘waiting’);return;
+}
+EO.waitingSince=0;
+
+// Update momentum display
+const momEl=document.getElementById(‘eoMomentum’);
+if(momEl){
+const trend=market.mom.delta>=3?‘RISING’:market.mom.delta<=-3?‘FADING’:‘STEADY’;
+momEl.textContent=trend+’ ‘+market.mom.delta+’%’;
+momEl.style.color=trend===‘RISING’?‘var(–green)’:trend===‘FADING’?‘var(–red)’:‘var(–yellow)’;
+}
+const deltaEl=document.getElementById(‘eoDelta’);if(deltaEl)deltaEl.textContent=(market.mom.delta>=0?’+’:’’)+market.mom.delta+’%’;
+
+// Confirmation - require 2 consecutive scans before firing S1
+if(EO.step===0){
+const prev=EO._lastCandidate;
+const same=prev&&prev.sym===market.sym&&prev.direction===market.direction;
+if(same)EO._confirmCount++;else EO._confirmCount=1;
+EO._lastCandidate={sym:market.sym,direction:market.direction};
+if(EO._confirmCount<2){
+setAIState(‘waiting’);
+eoLog(‘E/O | ‘+(IDX.find(i=>i.s===market.sym)||{n:market.sym}).n+’ | ‘+market.direction+’ ‘+market.leanPct+’% delta:’+market.mom.delta+’% - confirming (’+EO._confirmCount+’/2)…’,‘warn’);
+return;
+}
+EO._confirmCount=0;EO._lastCandidate=null;
+// Lock direction for the chain
+EO.direction=market.direction;
+eoLog(‘S1 | ‘+(IDX.find(i=>i.s===market.sym)||{n:market.sym}).n+’ | ‘+market.direction+’ ‘+market.leanPct+’% | delta:’+market.mom.delta+’% momentum | $’+calcEOStake(0).toFixed(2),‘info’);
+}else{
+// Recovery - re-scan and must still have same direction signal
+if(!market){setAIState(‘waiting’);eoLog(‘S’+(EO.step+1)+’ - waiting for ‘+EO.direction+’ signal…’,‘warn’);return;}
+eoLog(‘S’+(EO.step+1)+’ | ‘+(IDX.find(i=>i.s===market.sym)||{n:market.sym}).n+’ | ‘+market.direction+’ ‘+market.leanPct+’% delta:’+market.mom.delta+’% | $’+calcEOStake(EO.step).toFixed(2)+’ FIRING’,‘warn’);
+}
+
+// Update ladder type labels to match direction
+for(let i=0;i<5;i++){const lt=document.getElementById(‘eoladt’+i);if(lt)lt.textContent=EO.direction||market.direction;}
+refreshEOLadder();updateEOLadderUI();
+
+const stake=calcEOStake(EO.step);
+const contractCode=market.direction===‘EVEN’?‘DIGITEVEN’:‘DIGITODD’;
+EO.activeSym=market.sym;
+_eoLastTradeTime=now;
+placeTrade(market.sym,contractCode,stake,null,market.direction,‘evenodd’);
+}
+
+function onEOContract(poc){
+const won=poc.is_sold&&poc.profit>0;const profit=parseFloat(poc.profit||0);const stake=parseFloat(poc.buy_price||0);
+if(EO.activeSym)silRecordTrade(EO.activeSym,profit,won);
+EO.sessPnl=Math.round((EO.sessPnl+profit)*100)/100;
+EO.equityPoints.push(EO.sessPnl);if(EO.equityPoints.length>300)EO.equityPoints.shift();
+AI.totalPnl=Math.round((AI.totalPnl+profit)*100)/100;
+AI.sessPnl=Math.round((AI.sessPnl+profit)*100)/100;
+AI.equityPoints.push(AI.sessPnl);if(AI.equityPoints.length>300)AI.equityPoints.shift();
+const stepEl=document.getElementById(‘eolad’+EO.step);
+if(won){
+EO.wins++;AI.wins++;EO.consecLoss=0;AI.consecLoss=0;
+if(stepEl){stepEl.classList.remove(‘active’);stepEl.classList.add(‘won’);}
+eoLog(‘WIN +$’+profit.toFixed(2)+’ S’+(EO.step+1)+’ | Session: $’+EO.sessPnl.toFixed(2),‘success’);
+EO.step=0;EO.direction=null;EO._confirmCount=0;EO._lastCandidate=null;
+setTimeout(()=>{for(let i=0;i<5;i++){const e=document.getElementById(‘eolad’+i);if(e)e.classList.remove(‘won’,‘lost’,‘active’);}updateEOLadderUI();},1000);
+}else{
+EO.losses++;AI.losses++;EO.consecLoss++;AI.consecLoss++;
+if(stepEl){stepEl.classList.remove(‘active’);stepEl.classList.add(‘lost’);}
+if(EO.step<4){EO.step++;eoLog(‘LOSS S’+(EO.step)+’ - next ‘+EO.direction+’: $’+calcEOStake(EO.step).toFixed(2),‘danger’);}
+else{eoLog(‘S5 LOSS - chain failed. Resetting.’,‘danger’);EO.step=0;EO.direction=null;}
+}
+if(EO.consecLoss>=5){
+EO.circuitPausedUntil=Date.now()+180000;EO.consecLoss=0;EO.step=0;EO.direction=null;
+pushError(‘circuit’,‘E/O circuit breaker - 5 losses. Auto-resuming in 3 min.’,’’);
+setAIState(‘waiting’);eoLog(‘CIRCUIT BREAKER - pausing 3 minutes’,‘warn’);
+}
+const prevSrc=AI.activeSource;AI.activeSource=‘evenodd’;
+addTradeLog(EO.activeSym,AI.activeType,null,stake,profit,won,‘EO S’+(EO.step+1),poc.contract_id);
+AI.activeSource=prevSrc;
+updateAIStats();drawEquity();drawEOEquity();silUpdateBar();
+setTimeout(()=>{
+const ct=document.getElementById(‘curTrade’);if(ct){ct.classList.remove(‘active’);ct.style.display=‘none’;}
+if(EO.running&&EO.consecLoss<5)setAIState(‘scanning’);
+updateEOLadderUI();
+},400);
+}
+
+function eoStart(){
+if(!userToken||isGuest){eoLog(‘Token required.’,‘danger’);return;}
+if(!ws||ws.readyState!==1){eoLog(‘Not connected.’,‘warn’);return;}
+if(AI.running||PW.running||BB.running){eoLog(‘Stop other mode first.’,‘warn’);return;}
+EO.baseStake=parseFloat(document.getElementById(‘eoStake’).value)||1;
+EO.mult=parseFloat(document.getElementById(‘eoMult’).value)||2.1;
+EO.step=0;EO.consecLoss=0;EO.direction=null;EO.sessPnl=0;
+EO.wins=0;EO.losses=0;EO.equityPoints=[0];EO.circuitPausedUntil=0;
+EO.activeSym=null;EO.waitingSince=0;EO._confirmCount=0;EO._lastCandidate=null;
+EO.running=true;
+refreshEOLadder();updateEOLadderUI();
+document.getElementById(‘startBtn’).disabled=true;document.getElementById(‘stopBtn’).disabled=false;
+[‘eoStake’,‘eoMult’,‘eoTP’,‘eoSL’,‘eoMinLean’,‘eoIndex’].forEach(id=>{const el=document.getElementById(id);if(el)el.disabled=true;});
+setAIState(‘scanning’);
+const pr=document.getElementById(‘eoRunning’);if(pr){pr.textContent=‘RUNNING’;pr.style.color=‘var(–green)’;}
+const maxExp=[0,1,2,3,4].reduce((s,i)=>s+calcEOStake(i),0);
+eoLog(‘EVEN/ODD STARTED - Base:$’+EO.baseStake+’ x’+EO.mult+’ TP:$’+(document.getElementById(‘eoTP’).value||20)+’ SL:$’+(document.getElementById(‘eoSL’).value||30),‘success’);
+eoLog(‘Entry: 57%+ lean + chi2 p<0.05 + momentum (delta >= -3%)’,‘info’);
+eoLog(‘Ladder: S1=S2=base, S3-S5 x2.1 | Direction locked per chain’,‘info’);
+eoLog(‘Max exposure: $’+maxExp.toFixed(2),‘warn’);
+}
+
+function eoStop(){
+EO.running=false;
+document.getElementById(‘startBtn’).disabled=false;document.getElementById(‘stopBtn’).disabled=true;
+[‘eoStake’,‘eoMult’,‘eoTP’,‘eoSL’,‘eoMinLean’,‘eoIndex’].forEach(id=>{const el=document.getElementById(id);if(el)el.disabled=false;});
+setAIState(‘idle’);const pr=document.getElementById(‘eoRunning’);if(pr){pr.textContent=‘IDLE’;pr.style.color=‘var(–dim)’;}
+eoLog(‘Even/Odd stopped.’,‘warn’);
+}
+// ============ END EVEN/ODD ============
+
 </script>
 </body>
 </html>
