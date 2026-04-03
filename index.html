@@ -769,41 +769,47 @@ function findRec(recMode,lockedDir){
   return best;
 }
 function findPW(minScore,tgt,lastLost){
+  // POWER uses OVER1/UNDER8 as S1 entry
+  // Signal logic: look for cold barrier digits
+  // OVER1 wins if last digit > 1 (digits 2-9). Edge = digits 0 and 1 are cold/rare
+  // UNDER8 wins if last digit < 8 (digits 0-7). Edge = digits 8 and 9 are cold/rare
+  // Expected frequency for any 2 digits = 20%. Cold threshold = below 18%
   var check=function(sym){
     if(sym===lastLost)return null;
     var s=ST[sym],ix=IDX.find(function(i){return i.s===sym;});
     if(!s||!s.conn||s.digits.length<(ix?ix.mt:60))return null;
-    if(!s.isCon&&s.digits.length>0){try{var aq=ana(sym);if(!aq.isCon)return null;}catch(e){return null;}}
     var a;try{a=ana(sym);}catch(e){return null;}
     if(!a.isCon)return null;
     var fr=a.fr,tot=a.tot||1;
-    // OVER1: edge when digits 0,1 are cold (rarely appearing)
-    // cold01Pct = how often digits 0 or 1 appeared in full buffer
+    // Cold pair counts
     var cold01=(fr[0]+fr[1])/tot*100;
-    // UNDER8: edge when digits 8,9 are cold
     var cold89=(fr[8]+fr[9])/tot*100;
-    // Decide direction: whichever cold pair is colder wins
+    // Pick the colder pair
     var bDir=cold01<=cold89?'OVER':'UNDER';
     var coldPct=bDir==='OVER'?cold01:cold89;
-    // Must be clearly cold: < 16% (expected is 20% for 2 digits)
-    if(coldPct>16)return null;
-    // Confirm in recent 20 ticks too
+    // Cold threshold: below 18% (expected 20%) - relaxed for more signals
+    if(coldPct>18)return null;
+    // Confirm cold in recent 20 ticks
     var r20=s.digits.slice(-20);
-    var r20cold=bDir==='OVER'?r20.filter(function(d){return d===0||d===1;}).length/20*100:r20.filter(function(d){return d===8||d===9;}).length/20*100;
-    if(r20cold>20)return null; // must stay cold recently
-    // Momentum: cold digits declining (check last 10 vs prior 10)
+    var r20cold=bDir==='OVER'
+      ?r20.filter(function(d){return d===0||d===1;}).length/20*100
+      :r20.filter(function(d){return d===8||d===9;}).length/20*100;
+    // Recent must also be cold (< 25%) - barrier digits not flooding back
+    if(r20cold>25)return null;
+    // Momentum check: cold digits not surging in last 10 ticks
     var l10=s.digits.slice(-10),p10=s.digits.slice(-20,-10);
-    var l10cold=bDir==='OVER'?l10.filter(function(d){return d===0||d===1;}).length:l10.filter(function(d){return d===8||d===9;}).length;
-    var p10cold=bDir==='OVER'?p10.filter(function(d){return d===0||d===1;}).length:p10.filter(function(d){return d===8||d===9;}).length;
-    // Don't fire if cold digits are surging back
-    if(l10cold>p10cold+2)return null;
-    // Chi-square: overall digit distribution should be significant
-    if(!a.chi2sig)return null;
-    // Score: lower coldPct = stronger signal
-    var edgeScore=(16-coldPct)*5 + (a.score/10) + (p10cold-l10cold)*3;
+    var l10c=bDir==='OVER'
+      ?l10.filter(function(d){return d===0||d===1;}).length
+      :l10.filter(function(d){return d===8||d===9;}).length;
+    var p10c=bDir==='OVER'
+      ?p10.filter(function(d){return d===0||d===1;}).length
+      :p10.filter(function(d){return d===8||d===9;}).length;
+    if(l10c>p10c+2)return null; // barrier digits surging - skip
+    // Edge score: colder = better
+    var edgeScore=(18-coldPct)*6+(20-r20cold)*2+(p10c-l10c)*4+(a.score/10);
     var lbl=bDir==='OVER'?'OVER 1':'UNDER 8';
     var code=bDir==='OVER'?'DIGITOVER':'DIGITUNDER';
-    return{sym:sym,direction:bDir,coldPct:Math.round(coldPct*10)/10,r20cold:Math.round(r20cold*10)/10,score:edgeScore+(a.grade==='A'?20:0),barrier:bDir==='OVER'?1:8,code:code,lbl:lbl,fullPct:Math.round(coldPct*10)/10,recentPct:Math.round(r20cold*10)/10};
+    return{sym:sym,direction:bDir,coldPct:Math.round(coldPct*10)/10,r20cold:Math.round(r20cold*10)/10,score:edgeScore+(a.grade==='A'?15:0),barrier:bDir==='OVER'?1:8,code:code,lbl:lbl,fullPct:Math.round(coldPct*10)/10,recentPct:Math.round(r20cold*10)/10};
   };
   if(tgt&&tgt!=='AUTO'){try{return check(tgt);}catch(e){return null;}}
   var best=null,bs=0;IDX.forEach(function(ix){try{var r=check(ix.s);if(r&&r.score>bs){bs=r.score;best=r;}}catch(e){}});
@@ -973,10 +979,17 @@ function pwTick(){
   if(EQ.pwS<=-sl){log('pw','SL hit','danger');stopMode();return;}
   setState('scanning');
   if(AI.pwStep===0){
+    // Show live cold% scan every 15s for diagnosis
+    var nowPW=Date.now();if(!AI._pwScanLogT||nowPW-AI._pwScanLogT>15000){
+      AI._pwScanLogT=nowPW;
+      var _bestCold=null,_bestPct=100;
+      IDX.forEach(function(ix){var _s=ST[ix.s];if(!_s||!_s.conn||_s.digits.length<ix.mt)return;try{var _a=ana(ix.s);if(!_a.isCon)return;var _fr=_a.fr,_tot=_a.tot||1;var _c01=(_fr[0]+_fr[1])/_tot*100;var _c89=(_fr[8]+_fr[9])/_tot*100;var _cp=Math.min(_c01,_c89);if(_cp<_bestPct){_bestPct=_cp;_bestCold={n:ix.n,cold01:Math.round(_c01*10)/10,cold89:Math.round(_c89*10)/10,dir:_c01<=_c89?'OVER':'UNDER'};}}catch(e){}});
+      if(_bestCold)log('pw','Scan: best='+_bestCold.n+' cold01='+_bestCold.cold01+'% cold89='+_bestCold.cold89+'% need<18%','warn');
+    }
     var mkt=findPW(45,gv('pwIndex')||'AUTO',AI.pwLastLost);
     if(!mkt){
       if(AI.pwWaitSince===0)AI.pwWaitSince=Date.now();
-      if(Date.now()-AI.pwWaitSince>90000){AI.pwPauseUntil=Date.now()+300000;AI.pwWaitSince=0;log('pw','PW no signal (need cold 0+1 or 8+9 < 16%)','warn');
+      if(Date.now()-AI.pwWaitSince>90000){AI.pwPauseUntil=Date.now()+300000;AI.pwWaitSince=0;log('pw','PW no signal 90s - pausing','warn');
         var sigEl=g('pwSig');if(sigEl){sigEl.textContent='WAIT';sigEl.style.color='var(--yellow)';}}
       setState('waiting');return;
     }
