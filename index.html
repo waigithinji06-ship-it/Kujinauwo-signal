@@ -261,6 +261,17 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 .logout-btn{width:100%;padding:12px;background:rgba(255,23,68,.1);color:var(–loss);border:1px solid rgba(255,23,68,.25);border-radius:10px;font-size:12px;font-weight:700;font-family:var(–mono);cursor:pointer;margin-bottom:18px;}
 
 /* MODE DISP BAR */
+
+/* ACCUM */
+.accum-info{background:rgba(255,214,0,.05);border:1px solid rgba(255,214,0,.18);border-radius:8px;padding:7px 10px;margin-bottom:7px;font-family:var(–mono);font-size:9px;color:var(–sub);line-height:1.7;}
+.accum-live{background:var(–card2);border:1px solid rgba(255,214,0,.3);border-radius:9px;padding:8px 11px;margin-bottom:8px;}
+.accum-live-row{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;}
+.accum-val{font-family:var(–mono);font-size:20px;font-weight:800;color:var(–profit);}
+.accum-ticks{font-family:var(–mono);font-size:11px;color:var(–yellow);font-weight:700;}
+.accum-bar-wrap{width:100%;height:6px;background:var(–border);border-radius:3px;margin-top:6px;overflow:hidden;}
+.accum-bar{height:100%;background:linear-gradient(90deg,var(–green),var(–yellow));border-radius:3px;transition:width .3s;}
+.bb-visual{background:var(–surface);border:1px solid var(–border);border-radius:10px;padding:7px;margin-bottom:8px;}
+.bb-visual-hdr{font-family:var(–mono);font-size:8px;color:var(–sub);margin-bottom:4px;display:flex;justify-content:space-between;}
 .minfo{background:var(–surface);border:1px solid var(–border);border-radius:8px;padding:6px 10px;margin-bottom:7px;font-family:var(–mono);font-size:9px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:5px;}
 .minfo span{color:var(–sub);}
 .minfo strong{color:var(–text);font-weight:700;}
@@ -388,6 +399,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
     <div class="mchip" id="chipPower" onclick="setMode('power')">&#9889; POWER</div>
     <div class="mchip" id="chipBoyboy" onclick="setMode('boyboy')">&#128293; BOY BOY</div>
     <div class="mchip" id="chipEvenodd" onclick="setMode('evenodd')">&#9889; E/O</div>
+    <div class="mchip" id="chipAccum" onclick="setMode('accum')">&#128200; ACCUM</div>
   </div>
 
   <div style="flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;">
@@ -503,6 +515,51 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
       <div id="logEO" class="ai-log"></div>
     </div>
 
+    <!-- ACCUMULATOR -->
+    <div id="mpAccum" class="mpage">
+      <div class="eq-card"><div class="eq-hdr"><span>&#128200; ACCUMULATOR</span><span id="eqStAC" style="font-family:var(--mono);font-size:8px;color:var(--sub)">+0.00</span></div><canvas id="eqAC" style="width:100%;height:62px;display:block;"></canvas></div>
+      <div class="accum-info">
+        <strong style="color:var(--yellow)">HOW IT WORKS</strong> - Opens accumulator when BB is contracting + RSI neutral (40-60) + price consolidating. Auto-cashout after N ticks. Never lets it run to barrier.
+      </div>
+      <div id="accumLive" class="accum-live" style="display:none;">
+        <div class="accum-live-row">
+          <div><div style="font-size:8px;color:var(--sub);font-family:var(--mono);">CURRENT VALUE</div><div class="accum-val" id="accumVal">$0.00</div></div>
+          <div><div style="font-size:8px;color:var(--sub);font-family:var(--mono);">TICKS</div><div class="accum-ticks" id="accumTicksD">0 / 5</div></div>
+          <div><div style="font-size:8px;color:var(--sub);font-family:var(--mono);">PROFIT</div><div style="font-family:var(--mono);font-size:14px;font-weight:800;" id="accumProfit">+$0.00</div></div>
+          <button id="accumCashoutBtn" style="padding:7px 14px;background:#1b5e20;color:#fff;border:none;border-radius:8px;font-family:var(--mono);font-size:11px;font-weight:700;cursor:pointer;">CASHOUT NOW</button>
+        </div>
+        <div class="accum-bar-wrap"><div class="accum-bar" id="accumBar" style="width:0%"></div></div>
+      </div>
+      <div class="bb-visual">
+        <div class="bb-visual-hdr"><span>BB + RSI SIGNAL</span><span id="accumSigInfo" style="color:var(--dim)">--</span></div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:5px;">
+          <div class="cstat"><div class="cstat-l">BB WIDTH</div><div class="cstat-v" id="accumBBW" style="font-size:11px;color:var(--dim)">--</div></div>
+          <div class="cstat"><div class="cstat-l">BB TREND</div><div class="cstat-v" id="accumBBT" style="font-size:11px;color:var(--dim)">--</div></div>
+          <div class="cstat"><div class="cstat-l">RSI</div><div class="cstat-v" id="accumRSI" style="font-size:11px;color:var(--dim)">--</div></div>
+          <div class="cstat"><div class="cstat-l">MARKET</div><div class="cstat-v" id="accumMkt" style="font-size:10px">--</div></div>
+        </div>
+      </div>
+      <div class="cfg-tog" onclick="toggleCfg(this)">&#9881; CONFIG <span>&#9660;</span></div>
+      <div class="cfg-grid">
+        <div class="cfg-blk"><div class="cfg-lbl">STAKE ($)</div><input class="cfg-inp" id="acStake" type="number" value="5" min="1" step="1"/></div>
+        <div class="cfg-blk"><div class="cfg-lbl">GROWTH RATE</div><select class="cfg-sel" id="acGrowth"><option value="0.5">0.5% (safest)</option><option value="1" selected>1%</option><option value="2">2%</option><option value="3">3%</option><option value="5">5% (riskiest)</option></select></div>
+        <div class="cfg-blk"><div class="cfg-lbl">AUTO-CASHOUT TICKS</div><input class="cfg-inp" id="acTicks" type="number" value="5" min="2" max="20" step="1"/><div class="cfg-hint">5 ticks @ 1% = ~5.1% profit</div></div>
+        <div class="cfg-blk"><div class="cfg-lbl">TAKE PROFIT ($)</div><input class="cfg-inp" id="acTP" type="number" value="10" min="1" step="1"/></div>
+        <div class="cfg-blk"><div class="cfg-lbl">STOP LOSS ($)</div><input class="cfg-inp" id="acSL" type="number" value="20" min="1" step="1"/></div>
+        <div class="cfg-blk"><div class="cfg-lbl">RSI NEUTRAL ZONE</div><select class="cfg-sel" id="acRSIZone"><option value="strict">Strict 45-55</option><option value="normal" selected>Normal 40-60</option><option value="wide">Wide 35-65</option></select></div>
+        <div class="cfg-blk" style="grid-column:1/-1"><div class="cfg-lbl">INDEX</div><select class="cfg-sel" id="acIndex"><option value="AUTO">AUTO (best BB signal)</option><option value="R_10">V10</option><option value="R_25">V25</option><option value="R_50">V50</option><option value="R_75">V75</option><option value="R_100">V100</option><option value="1HZ10V">V10 1s</option><option value="1HZ25V">V25 1s</option><option value="1HZ50V">V50 1s</option><option value="1HZ75V">V75 1s</option><option value="1HZ100V">V100 1s</option></select></div>
+      </div>
+      <div class="minfo">
+        <span>SESSION RUNS <strong id="acRuns" style="color:var(--accent)">0</strong></span>
+        <span>PROJ/RUN <strong id="acProjProfit" style="color:var(--profit)">$0.00</strong></span>
+        <span>NEEDED <strong id="acNeeded" style="color:var(--sub)">--</strong></span>
+        <span id="acRunning" style="color:var(--dim)">&#9208; IDLE</span>
+      </div>
+      <div class="log-hdr">ACCUMULATOR LOG</div>
+      <div id="logAC" class="ai-log"></div>
+    </div>
+    <!-- END ACCUMULATOR -->
+
   </div>
 
   <div class="tlog-hdr">
@@ -590,9 +647,9 @@ var AI={
   piLastWait:'',piLastWaitT:0,piTrigLogT:0,
   pwStep:0,pwDir:null,pwPrev:null,pwWaitSince:0,pwPauseUntil:0,pwLastLost:null,
   bbStep:0,bbDir:null,bbLastDig:null,bbActiveSym:null,bbPauseUntil:0,
-  eoStep:0,eoDir:null,eoConfirm:0,eoLastCand:null,eoWaitSince:0,eoPauseUntil:0
+  eoStep:0,eoDir:null,eoConfirm:0,eoLastCand:null,eoWaitSince:0,eoPauseUntil:0,acActiveCid:null,acTicks:0,acEntryStake:0,acPauseUntil:0,acWaitSince:0,acRuns:0
 };
-var EQ={pi:[0],pw:[0],bb:[0],eo:[0],piS:0,pwS:0,bbS:0,eoS:0};
+var EQ={pi:[0],pw:[0],bb:[0],eo:[0],ac:[0],piS:0,pwS:0,bbS:0,eoS:0,acS:0};
 var SIL={cal:false,calTicks:0,calTarget:50,calData:{},baseline:{e:3.1},thresh:{eGate:2.95},regime:'calibrating',prevR:'calibrating',dd:0,evRec:{}};
 IDX.forEach(function(ix){SIL.evRec[ix.s]=[];SIL.calData[ix.s]={digits:[],entropies:[]};});
 var _trades=0,_tPnl=0,_anaCache={};
@@ -906,7 +963,7 @@ function drawEq(canvasId,pts,statId){
   ctx.beginPath();pts.forEach(function(v,i){var x=i/(pts.length-1)*W,y=toY(v);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});ctx.stroke();
   var se=g(statId);if(se){var pk=Math.max.apply(null,pts),tr=Math.min.apply(null,pts);se.textContent=(last>=0?'+':'')+last.toFixed(2)+'  pk:'+(pk>=0?'+':'')+pk.toFixed(2);se.style.color=last>=0?'var(--profit)':'var(--loss)';}
 }
-function drawAll(){drawEq('eqPI',EQ.pi,'eqStPI');drawEq('eqPW',EQ.pw,'eqStPW');drawEq('eqBB',EQ.bb,'eqStBB');drawEq('eqEO',EQ.eo,'eqStEO');}
+function drawAll(){drawEq('eqPI',EQ.pi,'eqStPI');drawEq('eqPW',EQ.pw,'eqStPW');drawEq('eqBB',EQ.bb,'eqStBB');drawEq('eqEO',EQ.eo,'eqStEO');drawEq('eqAC',EQ.ac,'eqStAC');}
 
 // AI TICKS
 function piTick(sym){
@@ -1145,10 +1202,21 @@ function onBuy(msg){
   if(!msg.buy)return;
   AI.activeCid=msg.buy.contract_id;
   sel('ctStatus','ACTIVE');g('ctStatus').style.color='var(--green)';
+  if(AI.activeSource==='accum'){
+    AI.acActiveCid=msg.buy.contract_id;AI.pendingResult=false;
+    log('ac','Contract #'+AI.acActiveCid+' open - monitoring...','success');
+    sel('ctStatus','LIVE');
+  }
   ws.send(JSON.stringify({proposal_open_contract:1,contract_id:AI.activeCid,subscribe:1}));
 }
 function onContract(poc){
-  if(!poc||poc.contract_id!==AI.activeCid)return;
+  if(!poc)return;
+  // Route accumulator updates
+  if(AI.acActiveCid&&poc.contract_id===AI.acActiveCid){
+    if(poc.status==='open'||!poc.status){onAccumUpdate(poc);return;}
+    else{onAccumClosed(poc);return;}
+  }
+  if(poc.contract_id!==AI.activeCid)return;
   if(poc.status==='open')return;
   clearTimeout(AI.tradeTimer);clearTimeout(AI.lateTimer);
   AI.activeCid=null;var src=AI.activeSource||'pioneer';AI.pendingResult=false;AI.inTrade=false;
@@ -1224,7 +1292,7 @@ function upEO(){
 }
 function upStats(){
   var tot=AI.wins+AI.losses;
-  var sess=AI.mode==='power'?EQ.pwS:AI.mode==='boyboy'?EQ.bbS:AI.mode==='evenodd'?EQ.eoS:EQ.piS;
+  var sess=AI.mode==='power'?EQ.pwS:AI.mode==='boyboy'?EQ.bbS:AI.mode==='evenodd'?EQ.eoS:AI.mode==='accum'?EQ.acS:EQ.piS;
   var sp=g('sessPnl');if(sp){sp.textContent=(sess>=0?'+':'')+sess.toFixed(2);sp.style.color=sess>=0?'var(--profit)':'var(--loss)';}
   sel('sessPnlSub',tot+' trades');sel('statW',AI.wins);sel('statL',AI.losses);
   sel('statWR',tot>0?Math.round(AI.wins/tot*100)+'%':'--');
@@ -1257,6 +1325,7 @@ function startAI(){
   g('startBtn').disabled=true;g('stopBtn').disabled=false;disableCfg(true);
   setState('scanning');
   log('pi',AI.mode.toUpperCase()+' STARTED - SIL calibrating...','success');
+  if(AI.mode==='accum')updateAccumProjection();
   var ruMap={power:'pwRunning',boyboy:'bbRunning',evenodd:'eoRunning'};
   var rid=ruMap[AI.mode];var re=g(rid);if(re){re.textContent='RUNNING';re.style.color='var(--green)';}
 }
@@ -1271,8 +1340,8 @@ function resetAll(){
   AI.piStep=0;AI.piDir=null;AI.piConfirm=0;AI.piLastCand=null;AI.piFireAt=0;AI.piWaitSince=0;AI.piPauseUntil=0;AI.piNoSigPause=0;AI.piTrigLogT=0;
   AI.pwStep=0;AI.pwDir=null;AI.pwPrev=null;AI.pwWaitSince=0;AI.pwPauseUntil=0;AI.pwLastLost=null;
   AI.bbStep=0;AI.bbDir=null;AI.bbLastDig=null;AI.bbPauseUntil=0;
-  AI.eoStep=0;AI.eoDir=null;AI.eoConfirm=0;AI.eoLastCand=null;AI.eoWaitSince=0;AI.eoPauseUntil=0;
-  EQ.pi=[0];EQ.pw=[0];EQ.bb=[0];EQ.eo=[0];EQ.piS=0;EQ.pwS=0;EQ.bbS=0;EQ.eoS=0;
+  AI.eoStep=0;AI.eoDir=null;AI.eoConfirm=0;AI.eoLastCand=null;AI.eoWaitSince=0;AI.eoPauseUntil=0;AI.acActiveCid=null;AI.acTicks=0;AI.acEntryStake=0;AI.acPauseUntil=0;AI.acWaitSince=0;AI.acRuns=0;
+  EQ.pi=[0];EQ.pw=[0];EQ.bb=[0];EQ.eo=[0];EQ.ac=[0];EQ.piS=0;EQ.pwS=0;EQ.bbS=0;EQ.eoS=0;EQ.acS=0;
   _trades=0;_tPnl=0;
   g('tlogBody').innerHTML='';sel('tlogCnt','0 trades');
   var tl=g('tlogPnl');if(tl){tl.textContent='P&L: --';tl.style.color='var(--sub)';}
@@ -1314,8 +1383,8 @@ function toggleCfg(el){var grid=el.nextElementSibling;if(grid)grid.style.display
 // MODE / NAV
 function setMode(m){
   if(AI.running)return;AI.mode=m;
-  ['pioneer','power','boyboy','evenodd'].forEach(function(x){var el=g('chip'+x.charAt(0).toUpperCase()+x.slice(1));if(el)el.classList.toggle('active',x===m);});
-  var pMap={pioneer:'mpPioneer',power:'mpPower',boyboy:'mpBoyboy',evenodd:'mpEvenodd'};
+  ['pioneer','power','boyboy','evenodd','accum'].forEach(function(x){var el=g('chip'+x.charAt(0).toUpperCase()+x.slice(1));if(el)el.classList.toggle('active',x===m);});
+  var pMap={pioneer:'mpPioneer',power:'mpPower',boyboy:'mpBoyboy',evenodd:'mpEvenodd',accum:'mpAccum'};
   Object.values(pMap).forEach(function(id){var el=g(id);if(el){el.classList.remove('active');el.style.display='none';}});
   var active=g(pMap[m]);if(active){active.classList.add('active');active.style.display='flex';}
 }
@@ -1424,6 +1493,7 @@ function onTick(tk){
     else if(AI.mode==='power')pwTick();
     else if(AI.mode==='boyboy')bbTick(tk.symbol);
     else if(AI.mode==='evenodd')eoTick();
+    else if(AI.mode==='accum')accumLiveTick(tk.symbol);
   }
 }
 
@@ -1475,6 +1545,271 @@ function doLogout(){
 }
 function toggleTheme(){var isDay=document.documentElement.classList.toggle('day');var btn=g('themeBtn');if(btn)btn.innerHTML=isDay?'&#9790;':'&#9728;';drawAll();}
 
+
+// ── ACCUMULATOR ENGINE ───────────────────────────
+// BB + RSI signal, auto-cashout after N ticks
+// RSI calculation
+function calcRSI(prices, period) {
+  if (!prices || prices.length < period + 1) return 50;
+  var gains = 0, losses = 0;
+  for (var i = prices.length - period; i < prices.length; i++) {
+    var diff = prices[i] - prices[i - 1];
+    if (diff > 0) gains += diff; else losses -= diff;
+  }
+  var avgGain = gains / period, avgLoss = losses / period;
+  if (avgLoss === 0) return 100;
+  var rs = avgGain / avgLoss;
+  return Math.round((100 - 100 / (1 + rs)) * 10) / 10;
+}
+
+// Bollinger Bands calculation
+function calcBB(prices, period, mult) {
+  if (!prices || prices.length < period) return null;
+  var slice = prices.slice(-period);
+  var mean = slice.reduce(function(a, b) { return a + b; }, 0) / period;
+  var variance = slice.reduce(function(a, b) { return a + (b - mean) * (b - mean); }, 0) / period;
+  var sd = Math.sqrt(variance);
+  return {
+    upper: mean + mult * sd,
+    lower: mean - mult * sd,
+    mid: mean,
+    width: (2 * mult * sd) / mean * 100, // BB width as % of price
+    sd: sd
+  };
+}
+
+// Find best market for accumulator
+function findAccumMarket(tgt) {
+  var rsiZone = gv('acRSIZone') || 'normal';
+  var rsiLow = rsiZone === 'strict' ? 45 : rsiZone === 'wide' ? 35 : 40;
+  var rsiHigh = rsiZone === 'strict' ? 55 : rsiZone === 'wide' ? 65 : 60;
+
+  var check = function(sym) {
+    var s = ST[sym], ix = IDX.find(function(i) { return i.s === sym; });
+    if (!s || !s.conn || s.prices.length < 30) return null;
+    var prices = s.prices;
+    var rsi = calcRSI(prices, 14);
+    // RSI must be in neutral zone
+    if (rsi < rsiLow || rsi > rsiHigh) return null;
+    var bb20 = calcBB(prices, 20, 2);
+    var bb10 = calcBB(prices, 10, 2);
+    if (!bb20 || !bb10) return null;
+    // BB must be contracting: current width < recent width
+    var bbContracting = bb10.width < bb20.width;
+    if (!bbContracting) return null;
+    // Price must be within inner 60% of BB range (not near bands)
+    var last = prices[prices.length - 1];
+    var range = bb20.upper - bb20.lower;
+    var posInBand = range > 0 ? (last - bb20.lower) / range : 0.5;
+    if (posInBand < 0.20 || posInBand > 0.80) return null;
+    // Low tick volatility: last 5 ticks range should be small
+    var l5 = prices.slice(-5);
+    var l5range = Math.max.apply(null, l5) - Math.min.apply(null, l5);
+    var volatilityPct = l5range / last * 100;
+    if (volatilityPct > 0.05) return null; // too volatile for accumulator
+    // Score: tighter BB + more neutral RSI = better
+    var rsiNeutral = 50 - Math.abs(rsi - 50); // 0-25, higher is better
+    var score = (bb20.width > 0 ? (1 / bb20.width) * 10 : 0) + rsiNeutral * 0.5 + (bb20.width - bb10.width) * 20;
+    return {
+      sym: sym, rsi: rsi, bbWidth: Math.round(bb20.width * 1000) / 1000,
+      bbContracting: bbContracting, posInBand: Math.round(posInBand * 100),
+      score: score, bb20: bb20
+    };
+  };
+
+  if (tgt && tgt !== 'AUTO') { try { return check(tgt); } catch(e) { return null; } }
+  var best = null, bs = 0;
+  IDX.forEach(function(ix) {
+    try { var r = check(ix.s); if (r && r.score > bs) { bs = r.score; best = r; } } catch(e) {}
+  });
+  return best;
+}
+
+// Update projected profit display
+function updateAccumProjection() {
+  var stake = parseFloat(gv('acStake')) || 5;
+  var growth = parseFloat(gv('acGrowth')) || 1;
+  var ticks = parseInt(gv('acTicks')) || 5;
+  var tp = parseFloat(gv('acTP')) || 10;
+  var projProfit = Math.round(stake * (Math.pow(1 + growth / 100, ticks) - 1) * 100) / 100;
+  var runsNeeded = projProfit > 0 ? Math.ceil(tp / projProfit) : 999;
+  sel('acProjProfit', '+$' + projProfit.toFixed(3));
+  sel('acNeeded', runsNeeded + ' runs');
+  var hint = document.getElementById('acTicks');
+  if (hint && hint.nextElementSibling) {
+    hint.nextElementSibling.textContent = ticks + ' ticks @' + growth + '% = +$' + projProfit.toFixed(3) + '/run';
+  }
+}
+
+// Live accumulator tick handler (while contract is open)
+var _accumContractId = null;
+var _accumStartValue = 0;
+var _accumCashoutPending = false;
+
+function accumLiveTick(sym) {
+  if (!AI.running || AI.mode !== 'accum') return;
+  if (AI.acActiveCid) {
+    // Contract is open - update live display
+    return; // handled by proposal_open_contract subscription
+  }
+  if (AI.inTrade || AI.pendingResult) return;
+  if (Date.now() - lastTradeTime < 2000) return;
+  if (AI.acPauseUntil > 0) { if (Date.now() < AI.acPauseUntil) { setState('waiting'); return; } AI.acPauseUntil = 0; }
+  var tp = parseFloat(gv('acTP')) || 10;
+  var sl = parseFloat(gv('acSL')) || 20;
+  if (EQ.acS >= tp) { log('ac', 'TP +$' + EQ.acS.toFixed(2) + ' - Session complete!', 'success'); stopMode(); return; }
+  if (EQ.acS <= -sl) { log('ac', 'SL -$' + Math.abs(EQ.acS).toFixed(2), 'danger'); stopMode(); return; }
+  setState('scanning');
+
+  // Update BB/RSI display every scan
+  var acIdx = gv('acIndex') || 'AUTO';
+  var mkt = findAccumMarket(acIdx);
+
+  // Update display
+  if (mkt) {
+    var ix = IDX.find(function(i) { return i.s === mkt.sym; });
+    sel('accumBBW', mkt.bbWidth.toFixed(4) + '%');
+    sel('accumBBT', mkt.bbContracting ? 'CONTRACTING' : 'EXPANDING');
+    var bbtEl = document.getElementById('accumBBT');
+    if (bbtEl) bbtEl.style.color = mkt.bbContracting ? 'var(--green)' : 'var(--loss)';
+    sel('accumRSI', mkt.rsi.toFixed(1));
+    var rsiEl = document.getElementById('accumRSI');
+    if (rsiEl) rsiEl.style.color = (mkt.rsi >= 40 && mkt.rsi <= 60) ? 'var(--green)' : 'var(--yellow)';
+    sel('accumMkt', ix ? ix.n : mkt.sym);
+    sel('accumSigInfo', 'BB:' + mkt.bbWidth.toFixed(3) + '% RSI:' + mkt.rsi + ' pos:' + mkt.posInBand + '%');
+  } else {
+    // Show best scan info even when no signal
+    var _bestScan = null, _bScore = 0;
+    IDX.forEach(function(ix) {
+      var s = ST[ix.s]; if (!s || !s.conn || s.prices.length < 30) return;
+      try {
+        var rsi = calcRSI(s.prices, 14);
+        var bb = calcBB(s.prices, 20, 2);
+        if (!bb) return;
+        var rsiZoneEl = gv('acRSIZone') || 'normal';
+        var rLow = rsiZoneEl === 'strict' ? 45 : rsiZoneEl === 'wide' ? 35 : 40;
+        var rHigh = rsiZoneEl === 'strict' ? 55 : rsiZoneEl === 'wide' ? 65 : 60;
+        var score = (50 - Math.abs(rsi - 50)) + (rsi >= rLow && rsi <= rHigh ? 20 : 0);
+        if (score > _bScore) { _bScore = score; _bestScan = { n: ix.n, rsi: rsi, bbWidth: bb.width }; }
+      } catch(e) {}
+    });
+    if (_bestScan) {
+      sel('accumRSI', _bestScan.rsi.toFixed(1));
+      var rsiEl2 = document.getElementById('accumRSI');
+      if (rsiEl2) rsiEl2.style.color = 'var(--yellow)';
+      sel('accumBBW', _bestScan.bbWidth.toFixed(4) + '%');
+      sel('accumSigInfo', 'Best: ' + _bestScan.n + ' RSI:' + _bestScan.rsi.toFixed(1) + ' (need BB contract)');
+    }
+  }
+
+  if (!mkt) {
+    if (AI.acWaitSince === 0) AI.acWaitSince = Date.now();
+    if (Date.now() - AI.acWaitSince > 90000) {
+      AI.acPauseUntil = Date.now() + 300000; AI.acWaitSince = 0;
+      log('ac', 'No BB contraction signal 90s - pausing 5min', 'warn');
+      pushErr('info', 'ACCUM paused - no BB contraction', '');
+    }
+    setState('waiting'); return;
+  }
+  AI.acWaitSince = 0;
+
+  // Fire accumulator
+  var stake = parseFloat(gv('acStake')) || 5;
+  var growth = parseFloat(gv('acGrowth')) || 1;
+  var ticks = parseInt(gv('acTicks')) || 5;
+  AI.acEntryStake = stake;
+  AI.acTicks = 0;
+  var ix = IDX.find(function(i) { return i.s === mkt.sym; });
+  var projProfit = Math.round(stake * (Math.pow(1 + growth / 100, ticks) - 1) * 100) / 100;
+  log('ac', 'ACCUM | ' + ix.n + ' | ' + growth + '% | cashout@' + ticks + 't | $' + stake + ' +$' + projProfit.toFixed(3) + ' projected', 'info');
+  log('ac', 'BB:' + mkt.bbWidth.toFixed(4) + '% CONTR | RSI:' + mkt.rsi + ' | pos:' + mkt.posInBand + '%', 'info');
+
+  // Show live panel
+  var liveEl = document.getElementById('accumLive');
+  if (liveEl) liveEl.style.display = 'block';
+  sel('accumVal', '$' + stake.toFixed(2));
+  sel('accumProfit', '+$0.000');
+  sel('accumTicksD', '0 / ' + ticks);
+  var barEl = document.getElementById('accumBar');
+  if (barEl) barEl.style.width = '0%';
+
+  AI.inTrade = true; AI.pendingResult = true; AI.activeSym = mkt.sym; AI.activeSource = 'accum';
+  setState('trading');
+  var ct = g('ctBar'); if (ct) ct.className = 'ct show';
+  sel('ctIdx', ix ? ix.n : mkt.sym); sel('ctType', 'ACCUM ' + growth + '%'); sel('ctStake', '$' + stake.toFixed(2)); sel('ctStatus', 'OPENING...');
+  g('ctStatus').style.color = 'var(--yellow)';
+
+  var params = { amount: stake, basis: 'stake', contract_type: 'ACCU', currency: 'USD', symbol: mkt.sym, growth_rate: growth / 100, limit_order: { take_profit: stake * (Math.pow(1 + growth / 100, ticks) - 1) } };
+  AI.pendingResult = true;
+  lastTradeTime = Date.now();
+  ws.send(JSON.stringify({ buy: 1, price: stake, parameters: params }));
+}
+
+function onAccumUpdate(poc) {
+  // Called when proposal_open_contract updates for an accumulator
+  if (!poc || poc.contract_id !== AI.acActiveCid) return;
+  if (poc.status === 'sold' || poc.status === 'expired') {
+    onAccumClosed(poc); return;
+  }
+  // Update live display
+  var currentVal = parseFloat(poc.bid_price || poc.current_spot || AI.acEntryStake);
+  var profit = currentVal - AI.acEntryStake;
+  var ticks = parseInt(gv('acTicks')) || 5;
+  AI.acTicks = poc.tick_count || AI.acTicks;
+  sel('accumVal', '$' + currentVal.toFixed(3));
+  sel('accumProfit', (profit >= 0 ? '+' : '') + '$' + profit.toFixed(3));
+  document.getElementById('accumProfit').style.color = profit >= 0 ? 'var(--profit)' : 'var(--loss)';
+  sel('accumTicksD', AI.acTicks + ' / ' + ticks);
+  var barEl = document.getElementById('accumBar');
+  if (barEl) barEl.style.width = Math.min(100, AI.acTicks / ticks * 100) + '%';
+  sel('ctStatus', 'TICK ' + AI.acTicks);
+  // Auto-cashout when ticks reached
+  if (AI.acTicks >= ticks && !_accumCashoutPending) {
+    _accumCashoutPending = true;
+    log('ac', 'Auto-cashout at tick ' + AI.acTicks + ' | val: $' + currentVal.toFixed(3), 'success');
+    doCashout(AI.acActiveCid);
+  }
+}
+
+function doCashout(cid) {
+  if (!ws || ws.readyState !== 1) return;
+  log('ac', 'Sending cashout...', 'info');
+  ws.send(JSON.stringify({ sell: cid, price: 0 }));
+}
+
+function onAccumClosed(poc) {
+  clearTimeout(AI.tradeTimer);
+  var sold = poc.sell_price || poc.bid_price || 0;
+  var profit = Math.round((parseFloat(sold) - AI.acEntryStake) * 1000) / 1000;
+  var won = profit > 0;
+  AI.acActiveCid = null; _accumCashoutPending = false;
+  AI.inTrade = false; AI.pendingResult = false;
+  EQ.acS = Math.round((EQ.acS + profit) * 1000) / 1000;
+  EQ.ac.push(EQ.acS); if (EQ.ac.length > 300) EQ.ac.shift();
+  AI.totalPnl = Math.round((AI.totalPnl + profit) * 100) / 100;
+  AI.sessPnl = Math.round((AI.sessPnl + profit) * 100) / 100;
+  if (won) { AI.wins++; AI.acRuns++; AI.consecLoss = 0; } else { AI.losses++; AI.consecLoss++; }
+  sel('acRuns', AI.acRuns);
+  addTlog(AI.activeSym, 'ACCUM', AI.acEntryStake, profit, won, 'accum');
+  var liveEl = document.getElementById('accumLive');
+  if (liveEl) liveEl.style.display = 'none';
+  var ct = g('ctBar'); if (ct) ct.className = 'ct';
+  log('ac', (won ? 'WIN' : 'LOSS') + ' | profit: ' + (profit >= 0 ? '+' : '') + '$' + profit.toFixed(3) + ' | session: ' + (EQ.acS >= 0 ? '+' : '') + '$' + EQ.acS.toFixed(3), won ? 'success' : 'danger');
+  upStats(); drawAll(); silBar();
+  if (AI.consecLoss >= 3) {
+    AI.acPauseUntil = Date.now() + 120000; AI.consecLoss = 0;
+    log('ac', '3 losses - cooling 2min', 'warn');
+    pushErr('circuit', 'ACCUM cooling - 3 losses', '');
+  }
+  setTimeout(function() { if (AI.running) setState('scanning'); }, 1000);
+}
+
+function upAC() {
+  var runs = g('acRunning'); if (runs) { runs.textContent = AI.running && AI.mode === 'accum' ? 'RUNNING' : 'IDLE'; runs.style.color = AI.running && AI.mode === 'accum' ? 'var(--green)' : 'var(--dim)'; }
+  updateAccumProjection();
+}
+// ── END ACCUMULATOR ──────────────────────────────
+
 // EVENT WIRING
 document.addEventListener('DOMContentLoaded',function(){
   g('loginBtn').addEventListener('click',doLogin);
@@ -1487,6 +1822,13 @@ document.addEventListener('DOMContentLoaded',function(){
   g('logoutBtn').addEventListener('click',doLogout);
   g('themeBtn').addEventListener('click',toggleTheme);
   g('errClrBtn').addEventListener('click',function(){g('errList').innerHTML='';g('errBar').style.display='none';sel('errCnt','0');});
+  g('accumCashoutBtn').addEventListener('click',function(){
+    if(AI.acActiveCid){log('ac','Manual cashout requested','warn');doCashout(AI.acActiveCid);}
+  });
+  // Update projection on config change
+  ['acStake','acGrowth','acTicks','acTP'].forEach(function(id){
+    var el=g(id);if(el)el.addEventListener('change',updateAccumProjection);
+  });
   g('tlogClr').addEventListener('click',function(){g('tlogBody').innerHTML='';_trades=0;_tPnl=0;sel('tlogCnt','0 trades');var tl=g('tlogPnl');if(tl){tl.textContent='P&L: --';tl.style.color='var(--sub)';}});
   try{var saved=sessionStorage.getItem('dat'),expiry=parseInt(sessionStorage.getItem('dax')||'0');if(saved&&Date.now()<expiry){g('tokenInput').value=saved;userToken=saved;verifyToken(saved);}}catch(e){}
 });
