@@ -1198,14 +1198,16 @@ function placeTrade(sym,code,stake,barrier,typeLabel,source){
 }
 function onBuy(msg){
   if(!AI.pendingResult)return;
-  if(msg.error){clearTimeout(AI.tradeTimer);log('pi','Buy error: '+(msg.error.message||msg.error.code),'danger');AI.inTrade=false;AI.pendingResult=false;if(msg.error.code==='InsufficientBalance')stopMode();setState(AI.running?'scanning':'idle');return;}
+  if(msg.error){clearTimeout(AI.tradeTimer);var errMsg=msg.error.message||msg.error.code;log('pi','Buy error: '+errMsg,'danger');if(AI.activeSource==='accum')log('ac','ACCUM buy failed: '+errMsg,'danger');AI.inTrade=false;AI.pendingResult=false;AI.acActiveCid=null;if(msg.error.code==='InsufficientBalance')stopMode();setState(AI.running?'scanning':'idle');return;}
   if(!msg.buy)return;
   AI.activeCid=msg.buy.contract_id;
   sel('ctStatus','ACTIVE');g('ctStatus').style.color='var(--green)';
   if(AI.activeSource==='accum'){
-    AI.acActiveCid=msg.buy.contract_id;AI.pendingResult=false;
-    log('ac','Contract #'+AI.acActiveCid+' open - monitoring...','success');
-    sel('ctStatus','LIVE');
+    AI.acActiveCid=msg.buy.contract_id;
+    AI.pendingResult=false;
+    AI.inTrade=false; // accum manages its own state via acActiveCid
+    log('ac','Contract #'+AI.acActiveCid+' open - monitoring ticks...','success');
+    sel('ctStatus','LIVE');g('ctStatus').style.color='var(--profit)';
   }
   ws.send(JSON.stringify({proposal_open_contract:1,contract_id:AI.activeCid,subscribe:1}));
 }
@@ -1649,10 +1651,18 @@ var _accumCashoutPending = false;
 function accumLiveTick(sym) {
   if (!AI.running || AI.mode !== 'accum') return;
   if (AI.acActiveCid) {
-    // Contract is open - update live display
-    return; // handled by proposal_open_contract subscription
+    // Contract is live - handled by proposal_open_contract subscription
+    // Safety: if contract has been open > 5 min with no update, reset
+    if (AI.acOpenTime && Date.now() - AI.acOpenTime > 300000) {
+      log('ac', 'Contract timeout - resetting', 'warn');
+      AI.acActiveCid = null; AI.inTrade = false; AI.pendingResult = false;
+    }
+    return;
   }
-  if (AI.inTrade || AI.pendingResult) return;
+  // For accum, only pendingResult blocks (not inTrade - accum clears it in onBuy)
+  if (AI.pendingResult) return;
+  // Safety: if somehow inTrade stuck without acActiveCid, clear it
+  if (AI.inTrade) { AI.inTrade = false; return; }
   if (Date.now() - lastTradeTime < 2000) return;
   if (AI.acPauseUntil > 0) { if (Date.now() < AI.acPauseUntil) { setState('waiting'); return; } AI.acPauseUntil = 0; }
   var tp = parseFloat(gv('acTP')) || 10;
@@ -1739,23 +1749,26 @@ function accumLiveTick(sym) {
   sel('ctIdx', ix ? ix.n : mkt.sym); sel('ctType', 'ACCUM ' + growth + '%'); sel('ctStake', '$' + stake.toFixed(2)); sel('ctStatus', 'OPENING...');
   g('ctStatus').style.color = 'var(--yellow)';
 
-  var params = { amount: stake, basis: 'stake', contract_type: 'ACCU', currency: 'USD', symbol: mkt.sym, growth_rate: growth / 100, limit_order: { take_profit: stake * (Math.pow(1 + growth / 100, ticks) - 1) } };
+  // Deriv accumulator: growth_rate is decimal (0.01 = 1%)
+  var params = { amount: stake, basis: 'stake', contract_type: 'ACCU', currency: 'USD', symbol: mkt.sym, growth_rate: growth / 100 };
   AI.pendingResult = true;
+  AI.acOpenTime = Date.now();
   lastTradeTime = Date.now();
   ws.send(JSON.stringify({ buy: 1, price: stake, parameters: params }));
 }
 
 function onAccumUpdate(poc) {
-  // Called when proposal_open_contract updates for an accumulator
   if (!poc || poc.contract_id !== AI.acActiveCid) return;
-  if (poc.status === 'sold' || poc.status === 'expired') {
+  if (poc.status === 'sold' || poc.status === 'expired' || poc.is_sold) {
     onAccumClosed(poc); return;
   }
-  // Update live display
-  var currentVal = parseFloat(poc.bid_price || poc.current_spot || AI.acEntryStake);
-  var profit = currentVal - AI.acEntryStake;
+  // Update live display - Deriv accumulator fields
+  var currentVal = parseFloat(poc.bid_price || poc.sell_price || AI.acEntryStake);
+  var profit = Math.round((currentVal - AI.acEntryStake) * 1000) / 1000;
   var ticks = parseInt(gv('acTicks')) || 5;
-  AI.acTicks = poc.tick_count || AI.acTicks;
+  // tick_count from Deriv API
+  if (poc.tick_count !== undefined) AI.acTicks = poc.tick_count;
+  else AI.acTicks = (AI.acTicks || 0) + 1;
   sel('accumVal', '$' + currentVal.toFixed(3));
   sel('accumProfit', (profit >= 0 ? '+' : '') + '$' + profit.toFixed(3));
   document.getElementById('accumProfit').style.color = profit >= 0 ? 'var(--profit)' : 'var(--loss)';
@@ -1779,8 +1792,9 @@ function doCashout(cid) {
 
 function onAccumClosed(poc) {
   clearTimeout(AI.tradeTimer);
-  var sold = poc.sell_price || poc.bid_price || 0;
-  var profit = Math.round((parseFloat(sold) - AI.acEntryStake) * 1000) / 1000;
+  var sold = parseFloat(poc.sell_price || poc.bid_price || poc.payout || 0);
+  var profit = Math.round((sold - AI.acEntryStake) * 1000) / 1000;
+  log('ac', 'Contract closed. Sold: $' + sold.toFixed(3) + ' Entry: $' + AI.acEntryStake.toFixed(2), 'info');
   var won = profit > 0;
   AI.acActiveCid = null; _accumCashoutPending = false;
   AI.inTrade = false; AI.pendingResult = false;
