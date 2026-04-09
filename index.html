@@ -272,6 +272,40 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 .accum-bar{height:100%;background:linear-gradient(90deg,var(–green),var(–yellow));border-radius:3px;transition:width .3s;}
 .bb-visual{background:var(–surface);border:1px solid var(–border);border-radius:10px;padding:7px;margin-bottom:8px;}
 .bb-visual-hdr{font-family:var(–mono);font-size:8px;color:var(–sub);margin-bottom:4px;display:flex;justify-content:space-between;}
+
+/* INTELLIGENCE PANEL */
+.intel-panel{background:var(–card);border:1px solid var(–border);border-radius:12px;padding:0;margin:0 11px 8px;overflow:hidden;flex-shrink:0;}
+.intel-hdr{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(–card2);border-bottom:1px solid var(–border);cursor:pointer;}
+.intel-hdr-l{display:flex;align-items:center;gap:7px;font-family:var(–mono);font-size:9px;font-weight:700;color:var(–accent);letter-spacing:1px;}
+.intel-body{display:none;flex-direction:column;}
+.intel-body.open{display:flex;}
+.intel-tabs{display:flex;border-bottom:1px solid var(–border);}
+.intel-tab{flex:1;padding:6px;font-family:var(–mono);font-size:8px;font-weight:600;text-align:center;cursor:pointer;color:var(–dim);border:none;background:none;border-bottom:2px solid transparent;transition:all .2s;}
+.intel-tab.active{color:var(–accent);border-bottom-color:var(–accent);}
+.intel-content{padding:10px 12px;max-height:280px;overflow-y:auto;}
+.intel-stat-row{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(–border);font-family:var(–mono);font-size:9px;}
+.intel-stat-row .k{color:var(–sub);}
+.intel-stat-row .v{font-weight:700;color:var(–text);}
+.intel-stat-row .v.good{color:var(–profit);}
+.intel-stat-row .v.bad{color:var(–loss);}
+.intel-stat-row .v.warn{color:var(–yellow);}
+.adapt-badge{display:inline-flex;padding:1px 6px;border-radius:4px;font-size:7px;font-weight:700;font-family:var(–mono);}
+.adapt-badge.learned{background:rgba(0,230,118,.12);color:var(–profit);}
+.adapt-badge.default{background:rgba(74,96,128,.12);color:var(–dim);}
+.chat-wrap{display:flex;flex-direction:column;gap:6px;}
+.chat-msg{padding:7px 10px;border-radius:8px;font-size:11px;line-height:1.6;}
+.chat-msg.ai{background:rgba(56,189,248,.07);border:1px solid rgba(56,189,248,.15);color:var(–text);}
+.chat-msg.user{background:var(–card2);border:1px solid var(–border);color:var(–sub);text-align:right;}
+.chat-msg.thinking{color:var(–dim);font-family:var(–mono);font-size:9px;animation:spulse 1s infinite;}
+.chat-input-row{display:flex;gap:6px;padding:8px 12px;border-top:1px solid var(–border);}
+.chat-input{flex:1;background:var(–surface);border:1px solid var(–border);border-radius:8px;padding:7px 10px;font-family:var(–font);font-size:12px;color:var(–text);outline:none;}
+.chat-input:focus{border-color:var(–accent);}
+.chat-send{padding:7px 12px;background:var(–accent);border:none;border-radius:8px;color:#000;font-weight:700;font-size:11px;cursor:pointer;}
+.threshold-item{display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(–border);}
+.threshold-item .tname{font-family:var(–mono);font-size:9px;color:var(–sub);}
+.threshold-item .tval{font-family:var(–mono);font-size:10px;font-weight:700;color:var(–accent);}
+.threshold-bar{width:60px;height:4px;background:var(–border);border-radius:2px;overflow:hidden;margin-left:6px;}
+.threshold-fill{height:100%;background:var(–green);border-radius:2px;}
 .minfo{background:var(–surface);border:1px solid var(–border);border-radius:8px;padding:6px 10px;margin-bottom:7px;font-family:var(–mono);font-size:9px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:5px;}
 .minfo span{color:var(–sub);}
 .minfo strong{color:var(–text);font-weight:700;}
@@ -579,6 +613,48 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
       <tbody id="tlogBody"></tbody>
     </table>
   </div>
+
+  <!-- INTELLIGENCE PANEL -->
+  <div class="intel-panel" id="intelPanel">
+    <div class="intel-hdr" onclick="toggleIntel()">
+      <div class="intel-hdr-l">
+        <span>&#129302;</span>
+        <span>AI INTELLIGENCE</span>
+        <span id="intelBadge" class="adapt-badge default">DEFAULT</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span id="intelWR" style="font-family:var(--mono);font-size:9px;color:var(--sub);">--% win rate</span>
+        <span id="intelChevron" style="color:var(--dim);font-size:10px;">&#9660;</span>
+      </div>
+    </div>
+    <div class="intel-body" id="intelBody">
+      <div class="intel-tabs">
+        <button class="intel-tab active" id="itab-stats" onclick="switchIntelTab('stats')">STATS</button>
+        <button class="intel-tab" id="itab-adapt" onclick="switchIntelTab('adapt')">ADAPT</button>
+        <button class="intel-tab" id="itab-claude" onclick="switchIntelTab('claude')">ASK AI</button>
+      </div>
+      <!-- STATS TAB -->
+      <div class="intel-content" id="icontent-stats">
+        <div id="intelStatsList"></div>
+      </div>
+      <!-- ADAPT TAB -->
+      <div class="intel-content" id="icontent-adapt" style="display:none;">
+        <div style="font-size:9px;color:var(--sub);font-family:var(--mono);margin-bottom:8px;line-height:1.6;">
+          Thresholds adapt based on your win/loss patterns. Needs 30+ trades per mode.
+        </div>
+        <div id="intelAdaptList"></div>
+      </div>
+      <!-- CLAUDE AI TAB -->
+      <div class="intel-content" id="icontent-claude" style="display:none;padding:0;">
+        <div id="chatMessages" class="chat-wrap" style="padding:10px 12px;min-height:80px;max-height:200px;overflow-y:auto;"></div>
+      </div>
+      <div id="chatInputArea" class="chat-input-row" style="display:none;">
+        <input id="chatInput" class="chat-input" placeholder="Ask about your trading performance..." />
+        <button class="chat-send" id="chatSendBtn">&#10148;</button>
+      </div>
+    </div>
+  </div>
+  <!-- END INTELLIGENCE PANEL -->
 
 </div>
 
@@ -976,7 +1052,7 @@ function piTick(sym){
   if(EQ.piS<=-sl){log('pi','SL hit','danger');stopMode();return;}
   if(EQ.piS>=tp){log('pi','TP hit!','success');stopMode();return;}
   setState('scanning');
-  var minScore=parseInt(gv('piMinScore'))||50;
+  var minScore=getAdaptedThreshold('pioneer','minScore',parseInt(gv('piMinScore'))||50);
   if(AI.piStep===0){
     var mkt=findBest(minScore,gv('piIndex')||'AUTO');
     if(!mkt){
@@ -1003,6 +1079,7 @@ function piTick(sym){
     var stake=Math.max(0.35,Math.round(piStake(0,mkt.a.score)*silDDMult()*100)/100);
     var ix=IDX.find(function(i){return i.s===mkt.sym;});
     log('pi','S1 | '+ix.n+' | DIFF d.'+hotD+' | trigger='+lastD+' window=['+below+','+hotD+','+above+'] | $'+stake.toFixed(2)+' '+mkt.a.grade,'info');
+    AI._lastPiScore=mkt.a.score;AI._lastHotPct=Math.round(mkt.a.rawHP*10)/10;AI._lastRSI=null;AI._lastBBW=null;AI._lastLean=null;AI._lastTicksSurvived=null;
     lastTradeTime=Date.now();
     placeTrade(mkt.sym,'DIGITDIFF',stake,hotD,'DIFF d.'+hotD,'pioneer');
   } else {
@@ -1140,7 +1217,7 @@ function eoTick(){
   if(EQ.eoS>=tp){log('eo','EO TP hit','success');stopMode();return;}
   if(EQ.eoS<=-sl){log('eo','EO SL hit','danger');stopMode();return;}
   setState('scanning');
-  var minLean=parseFloat(gv('eoLean'))||57;
+  var minLean=getAdaptedThreshold('evenodd','minLean',parseFloat(gv('eoLean'))||57);
   var mkt=findEO(minLean,gv('eoIndex')||'AUTO');
   if(!mkt){
     if(AI.eoWaitSince===0)AI.eoWaitSince=Date.now();
@@ -1165,6 +1242,7 @@ function eoTick(){
   var stake4=calcStake(AI.eoStep,base4,mult4);
   var code4=AI.eoDir==='EVEN'?'DIGITEVEN':'DIGITODD';
   log('eo','EO S'+(AI.eoStep+1)+' | '+ix7.n+' | '+AI.eoDir+' '+mkt.lean.toFixed(1)+'% d:'+mkt.fresh.delta+'% | $'+stake4.toFixed(2),'info');
+  if(AI.eoStep===0)AI._lastLean=mkt.lean;
   renderLadder('eo');ladState('eo',AI.eoStep,true);upEO();
   lastTradeTime=Date.now();
   placeTrade(mkt.sym,code4,stake4,null,AI.eoDir,'evenodd');
@@ -1228,6 +1306,7 @@ function onContract(poc){
   AI.totalPnl=Math.round((AI.totalPnl+profit)*100)/100;AI.sessPnl=Math.round((AI.sessPnl+profit)*100)/100;
   if(won){AI.wins++;AI.consecLoss=0;}else{AI.losses++;AI.consecLoss++;}
   addTlog(AI.activeSym,AI.activeType,stake,profit,won,src);
+  recordTrade(AI.activeSym,src,profit,won,{entryScore:AI._lastPiScore,hotPct:AI._lastHotPct,rsi:AI._lastRSI,bbw:AI._lastBBW,lean:AI._lastLean,ticksSurvived:AI._lastTicksSurvived});
   handlePost(src,profit,won);
   upStats();drawAll();silBar();
   setTimeout(function(){var ct=g('ctBar');if(ct)ct.className='ct';if(AI.consecLoss>=5)circuitBreak(src);else if(AI.running)setState('scanning');},400);
@@ -1302,6 +1381,7 @@ function upStats(){
   var ap=g('acctPnl');if(ap){ap.textContent=(AI.totalPnl>=0?'+':'')+AI.totalPnl.toFixed(2);ap.style.color=AI.totalPnl>=0?'var(--profit)':'var(--loss)';}
   sel('acctWR',tot>0?Math.round(AI.wins/tot*100)+'%':'--');sel('acctW',AI.wins);sel('acctL',AI.losses);
   if(AI.mode==='pioneer')upPI();else if(AI.mode==='power')upPW();else if(AI.mode==='boyboy')upBB();else if(AI.mode==='evenodd')upEO();
+  updateIntelPanel();
 }
 
 // TRADE LOG
@@ -1531,6 +1611,7 @@ function launchDash(auth){
   }
   AI.piBase=parseFloat(gv('piStake'))||5;
   initAna();initDC();
+  initIntelligence();
   ['pi','pw','bb','eo'].forEach(function(m){renderLadder(m);});
   drawAll();silBar();startConn();
   setInterval(function(){var n=new Date();sel('CLK',n.toUTCString().slice(17,25));},1000);
@@ -1733,6 +1814,7 @@ function accumLiveTick(sym) {
   var projProfit = Math.round(stake * (Math.pow(1 + growth / 100, ticks) - 1) * 100) / 100;
   log('ac', 'ACCUM | ' + ix.n + ' | ' + growth + '% | cashout@' + ticks + 't | $' + stake + ' +$' + projProfit.toFixed(3) + ' projected', 'info');
   log('ac', 'BB:' + mkt.bbWidth.toFixed(4) + '% CONTR | RSI:' + mkt.rsi + ' | pos:' + mkt.posInBand + '%', 'info');
+  AI._lastRSI = mkt.rsi; AI._lastBBW = mkt.bbWidth; AI._lastTicksSurvived = 0;
 
   // Show live panel
   var liveEl = document.getElementById('accumLive');
@@ -1795,6 +1877,7 @@ function onAccumClosed(poc) {
   var sold = parseFloat(poc.sell_price || poc.bid_price || poc.payout || 0);
   var profit = Math.round((sold - AI.acEntryStake) * 1000) / 1000;
   log('ac', 'Contract closed. Sold: $' + sold.toFixed(3) + ' Entry: $' + AI.acEntryStake.toFixed(2), 'info');
+  AI._lastTicksSurvived = AI.acTicks;
   var won = profit > 0;
   AI.acActiveCid = null; _accumCashoutPending = false;
   AI.inTrade = false; AI.pendingResult = false;
@@ -1823,6 +1906,381 @@ function upAC() {
   updateAccumProjection();
 }
 // ── END ACCUMULATOR ──────────────────────────────
+
+
+// ══════════════════════════════════════════════════════
+// PHASE 1 INTELLIGENCE ENGINE
+// Persistent storage + Adaptive thresholds + Claude AI
+// ══════════════════════════════════════════════════════
+
+// ── PERSISTENT STORAGE ────────────────────────────────
+// Storage helpers - use localStorage for persistence
+function storeSave(key, val) {
+  try { localStorage.setItem('dai_' + key, JSON.stringify(val)); } catch(e) {}
+}
+function storeLoad(key, def) {
+  try { var raw = localStorage.getItem('dai_' + key); if (raw) return JSON.parse(raw); } catch(e) {}
+  return def;
+}
+
+// Trade record with full context for learning
+var TRADES = []; // in-memory, also persisted
+var ADAPT = {   // adaptive thresholds per mode
+  pioneer: { minScore: 50, hotPct: 15, loaded: false },
+  power:   { coldPct: 18, loaded: false },
+  boyboy:  { minFPct: 68, loaded: false },
+  evenodd: { minLean: 57, loaded: false },
+  accum:   { maxBBW: null, rsiLow: 40, rsiHigh: 60, loaded: false }
+};
+
+async function saveTrade(rec) {
+  TRADES.push(rec);
+  if (TRADES.length > 500) TRADES.shift();
+  storeSave('trades', TRADES);
+  runAdaptation();
+  updateIntelPanel();
+}
+
+function loadTrades() {
+  TRADES = storeLoad('trades', []);
+  ADAPT.pioneer = storeLoad('adapt_pioneer', ADAPT.pioneer);
+  ADAPT.power   = storeLoad('adapt_power',   ADAPT.power);
+  ADAPT.boyboy  = storeLoad('adapt_boyboy',  ADAPT.boyboy);
+  ADAPT.evenodd = storeLoad('adapt_evenodd', ADAPT.evenodd);
+  ADAPT.accum   = storeLoad('adapt_accum',   ADAPT.accum);
+  console.log('[INTEL] Loaded', TRADES.length, 'historical trades');
+  updateIntelPanel();
+}
+
+// ── ADAPTIVE THRESHOLD ENGINE ─────────────────────────
+function runAdaptation() {
+  ['pioneer','power','boyboy','evenodd','accum'].forEach(function(mode) {
+    var modeTrades = TRADES.filter(function(t) { return t.mode === mode; });
+    if (modeTrades.length < 30) return; // need 30+ trades to adapt
+    adaptMode(mode, modeTrades);
+  });
+  var badge = g('intelBadge');
+  var hasLearned = ['pioneer','power','boyboy','evenodd','accum'].some(function(m) { return ADAPT[m].loaded; });
+  if (badge) { badge.textContent = hasLearned ? 'LEARNED' : 'DEFAULT'; badge.className = 'adapt-badge ' + (hasLearned ? 'learned' : 'default'); }
+}
+
+function adaptMode(mode, trades) {
+  if (mode === 'pioneer') {
+    // Find optimal score threshold - group by score range, find best win rate
+    var buckets = {};
+    trades.forEach(function(t) {
+      if (t.entryScore === undefined) return;
+      var bucket = Math.floor(t.entryScore / 5) * 5;
+      if (!buckets[bucket]) buckets[bucket] = { w: 0, l: 0 };
+      if (t.won) buckets[bucket].w++; else buckets[bucket].l++;
+    });
+    var bestBucket = null, bestWR = 0;
+    Object.keys(buckets).forEach(function(b) {
+      var bk = buckets[b], tot = bk.w + bk.l;
+      if (tot < 5) return;
+      var wr = bk.w / tot;
+      if (wr > bestWR) { bestWR = wr; bestBucket = parseInt(b); }
+    });
+    if (bestBucket !== null && bestWR > 0.55) {
+      ADAPT.pioneer.minScore = Math.max(40, bestBucket - 5);
+      ADAPT.pioneer.loaded = true;
+      storeSave('adapt_pioneer', ADAPT.pioneer);
+    }
+    // Adapt hot digit threshold
+    var hotWins = trades.filter(function(t) { return t.hotPct && t.hotPct >= 18 && t.won; }).length;
+    var hotTotal = trades.filter(function(t) { return t.hotPct && t.hotPct >= 18; }).length;
+    var midWins = trades.filter(function(t) { return t.hotPct && t.hotPct >= 15 && t.hotPct < 18 && t.won; }).length;
+    var midTotal = trades.filter(function(t) { return t.hotPct && t.hotPct >= 15 && t.hotPct < 18; }).length;
+    if (hotTotal >= 10 && midTotal >= 10) {
+      var hotWR = hotTotal > 0 ? hotWins / hotTotal : 0;
+      var midWR = midTotal > 0 ? midWins / midTotal : 0;
+      ADAPT.pioneer.hotPct = hotWR > midWR + 0.05 ? 18 : 15;
+      storeSave('adapt_pioneer', ADAPT.pioneer);
+    }
+  }
+  if (mode === 'accum') {
+    // Find BBW range with best survival (most ticks)
+    var bbwGroups = {};
+    trades.forEach(function(t) {
+      if (t.bbw === undefined) return;
+      var bucket = Math.floor(t.bbw * 1000) / 1000;
+      if (!bbwGroups[bucket]) bbwGroups[bucket] = { ticks: [], wins: 0, total: 0 };
+      bbwGroups[bucket].ticks.push(t.ticksSurvived || 0);
+      bbwGroups[bucket].total++;
+      if (t.won) bbwGroups[bucket].wins++;
+    });
+    var bestBBW = null, bestSurvival = 0;
+    Object.keys(bbwGroups).forEach(function(b) {
+      var g2 = bbwGroups[b];
+      if (g2.total < 3) return;
+      var avgTicks = g2.ticks.reduce(function(a, b2) { return a + b2; }, 0) / g2.ticks.length;
+      if (avgTicks > bestSurvival) { bestSurvival = avgTicks; bestBBW = parseFloat(b); }
+    });
+    if (bestBBW !== null) {
+      ADAPT.accum.maxBBW = bestBBW * 1.2;
+      ADAPT.accum.loaded = true;
+      storeSave('adapt_accum', ADAPT.accum);
+    }
+    // Adapt RSI zone
+    var rsiGroups = { narrow: { w: 0, t: 0 }, normal: { w: 0, t: 0 }, wide: { w: 0, t: 0 } };
+    trades.forEach(function(t) {
+      if (t.rsi === undefined) return;
+      var narrow = t.rsi >= 45 && t.rsi <= 55;
+      var normal = t.rsi >= 40 && t.rsi <= 60;
+      if (narrow) { rsiGroups.narrow.t++; if (t.won) rsiGroups.narrow.w++; }
+      else if (normal) { rsiGroups.normal.t++; if (t.won) rsiGroups.normal.w++; }
+      else { rsiGroups.wide.t++; if (t.won) rsiGroups.wide.w++; }
+    });
+    var narrowWR = rsiGroups.narrow.t >= 5 ? rsiGroups.narrow.w / rsiGroups.narrow.t : 0;
+    var normalWR = rsiGroups.normal.t >= 5 ? rsiGroups.normal.w / rsiGroups.normal.t : 0;
+    if (narrowWR > normalWR + 0.08 && rsiGroups.narrow.t >= 8) {
+      ADAPT.accum.rsiLow = 45; ADAPT.accum.rsiHigh = 55;
+    } else if (normalWR >= narrowWR) {
+      ADAPT.accum.rsiLow = 40; ADAPT.accum.rsiHigh = 60;
+    }
+    ADAPT.accum.loaded = true;
+    storeSave('adapt_accum', ADAPT.accum);
+  }
+  if (mode === 'evenodd') {
+    var leanGroups = {};
+    trades.forEach(function(t) {
+      if (t.lean === undefined) return;
+      var bucket = Math.floor(t.lean);
+      if (!leanGroups[bucket]) leanGroups[bucket] = { w: 0, t: 0 };
+      leanGroups[bucket].t++;
+      if (t.won) leanGroups[bucket].w++;
+    });
+    var bestLean = null, bestWR2 = 0;
+    Object.keys(leanGroups).forEach(function(b) {
+      var bk = leanGroups[b];
+      if (bk.t < 5) return;
+      var wr = bk.w / bk.t;
+      if (wr > bestWR2) { bestWR2 = wr; bestLean = parseInt(b); }
+    });
+    if (bestLean !== null && bestLean >= 54) {
+      ADAPT.evenodd.minLean = Math.min(62, bestLean);
+      ADAPT.evenodd.loaded = true;
+      storeSave('adapt_evenodd', ADAPT.evenodd);
+    }
+  }
+}
+
+// Apply adaptive thresholds when firing trades
+function getAdaptedThreshold(mode, key, fallback) {
+  if (ADAPT[mode] && ADAPT[mode][key] !== undefined && ADAPT[mode].loaded) {
+    return ADAPT[mode][key];
+  }
+  return fallback;
+}
+
+// ── INTELLIGENCE PANEL UI ─────────────────────────────
+var _intelOpen = false;
+var _activeIntelTab = 'stats';
+
+function toggleIntel() {
+  _intelOpen = !_intelOpen;
+  var body = g('intelBody');
+  var chev = g('intelChevron');
+  if (body) body.className = 'intel-body' + (_intelOpen ? ' open' : '');
+  if (chev) chev.innerHTML = _intelOpen ? '&#9650;' : '&#9660;';
+  if (_intelOpen) updateIntelPanel();
+}
+
+function switchIntelTab(tab) {
+  _activeIntelTab = tab;
+  ['stats','adapt','claude'].forEach(function(t) {
+    var btn = g('itab-' + t);
+    var content = g('icontent-' + t);
+    if (btn) btn.className = 'intel-tab' + (t === tab ? ' active' : '');
+    if (content) content.style.display = t === tab ? 'block' : 'none';
+  });
+  var chatArea = g('chatInputArea');
+  if (chatArea) chatArea.style.display = tab === 'claude' ? 'flex' : 'none';
+  if (tab === 'stats') updateIntelStats();
+  if (tab === 'adapt') updateIntelAdapt();
+}
+
+function updateIntelPanel() {
+  var tot = AI.wins + AI.losses;
+  var wr = tot > 0 ? Math.round(AI.wins / tot * 100) : 0;
+  var wrEl = g('intelWR');
+  if (wrEl) { wrEl.textContent = wr + '% win rate (' + tot + ' trades)'; wrEl.style.color = wr >= 55 ? 'var(--profit)' : wr >= 45 ? 'var(--yellow)' : 'var(--loss)'; }
+  if (_intelOpen) {
+    if (_activeIntelTab === 'stats') updateIntelStats();
+    if (_activeIntelTab === 'adapt') updateIntelAdapt();
+  }
+}
+
+function updateIntelStats() {
+  var el = g('intelStatsList'); if (!el) return;
+  var tot = TRADES.length;
+  if (tot === 0) { el.innerHTML = '<div style="color:var(--dim);font-family:var(--mono);font-size:9px;padding:8px 0;">No trade history yet. Start trading to build intelligence.</div>'; return; }
+  var modes = ['pioneer','power','boyboy','evenodd','accum'];
+  var html = '';
+  // Overall stats
+  var allW = TRADES.filter(function(t){return t.won;}).length;
+  var allWR = tot > 0 ? Math.round(allW/tot*100) : 0;
+  var allPnl = TRADES.reduce(function(s,t){return s+t.profit;},0);
+  html += '<div style="font-size:8px;color:var(--sub);font-family:var(--mono);letter-spacing:1px;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid var(--border);">ALL TIME — '+tot+' TRADES</div>';
+  html += row('Win Rate', allWR+'%', allWR>=55?'good':allWR>=45?'warn':'bad');
+  html += row('Total P&L', (allPnl>=0?'+':'')+allPnl.toFixed(2), allPnl>=0?'good':'bad');
+  // Per mode
+  modes.forEach(function(mode) {
+    var mt = TRADES.filter(function(t){return t.mode===mode;});
+    if (mt.length === 0) return;
+    var mW = mt.filter(function(t){return t.won;}).length;
+    var mPnl = mt.reduce(function(s,t){return s+t.profit;},0);
+    var mWR = Math.round(mW/mt.length*100);
+    html += '<div style="font-size:8px;color:var(--sub);font-family:var(--mono);letter-spacing:1px;margin:8px 0 4px;padding-bottom:3px;border-bottom:1px solid var(--border);">'+mode.toUpperCase()+' — '+mt.length+' trades</div>';
+    html += row('Win Rate', mWR+'%', mWR>=55?'good':mWR>=45?'warn':'bad');
+    html += row('P&L', (mPnl>=0?'+':'')+mPnl.toFixed(2), mPnl>=0?'good':'bad');
+    // Best market
+    var mktMap = {};
+    mt.forEach(function(t){if(!mktMap[t.sym])mktMap[t.sym]={w:0,t:0};mktMap[t.sym].t++;if(t.won)mktMap[t.sym].w++;});
+    var bestMkt=null,bWR=0;
+    Object.keys(mktMap).forEach(function(s){var mk=mktMap[s];if(mk.t>=3&&mk.w/mk.t>bWR){bWR=mk.w/mk.t;bestMkt=s;}});
+    if (bestMkt) html += row('Best Market', bestMkt+' ('+Math.round(bWR*100)+'%)', 'good');
+    // Best time
+    var timeMap = {};
+    mt.forEach(function(t){if(!t.hour&&t.hour!==0)return;var h=t.hour;if(!timeMap[h])timeMap[h]={w:0,t:0};timeMap[h].t++;if(t.won)timeMap[h].w++;});
+    var bestHour=null,bhWR=0;
+    Object.keys(timeMap).forEach(function(h){var tk=timeMap[h];if(tk.t>=3&&tk.w/tk.t>bhWR){bhWR=tk.w/tk.t;bestHour=parseInt(h);}});
+    if (bestHour !== null) html += row('Best Hour (UTC)', bestHour+':00 ('+Math.round(bhWR*100)+'%)', 'good');
+    if (mode==='accum'){var avgT=mt.reduce(function(s,t){return s+(t.ticksSurvived||0);},0)/mt.length;html+=row('Avg Ticks Survived',avgT.toFixed(1),'warn');}
+  });
+  el.innerHTML = html;
+}
+
+function row(k, v, cls) {
+  return '<div class="intel-stat-row"><span class="k">'+k+'</span><span class="v '+cls+'">'+v+'</span></div>';
+}
+
+function updateIntelAdapt() {
+  var el = g('intelAdaptList'); if (!el) return;
+  var html = '';
+  var modes = ['pioneer','power','boyboy','evenodd','accum'];
+  modes.forEach(function(mode) {
+    var mt = TRADES.filter(function(t){return t.mode===mode;});
+    var adapt = ADAPT[mode];
+    var status = adapt.loaded ? 'LEARNED' : (mt.length >= 30 ? 'READY' : mt.length+'/30 trades');
+    var statusCol = adapt.loaded ? 'var(--profit)' : mt.length >= 30 ? 'var(--yellow)' : 'var(--dim)';
+    html += '<div style="margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border);">';
+    html += '<div style="display:flex;justify-content:space-between;margin-bottom:5px;"><span style="font-family:var(--mono);font-size:9px;font-weight:700;color:var(--text);">'+mode.toUpperCase()+'</span><span style="font-family:var(--mono);font-size:8px;color:'+statusCol+'">'+status+'</span></div>';
+    if (mode === 'pioneer') {
+      html += threshItem('Min Score', adapt.minScore, 40, 80, adapt.loaded);
+      html += threshItem('Hot Digit %', adapt.hotPct, 12, 25, adapt.loaded);
+    }
+    if (mode === 'power') { html += threshItem('Max Cold %', adapt.coldPct, 10, 20, adapt.loaded); }
+    if (mode === 'evenodd') { html += threshItem('Min Lean %', adapt.minLean, 54, 70, adapt.loaded); }
+    if (mode === 'accum') {
+      html += threshItem('RSI Low', adapt.rsiLow, 35, 49, adapt.loaded);
+      html += threshItem('RSI High', adapt.rsiHigh, 51, 65, adapt.loaded);
+      if (adapt.maxBBW) html += threshItem('Max BBW', Math.round(adapt.maxBBW*1000)/1000, 0, 0.05, adapt.loaded);
+    }
+    html += '</div>';
+  });
+  el.innerHTML = html || '<div style="color:var(--dim);font-family:var(--mono);font-size:9px;">Trade more to unlock adaptive thresholds.</div>';
+}
+
+function threshItem(name, val, min, max, learned) {
+  var pct = max > min ? Math.round((val - min) / (max - min) * 100) : 50;
+  return '<div class="threshold-item"><span class="tname">'+name+'</span><div style="display:flex;align-items:center;gap:5px;"><span class="tval">'+val+'</span><div class="threshold-bar"><div class="threshold-fill" style="width:'+pct+'%;background:'+(learned?'var(--profit)':'var(--accent)')+'"></div></div></div></div>';
+}
+
+// ── CLAUDE AI CHAT ────────────────────────────────────
+var _chatHistory = [];
+
+async function sendChat() {
+  var input = g('chatInput');
+  if (!input || !input.value.trim()) return;
+  var userMsg = input.value.trim();
+  input.value = '';
+  addChatMsg(userMsg, 'user');
+  addChatMsg('Analyzing your trading data...', 'thinking');
+  var thinkingEl = g('chatMessages').lastElementChild;
+
+  // Build context from trade history
+  var tot = TRADES.length;
+  var wins = TRADES.filter(function(t){return t.won;}).length;
+  var pnl = Math.round(TRADES.reduce(function(s,t){return s+t.profit;},0)*100)/100;
+  var recentLosses = TRADES.slice(-10).filter(function(t){return !t.won;}).length;
+
+  // Mode breakdown
+  var modeStats = {};
+  TRADES.forEach(function(t){
+    if(!modeStats[t.mode])modeStats[t.mode]={w:0,l:0,pnl:0};
+    if(t.won)modeStats[t.mode].w++;else modeStats[t.mode].l++;
+    modeStats[t.mode].pnl=Math.round((modeStats[t.mode].pnl+t.profit)*100)/100;
+  });
+  var modeStr = Object.keys(modeStats).map(function(m){var s=modeStats[m];return m+'('+s.w+'W/'+s.l+'L pnl:'+s.pnl+')';}).join(', ');
+
+  // Adaptive threshold status
+  var adaptStr = Object.keys(ADAPT).map(function(m){return m+':'+(ADAPT[m].loaded?'LEARNED':'default');}).join(', ');
+
+  var systemPrompt = "You are an AI trading analyst for a Deriv synthetic indices trading bot called DerivAI. You have access to the trader real performance data and help them optimize their strategy. Be concise, specific, and data-driven. Never give generic advice - always reference their actual numbers. Modes: Pioneer (DIFFERS hot digit), Power (OVER1/UNDER8), Boy Boy (fast DIFFERS), Even/Odd (lean detection), Accumulator (BB+RSI). Synthetic indices use cryptographic RNG so you cannot predict digits - focus on entry conditions and risk management.";
+
+  var context = 'trades='+tot+' wr='+(tot>0?Math.round(wins/tot*100):0)+'% pnl=$'+pnl+' rec10loss='+recentLosses+' '+modeStr+' adapt='+adaptStr+' mode='+AI.mode+' sil='+SIL.regime+' sess='+AI.sessPnl.toFixed(2);
+
+  _chatHistory.push({role:'user', content: context + ' QUESTION: ' + userMsg});
+  if (_chatHistory.length > 10) _chatHistory = _chatHistory.slice(-10);
+
+  try {
+    var response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 400,
+        system: systemPrompt,
+        messages: _chatHistory
+      })
+    });
+    var data = await response.json();
+    var reply = data.content && data.content[0] ? data.content[0].text : 'Unable to get response.';
+    _chatHistory.push({role:'assistant', content: reply});
+    if (thinkingEl) thinkingEl.remove();
+    addChatMsg(reply, 'ai');
+  } catch(err) {
+    if (thinkingEl) thinkingEl.remove();
+    addChatMsg('Connection error. Check your internet connection.', 'ai');
+  }
+}
+
+function addChatMsg(text, type) {
+  var el = g('chatMessages'); if (!el) return;
+  var div = document.createElement('div');
+  div.className = 'chat-msg ' + type;
+  div.textContent = text;
+  el.appendChild(div);
+  el.scrollTop = el.scrollHeight;
+}
+
+// ── ENHANCED TRADE RECORDING ─────────────────────────
+// Override addTlog to also save with context
+var _origAddTlog = null;
+function initIntelligence() {
+  loadTrades();
+  // Wire chat send
+  var sendBtn = g('chatSendBtn');
+  var chatIn = g('chatInput');
+  if (sendBtn) sendBtn.addEventListener('click', sendChat);
+  if (chatIn) chatIn.addEventListener('keydown', function(e){if(e.key==='Enter')sendChat();});
+}
+
+// Called from each mode's result handler with context
+function recordTrade(sym, mode, profit, won, context) {
+  var rec = {
+    sym: sym, mode: mode, profit: profit, won: won,
+    ts: Date.now(), hour: new Date().getUTCHours(),
+    silRegime: SIL.regime
+  };
+  // Merge context (entryScore, hotPct, rsi, bbw, lean, ticksSurvived etc)
+  if (context) Object.keys(context).forEach(function(k){rec[k]=context[k];});
+  saveTrade(rec);
+}
+// ══════════════════════════════════════════════════════
+// END INTELLIGENCE ENGINE
+// ══════════════════════════════════════════════════════
 
 // EVENT WIRING
 document.addEventListener('DOMContentLoaded',function(){
