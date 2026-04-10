@@ -397,7 +397,10 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
       <div class="cstat"><div class="cstat-l">TOTAL P&amp;L</div><div class="cstat-v" id="statPnl">+0.00</div></div>
     </div>
     <div class="ai-ctrl">
-      <div id="stateBadge" class="state-badge idle">&#9208; IDLE</div>
+      <div style="display:flex;align-items:center;gap:7px;">
+        <div id="stateBadge" class="state-badge idle">&#9208; IDLE</div>
+        <div id="confScore" style="display:none;flex-direction:column;align-items:center;padding:3px 8px;background:var(--card);border:1px solid var(--border);border-radius:8px;min-width:56px;"></div>
+      </div>
       <div class="ctrl-btns">
         <button class="btn start" id="startBtn">&#9654; START</button>
         <button class="btn stop" id="stopBtn" disabled>&#9632; STOP</button>
@@ -639,8 +642,9 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
       </div>
       <!-- ADAPT TAB -->
       <div class="intel-content" id="icontent-adapt" style="display:none;">
-        <div style="font-size:9px;color:var(--sub);font-family:var(--mono);margin-bottom:8px;line-height:1.6;">
-          Thresholds adapt based on your win/loss patterns. Needs 30+ trades per mode.
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <div style="font-size:9px;color:var(--sub);font-family:var(--mono);line-height:1.6;">Adapts from your trade history. 30+ trades per mode for thresholds, 500+ for neural net.</div>
+          <button id="trainNowBtn" onclick="trainAllModels()" style="padding:4px 10px;background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.3);color:var(--accent);border-radius:6px;font-family:var(--mono);font-size:8px;font-weight:700;cursor:pointer;white-space:nowrap;margin-left:8px;">TRAIN</button>
         </div>
         <div id="intelAdaptList"></div>
       </div>
@@ -1076,7 +1080,11 @@ function piTick(sym){
       var nowT=Date.now();if(!AI.piTrigLogT||nowT-AI.piTrigLogT>12000){log('pi','Watching: hot='+hotD+' window=['+below+','+hotD+','+above+'] last='+lastD+(hotInLast5?'':' [hot absent last 5]'),'warn');AI.piTrigLogT=nowT;}
       setState('waiting');return;
     }
-    var stake=Math.max(0.35,Math.round(piStake(0,mkt.a.score)*silDDMult()*100)/100);
+    var _piBaseStake=Math.max(0.35,Math.round(piStake(0,mkt.a.score)*silDDMult()*100)/100);
+    var _piConf=getConfidence('pioneer',{entryScore:mkt.a.score,hotPct:mkt.a.rawHP});
+    showConfidence('pioneer',_piConf);
+    var stake=confStake(_piBaseStake,_piConf);
+    if(stake===0){waitLog('[ML] Pioneer conf too low ('+_piConf+'%) - skip');setState('waiting');return;}
     var ix=IDX.find(function(i){return i.s===mkt.sym;});
     log('pi','S1 | '+ix.n+' | DIFF d.'+hotD+' | trigger='+lastD+' window=['+below+','+hotD+','+above+'] | $'+stake.toFixed(2)+' '+mkt.a.grade,'info');
     AI._lastPiScore=mkt.a.score;AI._lastHotPct=Math.round(mkt.a.rawHP*10)/10;AI._lastRSI=null;AI._lastBBW=null;AI._lastLean=null;AI._lastTicksSurvived=null;
@@ -1133,9 +1141,13 @@ function pwTick(){
     var uEl=g('pwU');if(uEl)uEl.textContent=mkt.r20cold.toFixed(1)+'%';
     var mEl=g('pwMkt');if(mEl){var ixm=IDX.find(function(i){return i.s===mkt.sym;});if(ixm)mEl.textContent=ixm.n;}
     var base=parseFloat(gv('pwStake'))||1;
-    var stake=Math.max(0.35,Math.round(base*silDDMult()*100)/100);
+    var _pwBase=Math.max(0.35,Math.round(base*silDDMult()*100)/100);
+    var _pwConf=getConfidence('power',{coldPct:mkt.coldPct,r20cold:mkt.r20cold});
+    showConfidence('power',_pwConf);
+    var stake=confStake(_pwBase,_pwConf);
+    if(stake===0){log('pw','[ML] Power conf '+(_pwConf||0)+'% too low - skip','warn');setState('waiting');return;}
     var ix=IDX.find(function(i){return i.s===mkt.sym;});
-    log('pw','PW S1 | '+ix.n+' | '+mkt.lbl+' cold:'+mkt.coldPct+'% r20:'+mkt.r20cold+'% | $'+stake.toFixed(2),'info');
+    log('pw','PW S1 | '+ix.n+' | '+mkt.lbl+' cold:'+mkt.coldPct+'% conf:'+(_pwConf||'--')+'% | $'+stake.toFixed(2),'info');
     renderLadder('pw');ladState('pw',0,true);
     lastTradeTime=Date.now();
     placeTrade(mkt.sym,mkt.code,stake,mkt.barrier,mkt.lbl,'power');
@@ -1240,9 +1252,13 @@ function eoTick(){
   AI.eoDir=mkt.dir; // re-scan direction each step - no lock
   var ix7=IDX.find(function(i){return i.s===mkt.sym;});
   var base4=parseFloat(gv('eoStake'))||1,mult4=parseFloat(gv('eoMult'))||2.1;
-  var stake4=calcStake(AI.eoStep,base4,mult4);
+  var _eoBaseStake=calcStake(AI.eoStep,base4,mult4);
+  var _eoConf=AI.eoStep===0?getConfidence('evenodd',{lean:mkt.lean,delta:mkt.fresh.delta,chi2sig:1}):null;
+  if(AI.eoStep===0){showConfidence('evenodd',_eoConf);}
+  var stake4=AI.eoStep===0?confStake(_eoBaseStake,_eoConf):_eoBaseStake;
+  if(stake4===0){log('eo','[ML] EO conf too low ('+_eoConf+'%) - skip','warn');setState('waiting');return;}
   var code4=AI.eoDir==='EVEN'?'DIGITEVEN':'DIGITODD';
-  log('eo','EO S'+(AI.eoStep+1)+' | '+ix7.n+' | '+AI.eoDir+' '+mkt.lean.toFixed(1)+'% d:'+mkt.fresh.delta+'% | $'+stake4.toFixed(2),'info');
+  log('eo','EO S'+(AI.eoStep+1)+' | '+ix7.n+' | '+AI.eoDir+' '+mkt.lean.toFixed(1)+'% d:'+mkt.fresh.delta+'% conf:'+(_eoConf||'--')+'% | $'+stake4.toFixed(2),'info');
   if(AI.eoStep===0)AI._lastLean=mkt.lean;
   renderLadder('eo');ladState('eo',AI.eoStep,true);upEO();
   lastTradeTime=Date.now();
@@ -1613,6 +1629,7 @@ function launchDash(auth){
   AI.piBase=parseFloat(gv('piStake'))||5;
   initAna();initDC();
   initIntelligence();
+  setTimeout(initML, 1000);
   ['pi','pw','bb','eo'].forEach(function(m){renderLadder(m);});
   drawAll();silBar();startConn();
   setInterval(function(){var n=new Date();sel('CLK',n.toUTCString().slice(17,25));},1000);
@@ -1806,9 +1823,13 @@ function accumLiveTick(sym) {
   AI.acWaitSince = 0;
 
   // Fire accumulator
-  var stake = parseFloat(gv('acStake')) || 5;
+  var _acBaseStake = parseFloat(gv('acStake')) || 5;
   var growth = parseFloat(gv('acGrowth')) || 1;
   var ticks = parseInt(gv('acTicks')) || 5;
+  var _acConf=getConfidence('accum',{rsi:mkt.rsi,bbw:mkt.bbWidth,posInBand:mkt.posInBand});
+  showConfidence('accum',_acConf);
+  var stake=confStake(_acBaseStake,_acConf);
+  if(stake===0){log('ac','[ML] Accum conf too low ('+_acConf+'%) - skip','warn');setState('waiting');return;}
   AI.acEntryStake = stake;
   AI.acTicks = 0;
   var ix = IDX.find(function(i) { return i.s === mkt.sym; });
@@ -1914,6 +1935,307 @@ function upAC() {
 // Persistent storage + Adaptive thresholds + Claude AI
 // ══════════════════════════════════════════════════════
 
+
+// ══════════════════════════════════════════════════════
+// PHASE 2: ML SCORING ENGINE
+// Logistic regression (30+ trades) → Neural net (500+)
+// ══════════════════════════════════════════════════════
+
+var ML = {
+  models: {},      // per-mode trained models
+  training: false,
+  lastTrained: {},
+  minTrades: 30,   // min trades to train
+  nnThreshold: 500 // trades needed for neural net
+};
+
+// Symbol encoding (0-12)
+var SYM_MAP = {};
+IDX.forEach(function(ix, i) { SYM_MAP[ix.s] = i / IDX.length; });
+
+// SIL regime encoding
+var REGIME_MAP = { calibrating: 0, normal: 1, reset: 0.5, streak: 0.25, cluster: 0 };
+
+// Hour encoding - cyclical (captures time-of-day patterns)
+function encodeHour(h) {
+  return [
+    Math.sin(2 * Math.PI * h / 24),
+    Math.cos(2 * Math.PI * h / 24)
+  ];
+}
+
+// ── FEATURE EXTRACTION PER MODE ──────────────────────
+function extractFeatures(rec) {
+  var h = encodeHour(rec.hour || 0);
+  var sym = SYM_MAP[rec.sym] || 0;
+  var regime = REGIME_MAP[rec.silRegime] !== undefined ? REGIME_MAP[rec.silRegime] : 0.5;
+
+  if (rec.mode === 'pioneer') {
+    return [
+      (rec.entryScore || 50) / 100,           // score 0-1
+      (rec.hotPct || 15) / 30,                // hot digit % normalised
+      rec.chi2p !== undefined ? (1 - rec.chi2p) : 0.5, // chi2 significance
+      regime, sym, h[0], h[1]
+    ];
+  }
+  if (rec.mode === 'power') {
+    return [
+      1 - (rec.coldPct || 18) / 25,          // lower cold = higher feature
+      1 - (rec.r20cold || 20) / 30,
+      regime, sym, h[0], h[1]
+    ];
+  }
+  if (rec.mode === 'boyboy') {
+    return [
+      (rec.fPct || 68) / 100,
+      (rec.rPct || 63) / 100,
+      regime, sym, h[0], h[1]
+    ];
+  }
+  if (rec.mode === 'evenodd') {
+    return [
+      ((rec.lean || 57) - 50) / 20,          // lean above 50%, normalised
+      (rec.delta || 0) / 10,                  // momentum
+      rec.chi2sig ? 1 : 0,
+      regime, sym, h[0], h[1]
+    ];
+  }
+  if (rec.mode === 'accum') {
+    return [
+      1 - Math.abs((rec.rsi || 50) - 50) / 25, // RSI neutrality 0-1
+      1 - (rec.bbw || 0.03) / 0.1,           // lower BBW = better
+      (rec.posInBand || 50) / 100,
+      regime, sym, h[0], h[1]
+    ];
+  }
+  return [0.5, 0.5, regime, sym, h[0], h[1]];
+}
+
+// ── LOGISTIC REGRESSION ─────────────────────────────
+// Simple but powerful - works well with 30-500 trades
+function sigmoid(x) { return 1 / (1 + Math.exp(-x)); }
+
+function logisticPredict(weights, bias, features) {
+  var z = bias;
+  for (var i = 0; i < features.length; i++) z += (weights[i] || 0) * features[i];
+  return sigmoid(z);
+}
+
+function trainLogistic(trades, mode, epochs, lr) {
+  if (!epochs) epochs = 200;
+  if (!lr) lr = 0.1;
+  var modeTrades = trades.filter(function(t) { return t.mode === mode; });
+  if (modeTrades.length < ML.minTrades) return null;
+
+  var X = modeTrades.map(extractFeatures);
+  var y = modeTrades.map(function(t) { return t.won ? 1 : 0; });
+  var nFeatures = X[0].length;
+
+  // Initialize weights
+  var weights = new Array(nFeatures).fill(0);
+  var bias = 0;
+
+  // Gradient descent
+  for (var ep = 0; ep < epochs; ep++) {
+    var dw = new Array(nFeatures).fill(0);
+    var db = 0;
+    var n = X.length;
+    for (var i = 0; i < n; i++) {
+      var pred = logisticPredict(weights, bias, X[i]);
+      var err = pred - y[i];
+      for (var j = 0; j < nFeatures; j++) dw[j] += err * X[i][j];
+      db += err;
+    }
+    for (var j = 0; j < nFeatures; j++) weights[j] -= lr * dw[j] / n;
+    bias -= lr * db / n;
+  }
+
+  // Calculate training accuracy
+  var correct = 0;
+  for (var i = 0; i < X.length; i++) {
+    var p = logisticPredict(weights, bias, X[i]);
+    if ((p >= 0.5) === (y[i] === 1)) correct++;
+  }
+  var acc = Math.round(correct / X.length * 100);
+
+  return { type: 'logistic', weights: weights, bias: bias, acc: acc, n: modeTrades.length, mode: mode };
+}
+
+// ── NEURAL NETWORK (TensorFlow.js - 500+ trades) ────
+var _tfLoaded = false;
+
+function loadTF() {
+  if (_tfLoaded || typeof tf !== 'undefined') { _tfLoaded = true; return Promise.resolve(); }
+  return new Promise(function(resolve) {
+    var script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.17.0/dist/tf.min.js';
+    script.onload = function() { _tfLoaded = true; resolve(); };
+    script.onerror = function() { resolve(); }; // fail gracefully
+    document.head.appendChild(script);
+  });
+}
+
+async function trainNeuralNet(trades, mode) {
+  await loadTF();
+  if (typeof tf === 'undefined') return null;
+
+  var modeTrades = trades.filter(function(t) { return t.mode === mode; });
+  if (modeTrades.length < ML.nnThreshold) return null;
+
+  var X = modeTrades.map(extractFeatures);
+  var y = modeTrades.map(function(t) { return t.won ? 1 : 0; });
+  var nFeatures = X[0].length;
+
+  var xs = tf.tensor2d(X);
+  var ys = tf.tensor2d(y.map(function(v) { return [v]; }));
+
+  var model = tf.sequential({
+    layers: [
+      tf.layers.dense({ inputShape: [nFeatures], units: 16, activation: 'relu' }),
+      tf.layers.dropout({ rate: 0.2 }),
+      tf.layers.dense({ units: 8, activation: 'relu' }),
+      tf.layers.dense({ units: 1, activation: 'sigmoid' })
+    ]
+  });
+
+  model.compile({ optimizer: tf.train.adam(0.001), loss: 'binaryCrossentropy', metrics: ['accuracy'] });
+
+  await model.fit(xs, ys, { epochs: 50, batchSize: 32, shuffle: true, verbose: 0 });
+
+  // Get accuracy
+  var preds = model.predict(xs);
+  var predArr = await preds.data();
+  var correct = predArr.filter(function(p, i) { return (p >= 0.5) === (y[i] === 1); }).length;
+  var acc = Math.round(correct / y.length * 100);
+
+  xs.dispose(); ys.dispose(); preds.dispose();
+
+  // Save weights as JSON for persistence
+  var weights = await model.save(tf.io.withSaveHandler(async function(artifacts) { return artifacts; }));
+  return { type: 'neural', model: model, weights: weights, acc: acc, n: modeTrades.length, mode: mode };
+}
+
+// ── MAIN TRAINING FUNCTION ────────────────────────────
+var _trainingInProgress = false;
+async function trainAllModels() {
+  if (_trainingInProgress || TRADES.length < ML.minTrades) return;
+  _trainingInProgress = true;
+  log('pi', '[ML] Training models on ' + TRADES.length + ' trades...', 'info');
+
+  var modes = ['pioneer', 'power', 'boyboy', 'evenodd', 'accum'];
+  var trained = 0;
+
+  for (var i = 0; i < modes.length; i++) {
+    var mode = modes[i];
+    var modeTrades = TRADES.filter(function(t) { return t.mode === mode; });
+    if (modeTrades.length < ML.minTrades) continue;
+
+    var model = null;
+    if (modeTrades.length >= ML.nnThreshold) {
+      model = await trainNeuralNet(TRADES, mode);
+      if (!model) model = trainLogistic(TRADES, mode); // fallback
+    } else {
+      model = trainLogistic(TRADES, mode);
+    }
+
+    if (model) {
+      ML.models[mode] = model;
+      ML.lastTrained[mode] = Date.now();
+      trained++;
+      // Persist logistic model (NN too large for localStorage)
+      if (model.type === 'logistic') {
+        storeSave('ml_' + mode, { weights: model.weights, bias: model.bias, acc: model.acc, n: model.n, type: 'logistic' });
+      }
+      log('pi', '[ML] ' + mode + ': ' + model.type + ' trained (' + model.acc + '% acc, ' + model.n + ' trades)', 'info');
+    }
+  }
+
+  _trainingInProgress = false;
+  if (trained > 0) {
+    updateIntelPanel();
+    log('pi', '[ML] ' + trained + ' models ready. Confidence scoring active.', 'success');
+  }
+}
+
+function loadModels() {
+  var modes = ['pioneer', 'power', 'boyboy', 'evenodd', 'accum'];
+  modes.forEach(function(mode) {
+    var saved = storeLoad('ml_' + mode, null);
+    if (saved && saved.type === 'logistic') {
+      ML.models[mode] = saved;
+      log('pi', '[ML] Loaded ' + mode + ' model (' + saved.acc + '% acc, ' + saved.n + ' trades)', 'info');
+    }
+  });
+}
+
+// ── CONFIDENCE SCORING ────────────────────────────────
+// Returns 0-100 confidence, or null if no model yet
+function getConfidence(mode, context) {
+  var model = ML.models[mode];
+  if (!model) return null;
+
+  var rec = { mode: mode, hour: new Date().getUTCHours(), silRegime: SIL.regime };
+  if (context) Object.keys(context).forEach(function(k) { rec[k] = context[k]; });
+  var features = extractFeatures(rec);
+
+  var prob;
+  if (model.type === 'logistic') {
+    prob = logisticPredict(model.weights, model.bias, features);
+  } else if (model.type === 'neural' && model.model) {
+    try {
+      var input = tf.tensor2d([features]);
+      var output = model.model.predict(input);
+      prob = output.dataSync()[0];
+      input.dispose(); output.dispose();
+    } catch(e) { prob = 0.5; }
+  } else { return null; }
+
+  return Math.round(prob * 100);
+}
+
+// ── CONFIDENCE-BASED STAKE SIZING ────────────────────
+function confStake(baseStake, confidence) {
+  if (confidence === null) return baseStake; // no model = use base
+  if (confidence < 55) return 0;            // below threshold = skip
+  if (confidence < 65) return Math.round(baseStake * 0.75 * 100) / 100;
+  if (confidence < 75) return baseStake;
+  if (confidence < 85) return Math.round(baseStake * 1.25 * 100) / 100;
+  return Math.round(baseStake * 1.5 * 100) / 100;
+}
+
+// ── UI: CONFIDENCE DISPLAY ────────────────────────────
+function showConfidence(mode, conf) {
+  var el = g('confScore');
+  if (!el) return;
+  if (conf === null) { el.style.display = 'none'; return; }
+  el.style.display = 'flex';
+  var col = conf >= 75 ? 'var(--profit)' : conf >= 55 ? 'var(--yellow)' : 'var(--loss)';
+  var label = conf >= 75 ? 'HIGH' : conf >= 55 ? 'MED' : 'LOW';
+  el.innerHTML = '<span style="font-size:8px;color:var(--sub);font-family:var(--mono);">ML CONF</span><span style="font-size:16px;font-weight:800;font-family:var(--mono);color:' + col + ';">' + conf + '%</span><span style="font-size:8px;font-family:var(--mono);color:' + col + ';">' + label + '</span>';
+}
+
+// ── TRAINING TRIGGER: after every 50 new trades ──────
+var _lastTrainCount = 0;
+function maybeRetrain() {
+  var tot = TRADES.length;
+  if (tot >= ML.minTrades && tot - _lastTrainCount >= 20) {
+    _lastTrainCount = tot;
+    setTimeout(trainAllModels, 2000); // train 2s after trade to avoid blocking
+  }
+}
+
+// ── LOAD MODELS ON STARTUP ────────────────────────────
+function initML() {
+  loadModels();
+  if (TRADES.length >= ML.minTrades) {
+    setTimeout(trainAllModels, 3000);
+  }
+}
+
+// ══════════════════════════════════════════════════════
+// END PHASE 2 ML ENGINE
+// ══════════════════════════════════════════════════════
+
 // ── PERSISTENT STORAGE ────────────────────────────────
 // Storage helpers - use localStorage for persistence
 function storeSave(key, val) {
@@ -1939,6 +2261,7 @@ async function saveTrade(rec) {
   if (TRADES.length > 500) TRADES.shift();
   storeSave('trades', TRADES);
   runAdaptation();
+  maybeRetrain();
   updateIntelPanel();
 }
 
@@ -2183,8 +2506,13 @@ function updateIntelAdapt() {
     var adapt = ADAPT[mode];
     var status = adapt.loaded ? 'LEARNED' : (mt.length >= 30 ? 'READY' : mt.length+'/30 trades');
     var statusCol = adapt.loaded ? 'var(--profit)' : mt.length >= 30 ? 'var(--yellow)' : 'var(--dim)';
+    var mlModel=ML.models[mode];
+    var mlStatus=mlModel?mlModel.type.toUpperCase()+' '+mlModel.acc+'%':'NO MODEL';
+    var mlCol=mlModel?'var(--profit)':'var(--dim)';
+    var nextUpgrade=modeTrades.length<ML.minTrades?'Need '+(ML.minTrades-modeTrades.length)+' more':modeTrades.length<ML.nnThreshold?'NN at '+(ML.nnThreshold-modeTrades.length)+' more':'Neural Net active';
     html += '<div style="margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border);">';
-    html += '<div style="display:flex;justify-content:space-between;margin-bottom:5px;"><span style="font-family:var(--mono);font-size:9px;font-weight:700;color:var(--text);">'+mode.toUpperCase()+'</span><span style="font-family:var(--mono);font-size:8px;color:'+statusCol+'">'+status+'</span></div>';
+    html += '<div style="display:flex;justify-content:space-between;margin-bottom:3px;"><span style="font-family:var(--mono);font-size:9px;font-weight:700;color:var(--text);">'+mode.toUpperCase()+'</span><span style="font-family:var(--mono);font-size:8px;color:'+statusCol+'">'+status+'</span></div>';
+    html += '<div style="display:flex;justify-content:space-between;margin-bottom:5px;"><span style="font-family:var(--mono);font-size:8px;color:var(--sub)">ML: <span style="color:'+mlCol+'">'+mlStatus+'</span></span><span style="font-family:var(--mono);font-size:7px;color:var(--dim)">'+nextUpgrade+'</span></div>';
     if (mode === 'pioneer') {
       html += threshItem('Min Score', adapt.minScore, 40, 80, adapt.loaded);
       html += threshItem('Hot Digit %', adapt.hotPct, 12, 25, adapt.loaded);
