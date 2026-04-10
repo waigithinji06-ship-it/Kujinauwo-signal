@@ -2171,47 +2171,109 @@ function loadModels() {
 // ── CONFIDENCE SCORING ────────────────────────────────
 // Returns 0-100 confidence, or null if no model yet
 function getConfidence(mode, context) {
+  // Step 1: Try ML model first (active after 30+ trades)
   var model = ML.models[mode];
-  if (!model) return null;
+  if (model) {
+    var rec = { mode: mode, hour: new Date().getUTCHours(), silRegime: SIL.regime };
+    if (context) Object.keys(context).forEach(function(k) { rec[k] = context[k]; });
+    var features = extractFeatures(rec);
+    var prob;
+    if (model.type === 'logistic') {
+      prob = logisticPredict(model.weights, model.bias, features);
+    } else if (model.type === 'neural' && model.model) {
+      try {
+        var inp = tf.tensor2d([features]);
+        var out = model.model.predict(inp);
+        prob = out.dataSync()[0];
+        inp.dispose(); out.dispose();
+      } catch(e) { prob = 0.5; }
+    } else { prob = 0.5; }
+    return Math.round(prob * 100);
+  }
 
-  var rec = { mode: mode, hour: new Date().getUTCHours(), silRegime: SIL.regime };
-  if (context) Object.keys(context).forEach(function(k) { rec[k] = context[k]; });
-  var features = extractFeatures(rec);
+  // Step 2: Rule-based confidence - works from trade 1
+  // Gives real visible impact while ML builds up data
+  if (!context) return 50;
+  var score = 50; // base
 
-  var prob;
-  if (model.type === 'logistic') {
-    prob = logisticPredict(model.weights, model.bias, features);
-  } else if (model.type === 'neural' && model.model) {
-    try {
-      var input = tf.tensor2d([features]);
-      var output = model.model.predict(input);
-      prob = output.dataSync()[0];
-      input.dispose(); output.dispose();
-    } catch(e) { prob = 0.5; }
-  } else { return null; }
+  // SIL regime gates
+  var regime = SIL.regime;
+  if (regime === 'cluster') score -= 25;
+  else if (regime === 'streak') score -= 15;
+  else if (regime === 'normal') score += 10;
+  else if (regime === 'reset') score += 5;
 
-  return Math.round(prob * 100);
+  // Mode-specific scoring
+  if (mode === 'pioneer') {
+    var es = context.entryScore || 50;
+    var hp = context.hotPct || 15;
+    score += Math.round((es - 50) * 0.4);  // score above 50 adds confidence
+    score += Math.round((hp - 15) * 1.2);  // hot digit strength
+    if (es >= 70) score += 8;
+    if (hp >= 20) score += 7;
+  }
+  else if (mode === 'power') {
+    var cp = context.coldPct || 18;
+    var rc = context.r20cold || 20;
+    score += Math.round((18 - cp) * 3);    // colder = better
+    score += Math.round((20 - rc) * 1.5);  // cold recently = better
+  }
+  else if (mode === 'evenodd') {
+    var ln = context.lean || 57;
+    var dt = context.delta || 0;
+    score += Math.round((ln - 57) * 2);
+    if (dt > 3) score += 10;  // momentum rising
+    else if (dt < -3) score -= 15; // momentum falling
+    if (context.chi2sig) score += 8;
+  }
+  else if (mode === 'accum') {
+    var rsi = context.rsi || 50;
+    var bbw = context.bbw || 0.03;
+    var pos = context.posInBand || 50;
+    score += Math.round((25 - Math.abs(rsi - 50)) * 0.8); // RSI neutrality
+    score += Math.round((0.05 - Math.min(bbw, 0.05)) / 0.05 * 15); // tight BB
+    if (pos >= 30 && pos <= 70) score += 8; // safe position
+  }
+  else if (mode === 'boyboy') {
+    // BB step 0: base confidence from market stability
+    if (regime === 'normal') score += 10;
+  }
+
+  // Hour penalty: erratic hours (known low-liquidity windows)
+  var h = new Date().getUTCHours();
+  if (h >= 0 && h <= 3) score -= 8;   // late night UTC
+  if (h >= 22) score -= 5;
+
+  // Drawdown penalty
+  var dd = Math.round(SIL.dd * 100);
+  if (dd >= 10) score -= 15;
+  else if (dd >= 5) score -= 7;
+
+  return Math.max(0, Math.min(100, Math.round(score)));
 }
 
 // ── CONFIDENCE-BASED STAKE SIZING ────────────────────
 function confStake(baseStake, confidence) {
-  if (confidence === null) return baseStake; // no model = use base
-  if (confidence < 55) return 0;            // below threshold = skip
-  if (confidence < 65) return Math.round(baseStake * 0.75 * 100) / 100;
-  if (confidence < 75) return baseStake;
-  if (confidence < 85) return Math.round(baseStake * 1.25 * 100) / 100;
-  return Math.round(baseStake * 1.5 * 100) / 100;
+  if (confidence === null) return baseStake;
+  // Scale stake by confidence band
+  if (confidence < 40) return 0;                                          // hard block - very bad conditions
+  if (confidence < 50) return Math.round(baseStake * 0.5 * 100) / 100;   // risky - half stake
+  if (confidence < 60) return Math.round(baseStake * 0.75 * 100) / 100;  // cautious
+  if (confidence < 70) return baseStake;                                  // normal
+  if (confidence < 80) return Math.round(baseStake * 1.25 * 100) / 100;  // good signal
+  return Math.round(baseStake * 1.5 * 100) / 100;                        // strong signal
 }
 
 // ── UI: CONFIDENCE DISPLAY ────────────────────────────
 function showConfidence(mode, conf) {
   var el = g('confScore');
   if (!el) return;
-  if (conf === null) { el.style.display = 'none'; return; }
+  if (conf === null) conf = 50;
   el.style.display = 'flex';
   var col = conf >= 75 ? 'var(--profit)' : conf >= 55 ? 'var(--yellow)' : 'var(--loss)';
   var label = conf >= 75 ? 'HIGH' : conf >= 55 ? 'MED' : 'LOW';
-  el.innerHTML = '<span style="font-size:8px;color:var(--sub);font-family:var(--mono);">ML CONF</span><span style="font-size:16px;font-weight:800;font-family:var(--mono);color:' + col + ';">' + conf + '%</span><span style="font-size:8px;font-family:var(--mono);color:' + col + ';">' + label + '</span>';
+  var src = ML.models[mode] ? 'ML' : 'RULE';
+  el.innerHTML = '<span style="font-size:7px;color:var(--sub);font-family:var(--mono);">' + src + ' CONF</span><span style="font-size:15px;font-weight:800;font-family:var(--mono);color:' + col + ';">' + conf + '%</span><span style="font-size:7px;font-family:var(--mono);color:' + col + ';font-weight:700;">' + label + '</span>';
 }
 
 // ── TRAINING TRIGGER: after every 50 new trades ──────
@@ -2642,6 +2704,16 @@ function recordTrade(sym, mode, profit, won, context) {
   };
   // Merge context (entryScore, hotPct, rsi, bbw, lean, ticksSurvived etc)
   if (context) Object.keys(context).forEach(function(k){rec[k]=context[k];});
+  // Auto-capture current sym analysis data
+  if (rec.sym && ST[rec.sym]) {
+    try {
+      var _a = ana(rec.sym);
+      if (!rec.entryScore && _a.score) rec.entryScore = _a.score;
+      if (!rec.hotPct && _a.rawHP) rec.hotPct = Math.round(_a.rawHP*10)/10;
+      if (rec.chi2sig === undefined) rec.chi2sig = _a.chi2sig ? 1 : 0;
+      if (!rec.lean && _a.ep) rec.lean = Math.round(Math.max(_a.ep,_a.op)*10)/10;
+    } catch(e) {}
+  }
   saveTrade(rec);
 }
 // ══════════════════════════════════════════════════════
