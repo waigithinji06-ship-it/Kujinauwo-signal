@@ -274,7 +274,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 .bb-visual-hdr{font-family:var(–mono);font-size:8px;color:var(–sub);margin-bottom:4px;display:flex;justify-content:space-between;}
 
 /* INTELLIGENCE PANEL */
-.intel-panel{background:var(–card);border:1px solid var(–border);border-radius:12px;padding:0;margin:0 11px 8px;overflow:hidden;flex-shrink:0;}
+.intel-panel{background:var(–card);border:1px solid var(–border);border-radius:12px;padding:0;margin:0 11px 8px;overflow:hidden;flex-shrink:0;transform:translateZ(0);will-change:auto;}
 .intel-hdr{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(–card2);border-bottom:1px solid var(–border);cursor:pointer;}
 .intel-hdr-l{display:flex;align-items:center;gap:7px;font-family:var(–mono);font-size:9px;font-weight:700;color:var(–accent);letter-spacing:1px;}
 .intel-body{display:none;flex-direction:column;}
@@ -282,7 +282,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 .intel-tabs{display:flex;border-bottom:1px solid var(–border);}
 .intel-tab{flex:1;padding:6px;font-family:var(–mono);font-size:8px;font-weight:600;text-align:center;cursor:pointer;color:var(–dim);border:none;background:none;border-bottom:2px solid transparent;transition:all .2s;}
 .intel-tab.active{color:var(–accent);border-bottom-color:var(–accent);}
-.intel-content{padding:10px 12px;max-height:280px;overflow-y:auto;}
+.intel-content{padding:10px 12px;max-height:260px;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;}
 .intel-stat-row{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(–border);font-family:var(–mono);font-size:9px;}
 .intel-stat-row .k{color:var(–sub);}
 .intel-stat-row .v{font-weight:700;color:var(–text);}
@@ -292,7 +292,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 .adapt-badge{display:inline-flex;padding:1px 6px;border-radius:4px;font-size:7px;font-weight:700;font-family:var(–mono);}
 .adapt-badge.learned{background:rgba(0,230,118,.12);color:var(–profit);}
 .adapt-badge.default{background:rgba(74,96,128,.12);color:var(–dim);}
-.chat-wrap{display:flex;flex-direction:column;gap:6px;}
+.chat-wrap{display:flex;flex-direction:column;gap:6px;-webkit-overflow-scrolling:touch;}
 .chat-msg{padding:7px 10px;border-radius:8px;font-size:11px;line-height:1.6;}
 .chat-msg.ai{background:rgba(56,189,248,.07);border:1px solid rgba(56,189,248,.15);color:var(–text);}
 .chat-msg.user{background:var(–card2);border:1px solid var(–border);color:var(–sub);text-align:right;}
@@ -723,7 +723,7 @@ var AI={
   piLastWait:'',piLastWaitT:0,piTrigLogT:0,
   pwStep:0,pwDir:null,pwPrev:null,pwWaitSince:0,pwPauseUntil:0,pwLastLost:null,
   bbStep:0,bbDir:null,bbLastDig:null,bbActiveSym:null,bbPauseUntil:0,
-  eoStep:0,eoDir:null,eoConfirm:0,eoLastCand:null,eoWaitSince:0,eoPauseUntil:0,acActiveCid:null,acTicks:0,acEntryStake:0,acPauseUntil:0,acWaitSince:0,acRuns:0
+  eoStep:0,eoDir:null,eoConfirm:0,eoLastCand:null,eoWaitSince:0,eoPauseUntil:0,acActiveCid:null,acTicks:0,acEntryStake:0,acPauseUntil:0,acWaitSince:0,acRuns:0,_lastPiScore:null,_lastHotPct:null,_lastRSI:null,_lastBBW:null,_lastLean:null,_lastTicksSurvived:null,_lastColdPct:null
 };
 var EQ={pi:[0],pw:[0],bb:[0],eo:[0],ac:[0],piS:0,pwS:0,bbS:0,eoS:0,acS:0};
 var SIL={cal:false,calTicks:0,calTarget:50,calData:{},baseline:{e:3.1},thresh:{eGate:2.95},regime:'calibrating',prevR:'calibrating',dd:0,evRec:{}};
@@ -921,7 +921,7 @@ function findPW(minScore,tgt,lastLost){
     var bDir=cold01<=cold89?'OVER':'UNDER';
     var coldPct=bDir==='OVER'?cold01:cold89;
     // Cold threshold: below 18% (expected 20%) - relaxed for more signals
-    if(coldPct>18)return null;
+    if(coldPct>getAdaptedThreshold('power','coldPct',18))return null;
     // Confirm cold in recent 20 ticks
     var r20=s.digits.slice(-20);
     var r20cold=bDir==='OVER'
@@ -1177,6 +1177,7 @@ function bbTick(sym){
     var ix4=IDX.find(function(i){return i.s===activeSym;});
     var stake=parseFloat(gv('bbStake'))||1;
     log('bb','BB S1 | '+ix4.n+' | DIFF d.'+ld+' | $'+stake.toFixed(2),'info');
+    AI._lastPiScore=null;AI._lastHotPct=null;AI._lastRSI=null;AI._lastBBW=null;AI._lastLean=null;AI._lastTicksSurvived=null;
     ladState('bb',0,true);lastTradeTime=now;
     placeTrade(activeSym,'DIGITDIFF',stake,ld,'DIFF d.'+ld,'boyboy');
   } else {
@@ -1306,7 +1307,7 @@ function onContract(poc){
   AI.totalPnl=Math.round((AI.totalPnl+profit)*100)/100;AI.sessPnl=Math.round((AI.sessPnl+profit)*100)/100;
   if(won){AI.wins++;AI.consecLoss=0;}else{AI.losses++;AI.consecLoss++;}
   addTlog(AI.activeSym,AI.activeType,stake,profit,won,src);
-  recordTrade(AI.activeSym,src,profit,won,{entryScore:AI._lastPiScore,hotPct:AI._lastHotPct,rsi:AI._lastRSI,bbw:AI._lastBBW,lean:AI._lastLean,ticksSurvived:AI._lastTicksSurvived});
+  recordTrade(AI.activeSym,src,profit,won,{entryScore:AI._lastPiScore,hotPct:AI._lastHotPct,coldPct:AI._lastColdPct,rsi:AI._lastRSI,bbw:AI._lastBBW,lean:AI._lastLean,ticksSurvived:AI._lastTicksSurvived});
   handlePost(src,profit,won);
   upStats();drawAll();silBar();
   setTimeout(function(){var ct=g('ctBar');if(ct)ct.className='ct';if(AI.consecLoss>=5)circuitBreak(src);else if(AI.running)setState('scanning');},400);
@@ -1814,7 +1815,7 @@ function accumLiveTick(sym) {
   var projProfit = Math.round(stake * (Math.pow(1 + growth / 100, ticks) - 1) * 100) / 100;
   log('ac', 'ACCUM | ' + ix.n + ' | ' + growth + '% | cashout@' + ticks + 't | $' + stake + ' +$' + projProfit.toFixed(3) + ' projected', 'info');
   log('ac', 'BB:' + mkt.bbWidth.toFixed(4) + '% CONTR | RSI:' + mkt.rsi + ' | pos:' + mkt.posInBand + '%', 'info');
-  AI._lastRSI = mkt.rsi; AI._lastBBW = mkt.bbWidth; AI._lastTicksSurvived = 0;
+  AI._lastRSI=mkt.rsi;AI._lastBBW=mkt.bbWidth;AI._lastTicksSurvived=0;AI._lastPiScore=null;AI._lastHotPct=null;AI._lastLean=null;
 
   // Show live panel
   var liveEl = document.getElementById('accumLive');
@@ -2041,6 +2042,20 @@ function adaptMode(mode, trades) {
     ADAPT.accum.loaded = true;
     storeSave('adapt_accum', ADAPT.accum);
   }
+  if (mode === 'power') {
+    var coldTrades = trades.filter(function(t) { return t.coldPct !== undefined && t.coldPct !== null; });
+    if (coldTrades.length >= 10) {
+      var coldWins = coldTrades.filter(function(t) { return t.coldPct <= 15 && t.won; }).length;
+      var coldTot = coldTrades.filter(function(t) { return t.coldPct <= 15; }).length;
+      var coldWR = coldTot >= 5 ? coldWins / coldTot : 0;
+      var relax = coldTrades.filter(function(t) { return t.coldPct > 15 && t.coldPct <= 18 && t.won; }).length;
+      var relaxTot = coldTrades.filter(function(t) { return t.coldPct > 15 && t.coldPct <= 18; }).length;
+      var relaxWR = relaxTot >= 5 ? relax / relaxTot : 0;
+      if (coldWR > relaxWR + 0.1) { ADAPT.power.coldPct = 15; } else { ADAPT.power.coldPct = 18; }
+      ADAPT.power.loaded = true;
+      storeSave('adapt_power', ADAPT.power);
+    }
+  }
   if (mode === 'evenodd') {
     var leanGroups = {};
     trades.forEach(function(t) {
@@ -2100,15 +2115,19 @@ function switchIntelTab(tab) {
   if (tab === 'adapt') updateIntelAdapt();
 }
 
+var _intelUpdateTimer = null;
 function updateIntelPanel() {
+  // Debounce - only update header immediately, defer content
   var tot = AI.wins + AI.losses;
   var wr = tot > 0 ? Math.round(AI.wins / tot * 100) : 0;
   var wrEl = g('intelWR');
-  if (wrEl) { wrEl.textContent = wr + '% win rate (' + tot + ' trades)'; wrEl.style.color = wr >= 55 ? 'var(--profit)' : wr >= 45 ? 'var(--yellow)' : 'var(--loss)'; }
-  if (_intelOpen) {
+  if (wrEl) { wrEl.textContent = wr + '% wr (' + tot + 't)'; wrEl.style.color = wr >= 55 ? 'var(--profit)' : wr >= 45 ? 'var(--yellow)' : 'var(--loss)'; }
+  if (!_intelOpen) return; // don't update content if panel closed
+  clearTimeout(_intelUpdateTimer);
+  _intelUpdateTimer = setTimeout(function() {
     if (_activeIntelTab === 'stats') updateIntelStats();
     if (_activeIntelTab === 'adapt') updateIntelAdapt();
-  }
+  }, 300); // 300ms debounce prevents layout thrash during trading
 }
 
 function updateIntelStats() {
@@ -2170,8 +2189,22 @@ function updateIntelAdapt() {
       html += threshItem('Min Score', adapt.minScore, 40, 80, adapt.loaded);
       html += threshItem('Hot Digit %', adapt.hotPct, 12, 25, adapt.loaded);
     }
-    if (mode === 'power') { html += threshItem('Max Cold %', adapt.coldPct, 10, 20, adapt.loaded); }
-    if (mode === 'evenodd') { html += threshItem('Min Lean %', adapt.minLean, 54, 70, adapt.loaded); }
+    if (mode === 'power') { html += threshItem('Max Cold %', adapt.coldPct||18, 10, 20, adapt.loaded); }
+    if (mode === 'power') {
+    var coldTrades = trades.filter(function(t) { return t.coldPct !== undefined && t.coldPct !== null; });
+    if (coldTrades.length >= 10) {
+      var coldWins = coldTrades.filter(function(t) { return t.coldPct <= 15 && t.won; }).length;
+      var coldTot = coldTrades.filter(function(t) { return t.coldPct <= 15; }).length;
+      var coldWR = coldTot >= 5 ? coldWins / coldTot : 0;
+      var relax = coldTrades.filter(function(t) { return t.coldPct > 15 && t.coldPct <= 18 && t.won; }).length;
+      var relaxTot = coldTrades.filter(function(t) { return t.coldPct > 15 && t.coldPct <= 18; }).length;
+      var relaxWR = relaxTot >= 5 ? relax / relaxTot : 0;
+      if (coldWR > relaxWR + 0.1) { ADAPT.power.coldPct = 15; } else { ADAPT.power.coldPct = 18; }
+      ADAPT.power.loaded = true;
+      storeSave('adapt_power', ADAPT.power);
+    }
+  }
+  if (mode === 'evenodd') { html += threshItem('Min Lean %', adapt.minLean, 54, 70, adapt.loaded); }
     if (mode === 'accum') {
       html += threshItem('RSI Low', adapt.rsiLow, 35, 49, adapt.loaded);
       html += threshItem('RSI High', adapt.rsiHigh, 51, 65, adapt.loaded);
@@ -2227,9 +2260,14 @@ async function sendChat() {
   try {
     var response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: {'Content-Type':'application/json'},
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': '',
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-io': 'true'
+      },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5',
         max_tokens: 400,
         system: systemPrompt,
         messages: _chatHistory
