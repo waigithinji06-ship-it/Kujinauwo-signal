@@ -1048,8 +1048,9 @@ function drawAll(){drawEq('eqPI',EQ.pi,'eqStPI');drawEq('eqPW',EQ.pw,'eqStPW');d
 // AI TICKS
 function piTick(sym){
   if(!AI.running||AI.mode!=='pioneer'||AI.inTrade||AI.pendingResult)return;
-  if(Date.now()-lastTradeTime<1500)return;
-  if(AI.piStep===0){silDD();var sg=silGate(0);if(!sg.ok){waitLog('[SIL] '+sg.r);setState('waiting');return;}}
+  // FAST: 200ms cooldown only - fires 3-4 trades/sec when conditions met
+  if(Date.now()-lastTradeTime<200)return;
+  if(AI.piStep===0){silDD();var sg=silGate(0);if(!sg.ok){setState('waiting');return;}}
   if(AI.piPauseUntil>0){if(Date.now()<AI.piPauseUntil){setState('waiting');return;}AI.piPauseUntil=0;}
   if(AI.piNoSigPause>0){if(Date.now()<AI.piNoSigPause){setState('waiting');return;}AI.piNoSigPause=0;}
   var tp=parseFloat(gv('piTP'))||30,sl=parseFloat(gv('piSL'))||50;
@@ -1065,29 +1066,23 @@ function piTick(sym){
       setState('waiting');return;
     }
     AI.piWaitSince=0;
-    // NEIGHBOURHOOD TRIGGER: fire when last digit is hotD-1, hotD, or hotD+1
-    // e.g. hotD=1: fire on 0,1,2 | hotD=0: fire on 9,0,1 | hotD=9: fire on 8,9,0
-    var smkt=ST[mkt.sym];
-    var lastD=smkt&&smkt.digits.length>0?smkt.digits[smkt.digits.length-1]:-1;
+    // DIRECT FIRE: only check hotPct >= 14% — no window, no confirm delay
     var hotD=mkt.a.hotD;
-    var below=(hotD+9)%10;
-    var above=(hotD+1)%10;
-    var inWindow=(lastD===below||lastD===hotD||lastD===above);
-    // Hot digit must have appeared in last 5 ticks (momentum check)
-    var last5=smkt.digits.slice(-5);
-    var hotInLast5=last5.filter(function(d){return d===hotD;}).length>=1;
-    if(!inWindow||!hotInLast5){
-      var nowT=Date.now();if(!AI.piTrigLogT||nowT-AI.piTrigLogT>12000){log('pi','Watching: hot='+hotD+' window=['+below+','+hotD+','+above+'] last='+lastD+(hotInLast5?'':' [hot absent last 5]'),'warn');AI.piTrigLogT=nowT;}
+    var rawHP=mkt.a.rawHP||0;
+    if(rawHP<14){
+      var nowT=Date.now();
+      if(!AI.piTrigLogT||nowT-AI.piTrigLogT>8000){log('pi','hot='+hotD+' hp='+rawHP.toFixed(1)+'% need 14%','warn');AI.piTrigLogT=nowT;}
       setState('waiting');return;
     }
-    var _piBaseStake=Math.max(0.35,Math.round(piStake(0,mkt.a.score)*silDDMult()*100)/100);
-    var _piConf=getConfidence('pioneer',{entryScore:mkt.a.score,hotPct:mkt.a.rawHP});
+    var _piBase=Math.max(0.35,Math.round(piStake(0,mkt.a.score)*silDDMult()*100)/100);
+    var _piConf=getConfidence('pioneer',{entryScore:mkt.a.score,hotPct:rawHP});
     showConfidence('pioneer',_piConf);
-    var stake=confStake(_piBaseStake,_piConf);
-    if(stake===0){waitLog('[ML] Pioneer conf too low ('+_piConf+'%) - skip');setState('waiting');return;}
+    var stake=confStake(_piBase,_piConf);
+    if(stake===0){setState('waiting');return;}
     var ix=IDX.find(function(i){return i.s===mkt.sym;});
-    log('pi','S1 | '+ix.n+' | DIFF d.'+hotD+' | trigger='+lastD+' window=['+below+','+hotD+','+above+'] | $'+stake.toFixed(2)+' '+mkt.a.grade,'info');
-    AI._lastPiScore=mkt.a.score;AI._lastHotPct=Math.round(mkt.a.rawHP*10)/10;AI._lastRSI=null;AI._lastBBW=null;AI._lastLean=null;AI._lastTicksSurvived=null;
+    log('pi','PI | '+ix.n+' | d.'+hotD+' hp:'+rawHP.toFixed(1)+'% s:'+mkt.a.score+' $'+stake.toFixed(2),'info');
+    AI._lastPiScore=mkt.a.score;AI._lastHotPct=Math.round(rawHP*10)/10;
+    AI._lastRSI=null;AI._lastBBW=null;AI._lastLean=null;AI._lastTicksSurvived=null;
     lastTradeTime=Date.now();
     placeTrade(mkt.sym,'DIGITDIFF',stake,hotD,'DIFF d.'+hotD,'pioneer');
   } else {
@@ -1340,8 +1335,8 @@ function handlePost(src,profit,won){
 }
 function onPiRes(won,profit){
   var step=AI.piStep;
-  if(won){ladWon('pi',step);if(step>0)AI.piFireAt=Date.now()+45000;log('pi','WIN +$'+profit.toFixed(2)+' S'+(step+1),'success');AI.piStep=0;AI.piDir=null;AI.piConfirm=0;AI.piLastCand=null;setTimeout(function(){ladState('pi',0,false);renderLadder('pi');},1000);}
-  else{ladLost('pi',step);if(step===0){AI.piFireAt=Date.now()+30000;log('pi','S1 lost - 30s settle','warn');}if(step<4){AI.piStep++;log('pi','LOSS -> S'+(AI.piStep+1)+' $'+piStake(AI.piStep,0).toFixed(2),'danger');}else{AI.piFireAt=Date.now()+60000;log('pi','S5 LOSS - resting','danger');}ladState('pi',AI.piStep,true);}
+  if(won){ladWon('pi',step);log('pi','WIN +$'+profit.toFixed(2)+' S'+(step+1),'success');AI.piStep=0;AI.piDir=null;AI.piConfirm=0;AI.piLastCand=null;setTimeout(function(){ladState('pi',0,false);renderLadder('pi');},1000);}
+  else{ladLost('pi',step);if(step===0){log('pi','S1 lost','warn');}if(step<4){AI.piStep++;log('pi','LOSS -> S'+(AI.piStep+1)+' $'+piStake(AI.piStep,0).toFixed(2),'danger');}else{AI.piFireAt=Date.now()+10000;log('pi','S5 LOSS - brief rest','danger');}ladState('pi',AI.piStep,true);}
   upPI();
 }
 function onPWRes(won,profit){
@@ -1439,7 +1434,7 @@ function resetAll(){
   AI.piStep=0;AI.piDir=null;AI.piConfirm=0;AI.piLastCand=null;AI.piFireAt=0;AI.piWaitSince=0;AI.piPauseUntil=0;AI.piNoSigPause=0;AI.piTrigLogT=0;
   AI.pwStep=0;AI.pwDir=null;AI.pwPrev=null;AI.pwWaitSince=0;AI.pwPauseUntil=0;AI.pwLastLost=null;
   AI.bbStep=0;AI.bbDir=null;AI.bbLastDig=null;AI.bbPauseUntil=0;
-  AI.eoStep=0;AI.eoDir=null;AI.eoConfirm=0;AI.eoLastCand=null;AI.eoWaitSince=0;AI.eoPauseUntil=0;AI.acActiveCid=null;AI.acTicks=0;AI.acEntryStake=0;AI.acPauseUntil=0;AI.acWaitSince=0;AI.acRuns=0;
+  AI.eoStep=0;AI.eoDir=null;AI.eoConfirm=0;AI.eoLastCand=null;AI.eoWaitSince=0;AI.eoPauseUntil=0;AI.acActiveCid=null;AI.acTicks=0;AI.acEntryStake=0;AI.acPauseUntil=0;AI.acWaitSince=0;AI.acRuns=0;AI._cashoutRetryTimer=null;
   EQ.pi=[0];EQ.pw=[0];EQ.bb=[0];EQ.eo=[0];EQ.ac=[0];EQ.piS=0;EQ.pwS=0;EQ.bbS=0;EQ.eoS=0;EQ.acS=0;
   _trades=0;_tPnl=0;
   g('tlogBody').innerHTML='';sel('tlogCnt','0 trades');
@@ -1560,6 +1555,11 @@ function startConn(){
       if(m.msg_type==='buy')onBuy(m);
       if(m.msg_type==='proposal_open_contract'){onContract(m.proposal_open_contract);return;}
       if(m.msg_type==='ping'&&_pingT>0){var rtt=Date.now()-_pingT;_pingT=0;updPing(rtt);}
+      if(m.msg_type==='sell'){
+        clearTimeout(AI._cashoutRetryTimer);
+        if(m.error){log('ac','Sell error: '+(m.error.message||m.error.code),'danger');_accumCashoutPending=false;}
+        else if(AI.acActiveCid){log('ac','Sold at $'+(m.sell&&m.sell.sold_for||0),'success');}
+      }
     }catch(err){}
   };
   ws.onclose=function(){setConn(false);stopKA();schedRecon();};
@@ -1870,9 +1870,14 @@ function onAccumUpdate(poc) {
   var currentVal = parseFloat(poc.bid_price || poc.sell_price || AI.acEntryStake);
   var profit = Math.round((currentVal - AI.acEntryStake) * 1000) / 1000;
   var ticks = parseInt(gv('acTicks')) || 5;
-  // tick_count from Deriv API
-  if (poc.tick_count !== undefined) AI.acTicks = poc.tick_count;
-  else AI.acTicks = (AI.acTicks || 0) + 1;
+  // tick_count from Deriv API - try multiple field names
+  if (poc.tick_count !== undefined && poc.tick_count !== null) {
+    AI.acTicks = poc.tick_count;
+  } else if (poc.ticks_stayed_in !== undefined) {
+    AI.acTicks = poc.ticks_stayed_in;
+  } else {
+    AI.acTicks = (AI.acTicks || 0) + 1;
+  }
   sel('accumVal', '$' + currentVal.toFixed(3));
   sel('accumProfit', (profit >= 0 ? '+' : '') + '$' + profit.toFixed(3));
   document.getElementById('accumProfit').style.color = profit >= 0 ? 'var(--profit)' : 'var(--loss)';
@@ -1889,9 +1894,16 @@ function onAccumUpdate(poc) {
 }
 
 function doCashout(cid) {
-  if (!ws || ws.readyState !== 1) return;
-  log('ac', 'Sending cashout...', 'info');
+  if (!ws || ws.readyState !== 1) { _accumCashoutPending = false; return; }
+  log('ac', 'CASHOUT -> #'+cid, 'success');
   ws.send(JSON.stringify({ sell: cid, price: 0 }));
+  // Retry after 3s if no response
+  AI._cashoutRetryTimer = setTimeout(function() {
+    if (AI.acActiveCid && _accumCashoutPending) {
+      log('ac', 'Cashout retry...', 'warn');
+      if (ws && ws.readyState === 1) ws.send(JSON.stringify({ sell: cid, price: 0 }));
+    }
+  }, 3000);
 }
 
 function onAccumClosed(poc) {
