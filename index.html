@@ -815,6 +815,8 @@ var EQ={pi:[0],pw:[0],bb:[0],eo:[0],ac:[0],piS:0,pwS:0,bbS:0,eoS:0,acS:0};
 var SIL={cal:false,calTicks:0,calTarget:50,calData:{},baseline:{e:3.1},thresh:{eGate:2.95},regime:'calibrating',prevR:'calibrating',dd:0,evRec:{}};
 IDX.forEach(function(ix){SIL.evRec[ix.s]=[];SIL.calData[ix.s]={digits:[],entropies:[]};});
 var _trades=0,_tPnl=0,_anaCache={};
+// Shared analysis store - single source of truth for all bots and display
+var ANA = {}; // ANA[sym] = latest analysis result, updated each tick
 
 // SIL
 function silE(fr,tot){if(!tot)return 0;var h=0;for(var d=0;d<10;d++){var p=(fr[d]||0)/tot;if(p>0)h-=p*Math.log2(p);}return Math.round(h*1000)/1000;}
@@ -931,7 +933,7 @@ function ana(sym){
   function o2Rec(){if(n<20)return{l:'LOAD',c:'wt'};var best=blendO2>=blendU7?'OV2':'UN7';var bp=Math.max(blendO2,blendU7);if(isCon&&bp>=72)return{l:best+'^',c:'sb'};if(bp>=68)return{l:best,c:'by'};return{l:'NEU',c:'nt'};}
   function difRec(){if(n<15)return{l:'LOAD',c:'wt'};var hp=rawHP2;if(hp>15&&chi2sig&&hotRecent)return{l:'D'+hotD+'**',c:'sb'};if(hp>13&&chi2sig)return{l:'D'+hotD+'*',c:'sb'};if(hp>12)return{l:'D'+hotD,c:'by'};return{l:'D'+hotD,c:'nt'};}
   var result={isCon:isCon,ms:ms,ep:ep,op:op,o2:o2,u7:u7,hotD:hotD,fr:fr,tot:tot,score:score,grade:grade,hotRecent:hotRecent,hotRecentPct:hotRecentPct,chi2sig:chi2sig,chi2p:chi2p,blendO2:blendO2,blendU7:blendU7,markov:markov,eoRec:eoRec(),o2Rec:o2Rec(),difRec:difRec(),rawHP:rawHP2};
-  _anaCache[sym]={tick:s.ticks,r:result};return result;
+  _anaCache[sym]={tick:s.ticks,r:result};ANA[sym]=result;return result;
 }
 function checkEOFresh(sym,dir){
   var s=ST[sym];if(!s||s.digits.length<40)return{ok:false,delta:0,rPct:50};
@@ -948,7 +950,14 @@ function findBest(minScore,tgt){
   var check=function(sym){
     var s=ST[sym],ix=IDX.find(function(i){return i.s===sym;});
     if(!s||!s.conn||s.digits.length<(ix?ix.mt:60))return null;
-    try{var a=ana(sym);if(!a.isCon||a.grade==='SKIP'||a.grade==='C')return null;if(a.score<minScore||!a.chi2sig||!a.hotRecent)return null;if(a.rawHP<15)return null;return{sym:sym,a:a,score:a.score+(a.grade==='A'?20:0)+a.hotRecentPct*0.5};}catch(e){return null;}
+    try{
+      // Use shared ANA cache - single source of truth
+      var a=ANA[sym]||ana(sym);
+      if(!a.isCon||a.grade==='SKIP'||a.grade==='C')return null;
+      if(a.score<minScore||!a.chi2sig||!a.hotRecent)return null;
+      if(a.rawHP<15)return null;
+      return{sym:sym,a:a,score:a.score+(a.grade==='A'?20:0)+a.hotRecentPct*0.5};
+    }catch(e){return null;}
   };
   if(tgt&&tgt!=='AUTO'){return check(tgt);}
   var best=null,bs=0;IDX.forEach(function(ix){try{var r=check(ix.s);if(r&&r.score>bs){bs=r.score;best=r;}}catch(e){}});
@@ -988,52 +997,53 @@ function findRec(recMode,lockedDir){
   return best;
 }
 function findPW(minScore,tgt,lastLost){
-  // POWER uses OVER1/UNDER8 as S1 entry
-  // Signal logic: look for cold barrier digits
-  // OVER1 wins if last digit > 1 (digits 2-9). Edge = digits 0 and 1 are cold/rare
-  // UNDER8 wins if last digit < 8 (digits 0-7). Edge = digits 8 and 9 are cold/rare
-  // Expected frequency for any 2 digits = 20%. Cold threshold = below 18%
+  // SELECTED MARKET MODE: use DIFFERS on the selected market's hot digit
+  // Recovery also stays on same market
+  if(tgt&&tgt!=='AUTO'){
+    var s=ST[tgt],ix=IDX.find(function(i){return i.s===tgt;});
+    if(!s||!s.conn||s.digits.length<(ix?ix.mt:60))return null;
+    var a;try{a=ana(tgt);}catch(e){return null;}
+    if(!a||!a.isCon)return null;
+    // DIFFERS on hot digit of selected market
+    var hotD=a.hotD,rawHP=a.rawHP||0;
+    if(rawHP<12)return null; // minimum signal
+    return{sym:tgt,direction:'DIFF',hotD:hotD,coldPct:rawHP,r20cold:rawHP,
+      score:a.score,barrier:hotD,code:'DIGITDIFF',lbl:'DIFF d.'+hotD,
+      fullPct:rawHP,recentPct:rawHP,selectedMode:true};
+  }
+  // AUTO MODE: OVER1/UNDER8 cold digit analysis across all markets
   var check=function(sym){
     if(sym===lastLost)return null;
     var s=ST[sym],ix=IDX.find(function(i){return i.s===sym;});
     if(!s||!s.conn||s.digits.length<(ix?ix.mt:60))return null;
-    var a;try{a=ana(sym);}catch(e){return null;}
-    if(!a.isCon)return null;
+    var a;try{a=ANA[sym]||ana(sym);}catch(e){return null;}
+    if(!a||!a.isCon)return null;
     var fr=a.fr,tot=a.tot||1;
-    // Cold pair counts
     var cold01=(fr[0]+fr[1])/tot*100;
     var cold89=(fr[8]+fr[9])/tot*100;
-    // Pick the colder pair
     var bDir=cold01<=cold89?'OVER':'UNDER';
     var coldPct=bDir==='OVER'?cold01:cold89;
-    // Cold threshold: below 18% (expected 20%) - relaxed for more signals
     if(coldPct>getAdaptedThreshold('power','coldPct',18))return null;
-    // Confirm cold in recent 20 ticks
     var r20=s.digits.slice(-20);
     var r20cold=bDir==='OVER'
       ?r20.filter(function(d){return d===0||d===1;}).length/20*100
       :r20.filter(function(d){return d===8||d===9;}).length/20*100;
-    // Recent must also be cold (< 25%) - barrier digits not flooding back
     if(r20cold>25)return null;
-    // Momentum check: cold digits not surging in last 10 ticks
     var l10=s.digits.slice(-10),p10=s.digits.slice(-20,-10);
-    var l10c=bDir==='OVER'
-      ?l10.filter(function(d){return d===0||d===1;}).length
-      :l10.filter(function(d){return d===8||d===9;}).length;
-    var p10c=bDir==='OVER'
-      ?p10.filter(function(d){return d===0||d===1;}).length
-      :p10.filter(function(d){return d===8||d===9;}).length;
-    if(l10c>p10c+2)return null; // barrier digits surging - skip
-    // Edge score: colder = better
+    var l10c=bDir==='OVER'?l10.filter(function(d){return d===0||d===1;}).length:l10.filter(function(d){return d===8||d===9;}).length;
+    var p10c=bDir==='OVER'?p10.filter(function(d){return d===0||d===1;}).length:p10.filter(function(d){return d===8||d===9;}).length;
+    if(l10c>p10c+2)return null;
     var edgeScore=(18-coldPct)*6+(20-r20cold)*2+(p10c-l10c)*4+(a.score/10);
-    var lbl=bDir==='OVER'?'OVER 1':'UNDER 8';
-    var code=bDir==='OVER'?'DIGITOVER':'DIGITUNDER';
-    return{sym:sym,direction:bDir,coldPct:Math.round(coldPct*10)/10,r20cold:Math.round(r20cold*10)/10,score:edgeScore+(a.grade==='A'?15:0),barrier:bDir==='OVER'?1:8,code:code,lbl:lbl,fullPct:Math.round(coldPct*10)/10,recentPct:Math.round(r20cold*10)/10};
+    return{sym:sym,direction:bDir,coldPct:Math.round(coldPct*10)/10,r20cold:Math.round(r20cold*10)/10,
+      score:edgeScore+(a.grade==='A'?15:0),barrier:bDir==='OVER'?1:8,
+      code:bDir==='OVER'?'DIGITOVER':'DIGITUNDER',lbl:bDir==='OVER'?'OVER 1':'UNDER 8',
+      fullPct:Math.round(coldPct*10)/10,recentPct:Math.round(r20cold*10)/10};
   };
-  if(tgt&&tgt!=='AUTO'){try{return check(tgt);}catch(e){return null;}}
-  var best=null,bs=0;IDX.forEach(function(ix){try{var r=check(ix.s);if(r&&r.score>bs){bs=r.score;best=r;}}catch(e){}});
+  var best=null,bs=0;
+  IDX.forEach(function(ix){try{var r=check(ix.s);if(r&&r.score>bs){bs=r.score;best=r;}}catch(e){}});
   return best;
 }
+
 function findPWRec(dir){
   var best=null,bk=0;
   IDX.forEach(function(ix){
@@ -1056,7 +1066,7 @@ function findEO(minLean,tgt){
   var check=function(sym){
     var s=ST[sym],ix=IDX.find(function(i){return i.s===sym;});
     if(!s||!s.conn||s.digits.length<(ix?ix.mt:60))return null;
-    var a=ana(sym);if(!a.isCon||!a.chi2sig)return null;
+    var a=ANA[sym]||ana(sym);if(!a.isCon||!a.chi2sig)return null;
     var dir=a.ep>=a.op?'EVEN':'ODD';var leanPct=Math.max(a.ep,a.op);if(leanPct<minLean)return null;
     var fresh=checkEOFresh(sym,dir);if(!fresh.ok)return null;if(fresh.rPct<minLean-3)return null;
     var ev=silEV(sym);if(ev.bad)return null;
@@ -1212,7 +1222,7 @@ function pwTick(){
         var sigEl=g('pwSig');if(sigEl){sigEl.textContent='WAIT';sigEl.style.color='var(--yellow)';}}
       setState('waiting');return;
     }
-    AI.pwWaitSince=0;AI.pwDir=mkt.direction;AI.pwLastLost=null;
+    AI.pwWaitSince=0;AI.pwDir=mkt.direction;AI.pwLastLost=null;AI.pwSelectedSym=mkt.selectedMode?mkt.sym:null;
     var sigEl=g('pwSig');if(sigEl){sigEl.textContent=mkt.lbl;sigEl.style.color=mkt.direction==='OVER'?'var(--green)':'var(--blue)';}
     var oEl=g('pwO');if(oEl)oEl.textContent=mkt.coldPct.toFixed(1)+'%';
     var uEl=g('pwU');if(uEl)uEl.textContent=mkt.r20cold.toFixed(1)+'%';
@@ -1229,19 +1239,38 @@ function pwTick(){
     lastTradeTime=Date.now();
     placeTrade(mkt.sym,mkt.code,stake,mkt.barrier,mkt.lbl,'power');
   } else {
-    var rec=findPWRec(AI.pwDir);
-    if(!rec){if(!AI.pwPrev){setState('waiting');log('pw','PW S'+(AI.pwStep+1)+' scanning...','warn');return;}}
-    var confirmed=!AI.pwPrev||(AI.pwPrev&&rec&&AI.pwPrev.sym===rec.sym&&AI.pwPrev.dir===rec.direction);
-    AI.pwPrev=rec?{sym:rec.sym,dir:rec.direction}:null;
-    if(!confirmed||!rec){setState('waiting');log('pw','PW confirming...','warn');return;}
-    AI.pwPrev=null;
-    var base2=parseFloat(gv('pwStake'))||1,mult2=parseFloat(gv('pwMult'))||2.1;
-    var stake2=calcStake(AI.pwStep,base2,mult2);
-    var ix3=IDX.find(function(i){return i.s===rec.sym;});
-    log('pw','PW S'+(AI.pwStep+1)+' | '+ix3.n+' | '+rec.lbl+' | $'+stake2.toFixed(2),'warn');
-    ladState('pw',AI.pwStep,true);
-    lastTradeTime=Date.now();
-    placeTrade(rec.sym,rec.code,stake2,rec.barrier,rec.lbl,'power');
+    // Recovery: if selectedMode (specific market chosen), stay on same market with O2/U7
+    var pwIdx=gv('pwIndex')||'AUTO';
+    if(AI.pwSelectedSym&&pwIdx!=='AUTO'){
+      // Stay on selected market for all recovery steps
+      var _recSym=AI.pwSelectedSym;
+      var _recS=ST[_recSym];
+      if(!_recS||!_recS.conn){setState('waiting');return;}
+      var _recA;try{_recA=ana(_recSym);}catch(e){setState('waiting');return;}
+      var _recDir=AI.pwDir||(_recA.blendO2>=_recA.blendU7?'OVER':'UNDER');
+      var _recBarrier=_recDir==='OVER'?2:7;
+      var _recCode=_recDir==='OVER'?'DIGITOVER':'DIGITUNDER';
+      var _recLbl=_recDir==='OVER'?'OVER 2':'UNDER 7';
+      var _base2=parseFloat(gv('pwStake'))||1,_mult2=parseFloat(gv('pwMult'))||2.1;
+      var _stake2=calcStake(AI.pwStep,_base2,_mult2);
+      var _ix3=IDX.find(function(i){return i.s===_recSym;});
+      log('pw','PW S'+(AI.pwStep+1)+' [LOCKED] | '+_ix3.n+' | '+_recLbl+' | $'+_stake2.toFixed(2),'warn');
+      ladState('pw',AI.pwStep,true);lastTradeTime=Date.now();
+      placeTrade(_recSym,_recCode,_stake2,_recBarrier,_recLbl,'power');
+    } else {
+      var rec=findPWRec(AI.pwDir);
+      if(!rec){if(!AI.pwPrev){setState('waiting');log('pw','PW S'+(AI.pwStep+1)+' scanning...','warn');return;}}
+      var confirmed=!AI.pwPrev||(AI.pwPrev&&rec&&AI.pwPrev.sym===rec.sym&&AI.pwPrev.dir===rec.direction);
+      AI.pwPrev=rec?{sym:rec.sym,dir:rec.direction}:null;
+      if(!confirmed||!rec){setState('waiting');log('pw','PW confirming...','warn');return;}
+      AI.pwPrev=null;
+      var base2=parseFloat(gv('pwStake'))||1,mult2=parseFloat(gv('pwMult'))||2.1;
+      var stake2=calcStake(AI.pwStep,base2,mult2);
+      var ix3=IDX.find(function(i){return i.s===rec.sym;});
+      log('pw','PW S'+(AI.pwStep+1)+' | '+ix3.n+' | '+rec.lbl+' | $'+stake2.toFixed(2),'warn');
+      ladState('pw',AI.pwStep,true);lastTradeTime=Date.now();
+      placeTrade(rec.sym,rec.code,stake2,rec.barrier,rec.lbl,'power');
+    }
   }
   upPW();
 }
@@ -1514,7 +1543,7 @@ function resetAll(){
   stopMode();
   AI.wins=0;AI.losses=0;AI.totalPnl=0;AI.sessPnl=0;AI.consecLoss=0;AI.inTrade=false;AI.pendingResult=false;AI.activeCid=null;
   AI.piStep=0;AI.piDir=null;AI.piConfirm=0;AI.piLastCand=null;AI.piFireAt=0;AI.piWaitSince=0;AI.piPauseUntil=0;AI.piNoSigPause=0;AI.piTrigLogT=0;
-  AI.pwStep=0;AI.pwDir=null;AI.pwPrev=null;AI.pwWaitSince=0;AI.pwPauseUntil=0;AI.pwLastLost=null;
+  AI.pwStep=0;AI.pwDir=null;AI.pwPrev=null;AI.pwWaitSince=0;AI.pwPauseUntil=0;AI.pwLastLost=null;AI.pwSelectedSym=null;
   AI.bbStep=0;AI.bbDir=null;AI.bbLastDig=null;AI.bbPauseUntil=0;
   AI.eoStep=0;AI.eoDir=null;AI.eoConfirm=0;AI.eoLastCand=null;AI.eoWaitSince=0;AI.eoPauseUntil=0;AI.acActiveCid=null;AI.acTicks=0;AI.acEntryStake=0;AI.acPauseUntil=0;AI.acWaitSince=0;AI.acRuns=0;AI._cashoutRetryTimer=null;
   EQ.pi=[0];EQ.pw=[0];EQ.bb=[0];EQ.eo=[0];EQ.ac=[0];EQ.piS=0;EQ.pwS=0;EQ.bbS=0;EQ.eoS=0;EQ.acS=0;
@@ -1588,7 +1617,21 @@ function updateRow(sym){
   var dir=p>prev?'up':p<prev?'down':'';
   var sCol=a.score>=65?'var(--green)':a.score>=45?'var(--yellow)':'var(--loss)';
   var msC=a.isCon?'cy':a.ms==='EXP'?'cn':'cw';
-  row.innerHTML='<td class="L"><div class="mname">'+ix.n+'</div><div class="msub">'+ix.sub+'</div></td><td><span class="ms '+msC+'">'+a.ms+'</span></td><td><span style="font-family:var(--mono);font-weight:800;color:'+sCol+'">'+a.score+'</span></td><td><span class="rec '+a.difRec.c+'">'+a.difRec.l+'</span></td><td><span class="rec '+a.eoRec.c+'">'+a.eoRec.l+'</span></td><td><span class="rec '+a.o2Rec.c+'">'+a.o2Rec.l+'</span></td>';
+  var fr=a.fr,tot=a.tot||1;
+  var cold01=Math.round((fr[0]+fr[1])/tot*1000)/10;
+  var cold89=Math.round((fr[8]+fr[9])/tot*1000)/10;
+  var bestCold=Math.min(cold01,cold89);
+  var coldDir=cold01<=cold89?'OV1':'UN8';
+  var coldCol=bestCold<15?'var(--profit)':bestCold<18?'var(--yellow)':'var(--loss)';
+  var ou1Lbl=coldDir+(bestCold<18?'*':'');
+  var hpCol=a.rawHP>=18?'var(--green)':a.rawHP>=14?'var(--yellow)':'var(--loss)';
+  row.innerHTML='<td class="L"><div class="mname">'+ix.n+'</div></td>'
+    +'<td><span class="ms '+msC+'">'+a.ms+'</span></td>'
+    +'<td><span style="font-family:var(--mono);font-weight:800;color:'+sCol+'">'+a.score+'</span></td>'
+    +'<td><span style="font-family:var(--mono);font-weight:700;color:'+hpCol+'">'+Math.round(a.rawHP*10)/10+'%</span></td>'
+    +'<td><span class="rec '+a.difRec.c+'">'+a.difRec.l+'</span></td>'
+    +'<td><span style="font-family:var(--mono);font-size:9px;color:'+coldCol+';">'+ou1Lbl+' '+bestCold+'%</span></td>'
+    +'<td><span class="rec '+a.eoRec.c+'">'+a.eoRec.l+'</span></td>';
 }
 function initDC(){
   var dc=g('digitGrid');if(!dc)return;dc.innerHTML='';
