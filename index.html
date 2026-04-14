@@ -306,6 +306,33 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 .threshold-item .tval{font-family:var(–mono);font-size:10px;font-weight:700;color:var(–accent);}
 .threshold-bar{width:60px;height:4px;background:var(–border);border-radius:2px;overflow:hidden;margin-left:6px;}
 .threshold-fill{height:100%;background:var(–green);border-radius:2px;}
+
+/* MARKET INTELLIGENCE */
+.mkt-intel{background:var(–surface);border:1px solid var(–border);border-radius:10px;margin-bottom:8px;overflow:hidden;}
+.mkt-intel-hdr{display:flex;align-items:center;justify-content:space-between;padding:7px 11px;border-bottom:1px solid var(–border);background:var(–card2);}
+.mkt-intel-title{font-family:var(–mono);font-size:9px;font-weight:700;color:var(–accent);letter-spacing:1px;}
+.mkt-intel-sub{font-family:var(–mono);font-size:8px;color:var(–dim);}
+.mi-summary{display:grid;grid-template-columns:1fr 1fr;gap:5px;padding:8px 11px;}
+.mi-card{background:var(–card);border:1px solid var(–border);border-radius:8px;padding:6px 8px;}
+.mi-card-lbl{font-family:var(–mono);font-size:7px;color:var(–dim);letter-spacing:.8px;text-transform:uppercase;margin-bottom:3px;}
+.mi-card-val{font-family:var(–mono);font-size:11px;font-weight:800;color:var(–text);}
+.mi-card-sub{font-family:var(–mono);font-size:8px;color:var(–sub);margin-top:1px;}
+.mi-tbl-wrap{overflow-x:auto;padding:0 0 4px;}
+.mi-tbl{width:100%;border-collapse:collapse;min-width:380px;}
+.mi-tbl th{padding:5px 7px;font-family:var(–mono);font-size:7px;font-weight:700;color:var(–dim);letter-spacing:.7px;text-transform:uppercase;border-bottom:1px solid var(–border);text-align:left;background:var(–card2);white-space:nowrap;}
+.mi-tbl th.r{text-align:right;}
+.mi-tbl td{padding:5px 7px;font-family:var(–mono);font-size:9px;border-bottom:1px solid var(–border);white-space:nowrap;}
+.mi-tbl td.r{text-align:right;}
+.mi-tbl tbody tr:hover{background:rgba(56,189,248,.04);}
+.mi-pct{display:inline-flex;align-items:center;gap:4px;}
+.mi-bar{width:36px;height:4px;background:var(–border);border-radius:2px;overflow:hidden;display:inline-block;vertical-align:middle;}
+.mi-bar-fill{height:100%;border-radius:2px;}
+.badge-hot{background:rgba(0,230,118,.12);color:var(–green);padding:1px 5px;border-radius:3px;font-size:7px;font-weight:700;}
+.badge-cold{background:rgba(255,23,68,.12);color:var(–loss);padding:1px 5px;border-radius:3px;font-size:7px;font-weight:700;}
+.badge-neu{background:rgba(74,96,128,.12);color:var(–dim);padding:1px 5px;border-radius:3px;font-size:7px;font-weight:700;}
+.mi-tabs{display:flex;border-bottom:1px solid var(–border);}
+.mi-tab{flex:1;padding:5px;font-family:var(–mono);font-size:8px;font-weight:600;text-align:center;cursor:pointer;color:var(–dim);border:none;background:none;border-bottom:2px solid transparent;}
+.mi-tab.active{color:var(–accent);border-bottom-color:var(–accent);}
 .minfo{background:var(–surface);border:1px solid var(–border);border-radius:8px;padding:6px 10px;margin-bottom:7px;font-family:var(–mono);font-size:9px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:5px;}
 .minfo span{color:var(–sub);}
 .minfo strong{color:var(–text);font-weight:700;}
@@ -370,16 +397,71 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 <!-- ANALYSIS PAGE -->
 <div id="pgAnalysis" class="page" style="flex-direction:column;">
   <div class="ana-hdr">
-    <div style="font-size:9px;color:var(--sub);font-family:var(--mono);letter-spacing:1.5px;">DIGIT ANALYSIS</div>
-    <div style="font-family:var(--mono);font-size:9px;color:var(--sub);">LIVE <strong id="liveCnt" style="color:var(--text)">0/10</strong></div>
+    <div style="font-size:9px;color:var(--sub);font-family:var(--mono);letter-spacing:1.5px;">MARKET ANALYSIS</div>
+    <div style="display:flex;align-items:center;gap:7px;">
+      <div style="font-family:var(--mono);font-size:9px;color:var(--sub);">LIVE <strong id="liveCnt" style="color:var(--text)">0/13</strong></div>
+      <div id="histLoadBadge" style="font-family:var(--mono);font-size:8px;padding:2px 6px;border-radius:4px;background:rgba(255,214,0,.1);color:var(--yellow);border:1px solid rgba(255,214,0,.25);">LOADING...</div>
+    </div>
   </div>
-  <div class="pill-row">
-    <div class="apill"><div class="apill-d" style="background:var(--green)"></div>SB <strong id="pSB" style="color:var(--green);margin-left:2px">0</strong></div>
-    <div class="apill"><div class="apill-d" style="background:var(--yellow)"></div>NEU <strong id="pNE" style="color:var(--yellow);margin-left:2px">0</strong></div>
-    <div class="apill"><div class="apill-d" style="background:var(--loss)"></div>AVD <strong id="pAV" style="color:var(--loss);margin-left:2px">0</strong></div>
-    <div style="margin-left:auto;font-size:8px;font-family:var(--mono);color:var(--sub);display:flex;align-items:center;">PI: <span id="pioneerPick" style="color:var(--green);margin-left:4px;font-weight:700">--</span></div>
+
+  <!-- MARKET INTELLIGENCE PANEL -->
+  <div class="mkt-intel" style="margin:0 11px 0;flex-shrink:0;">
+    <div class="mkt-intel-hdr">
+      <span class="mkt-intel-title">&#128202; MARKET INTELLIGENCE</span>
+      <span class="mkt-intel-sub" id="miLastUpdate">--</span>
+    </div>
+    <div class="mi-tabs">
+      <button class="mi-tab active" id="miTab-summary" onclick="switchMiTab('summary')">SUMMARY</button>
+      <button class="mi-tab" id="miTab-ourank" onclick="switchMiTab('ourank')">OVER/UNDER</button>
+      <button class="mi-tab" id="miTab-differs" onclick="switchMiTab('differs')">DIFFERS</button>
+      <button class="mi-tab" id="miTab-trend" onclick="switchMiTab('trend')">TREND</button>
+    </div>
+    <!-- SUMMARY TAB -->
+    <div id="miContent-summary">
+      <div class="mi-summary" id="miSummaryCards"></div>
+    </div>
+    <!-- OVER/UNDER RANK TAB -->
+    <div id="miContent-ourank" style="display:none;">
+      <div class="mi-tbl-wrap"><table class="mi-tbl" id="miOURankTbl">
+        <thead><tr>
+          <th>BARRIER</th>
+          <th>BEST UNDER MKT</th><th class="r">UNDER%</th>
+          <th>BEST OVER MKT</th><th class="r">OVER%</th>
+        </tr></thead>
+        <tbody id="miOURankBody"></tbody>
+      </table></div>
+    </div>
+    <!-- DIFFERS TAB -->
+    <div id="miContent-differs" style="display:none;">
+      <div class="mi-tbl-wrap"><table class="mi-tbl" id="miDiffersTbl">
+        <thead><tr>
+          <th>MARKET</th><th>HOT DIGIT</th><th class="r">HOT%</th>
+          <th>COLD DIGIT</th><th class="r">COLD%</th><th>SIGNAL</th>
+        </tr></thead>
+        <tbody id="miDiffersBody"></tbody>
+      </table></div>
+    </div>
+    <!-- TREND TAB -->
+    <div id="miContent-trend" style="display:none;">
+      <div class="mi-tbl-wrap"><table class="mi-tbl" id="miTrendTbl">
+        <thead><tr>
+          <th>MARKET</th><th>DIRECTION</th><th class="r">RISING%</th>
+          <th class="r">FALLING%</th><th>EVEN%</th><th>ODD%</th>
+        </tr></thead>
+        <tbody id="miTrendBody"></tbody>
+      </table></div>
+    </div>
   </div>
-  <div class="scroll" style="padding-top:0;">
+
+  <div class="scroll" style="padding-top:6px;">
+    <div style="font-size:9px;color:var(--sub);font-family:var(--mono);letter-spacing:1.5px;padding:0 0 5px;display:flex;justify-content:space-between;">
+      <span>PER-MARKET DETAIL</span>
+      <div style="display:flex;gap:5px;">
+        <div class="apill"><div class="apill-d" style="background:var(--green)"></div>SB <strong id="pSB" style="color:var(--green);margin-left:2px">0</strong></div>
+        <div class="apill"><div class="apill-d" style="background:var(--yellow)"></div>NEU <strong id="pNE" style="color:var(--yellow);margin-left:2px">0</strong></div>
+        <div class="apill"><div class="apill-d" style="background:var(--loss)"></div>AVD <strong id="pAV" style="color:var(--loss);margin-left:2px">0</strong></div>
+      </div>
+    </div>
     <div style="overflow-x:auto;margin-bottom:10px;"><table id="anaTbl" class="atbl"></table></div>
     <div style="font-size:9px;color:var(--sub);font-family:var(--mono);letter-spacing:1.5px;padding:0 0 6px;">DIGIT FREQUENCY</div>
     <div class="dg-grid" id="digitGrid"></div>
@@ -1489,7 +1571,7 @@ function navTo(p){
   var pg=g(v.page);if(pg)pg.classList.add('active');
   var tb=g(v.tab);if(tb)tb.classList.add('active');
   if(p==='account')silBar();
-  if(p==='analysis'){IDX.forEach(function(ix){if(ST[ix.s].prices.length>0){try{updateRow(ix.s);updateDC(ix.s);}catch(e){}}});updateSum();}
+  if(p==='analysis'){IDX.forEach(function(ix){if(ST[ix.s].prices.length>0){try{updateRow(ix.s);updateDC(ix.s);}catch(e){}}});updateSum();updateMktIntel();}
 }
 
 // ANALYSIS RENDER
@@ -1534,6 +1616,7 @@ function updateSum(){
     try{var a=ana(i.s);var eff=a.score+(a.grade==='A'?20:0);if(eff>=65&&a.isCon)sb++;else if(eff>=45)ne++;else av++;}catch(e){av++;}
   });
   sel('pSB',sb);sel('pNE',ne);sel('pAV',av);
+  updateMktIntel();
   var pick=null,bs=0;
   IDX.forEach(function(i){var s=ST[i.s];if(!s||!s.conn||s.digits.length<i.mt)return;try{var a=ana(i.s);var eff=a.score+(a.grade==='A'?20:0);if(eff>bs&&a.hotRecent&&a.isCon){bs=eff;pick=i.s;}}catch(e){}});
   var pp=g('pioneerPick');if(pp){if(pick){var ix=IDX.find(function(i){return i.s===pick;});try{var ap=ana(pick);pp.textContent=(ix?ix.n:pick)+' '+ap.score+' '+ap.grade;}catch(e){pp.textContent=pick;}pp.style.color='var(--green)';}else{pp.textContent='SCAN';pp.style.color='var(--dim)';}}
@@ -1551,6 +1634,7 @@ function startConn(){
       var m=JSON.parse(e.data);
       if(m.msg_type==='authorize'&&!m.error){subAll();ws.send(JSON.stringify({balance:1,subscribe:1}));}
       if(m.msg_type==='tick'){try{onTick(m.tick);}catch(err){}}
+      if(m.msg_type==='history'&&m.history){try{onHistory(m.echo_req&&m.echo_req.ticks_history,m.history);}catch(err){}}
       if(m.msg_type==='balance'&&m.balance){var bal=parseFloat(m.balance.balance);sel('balVal',bal.toFixed(2));}
       if(m.msg_type==='buy')onBuy(m);
       if(m.msg_type==='proposal_open_contract'){onContract(m.proposal_open_contract);return;}
@@ -1565,7 +1649,23 @@ function startConn(){
   ws.onclose=function(){setConn(false);stopKA();schedRecon();};
   ws.onerror=function(){setConn(false);stopKA();try{ws.close();}catch(ex){}};
 }
-function subAll(){IDX.forEach(function(i){if(ws&&ws.readyState===1)ws.send(JSON.stringify({ticks:i.s,subscribe:1}));});}
+function subAll(){
+  // First load 500 historical ticks per market, then subscribe to live feed
+  IDX.forEach(function(ix){
+    if(!ws||ws.readyState!==1)return;
+    // Request history: 500 ticks gets us enough for full analysis immediately
+    ws.send(JSON.stringify({
+      ticks_history: ix.s,
+      adjust_start_time: 1,
+      count: 500,
+      end: 'latest',
+      start: 1,
+      style: 'ticks'
+    }));
+    // Also subscribe to live ticks
+    ws.send(JSON.stringify({ticks: ix.s, subscribe: 1}));
+  });
+}
 function schedRecon(){clearTimeout(rtimer);var d=Math.min(16000,2000*Math.pow(2,Math.min(_reconCt,3)));_reconCt++;rtimer=setTimeout(function(){_reconCt=0;startConn();},d);}
 function setConn(live){var dot=g('connDot'),lbl=g('connLbl');if(dot){dot.style.background=live?'var(--green)':'var(--loss)';dot.className='cdot'+(live?' on':'');}if(lbl)lbl.textContent=live?'LIVE':'OFF';}
 function startKA(){stopKA();_kTimer=setInterval(function(){if(ws&&ws.readyState===1){_pingT=Date.now();ws.send(JSON.stringify({ping:1}));}},20000);_wTimer=setInterval(function(){if(_lastMsg>0&&Date.now()-_lastMsg>45000){setConn(false);stopKA();try{ws.onclose=null;ws.close();}catch(ex){}schedRecon();}},10000);}
@@ -1573,6 +1673,288 @@ function stopKA(){clearInterval(_kTimer);clearInterval(_wTimer);_pingT=0;}
 function updPing(rtt){var dot=g('pingDot'),val=g('pingVal');if(!dot||!val)return;val.textContent=rtt+'ms';var col=rtt<150?'var(--green)':rtt<350?'var(--yellow)':'var(--loss)';dot.style.background=col;val.style.color=col;}
 
 // TICK HANDLER
+
+// ══════════════════════════════════════════════════════
+// MARKET INTELLIGENCE ENGINE
+// Cross-market analysis: OVER/UNDER ranking, DIFFERS,
+// TREND detection, SUMMARY cards
+// Updates on every tick (debounced 500ms)
+// ══════════════════════════════════════════════════════
+
+var _miTab = 'summary';
+var _miTimer = null;
+var _miReady = 0; // count of markets with history loaded
+
+function switchMiTab(tab) {
+  _miTab = tab;
+  ['summary','ourank','differs','trend'].forEach(function(t) {
+    var btn = g('miTab-' + t);
+    var content = g('miContent-' + t);
+    if (btn) btn.className = 'mi-tab' + (t === tab ? ' active' : '');
+    if (content) content.style.display = t === tab ? 'block' : 'none';
+  });
+  updateMktIntel();
+}
+
+function updateMktIntel() {
+  // Debounce - max once per 500ms
+  clearTimeout(_miTimer);
+  _miTimer = setTimeout(function() {
+    var onAna = g('pgAnalysis') && g('pgAnalysis').classList.contains('active');
+    if (!onAna) return; // only update when visible
+    try {
+      if (_miTab === 'summary') buildMiSummary();
+      else if (_miTab === 'ourank') buildMiOURank();
+      else if (_miTab === 'differs') buildMiDiffers();
+      else if (_miTab === 'trend') buildMiTrend();
+      var ts = new Date().toUTCString().slice(17,25);
+      sel('miLastUpdate', ts);
+    } catch(e) {}
+  }, 500);
+}
+
+// ── SUMMARY CARDS ─────────────────────────────────────
+function buildMiSummary() {
+  var el = g('miSummaryCards'); if (!el) return;
+  var ready = IDX.filter(function(i){ return ST[i.s].digits.length >= 30; });
+  if (!ready.length) { el.innerHTML = '<div style="padding:10px;font-family:var(--mono);font-size:9px;color:var(--dim);">Loading market data...</div>'; return; }
+
+  // Find best market for each category
+  var bestDiff = null, bestDiffPct = 0;
+  var bestO1 = null, bestO1Pct = 0;
+  var bestU8 = null, bestU8Pct = 0;
+  var bestEven = null, bestEvenPct = 0;
+  var bestOdd = null, bestOddPct = 0;
+  var mostRising = null, mostRisingPct = 0;
+  var mostFalling = null, mostFallingPct = 0;
+  var hotDigitMkt = null, hotDigitVal = 0, hotDigitD = 0;
+  var coldDigitMkt = null, coldDigitPct = 100, coldDigitD = 0;
+  var bestO4 = null, bestO4Pct = 0;
+  var bestU5 = null, bestU5Pct = 0;
+
+  ready.forEach(function(ix) {
+    var s = ST[ix.s];
+    var fr = s.freq; var tot = fr.reduce(function(a,b){return a+b;},0) || 1;
+    var prices = s.prices;
+
+    // Hot/cold digit
+    var mxF = Math.max.apply(null, fr), mnF = Math.min.apply(null, fr);
+    var hd = fr.indexOf(mxF), cd = fr.indexOf(mnF);
+    var hp = mxF/tot*100, cp = mnF/tot*100;
+    if (hp > hotDigitVal) { hotDigitVal = hp; hotDigitMkt = ix; hotDigitD = hd; }
+    if (cp < coldDigitPct) { coldDigitPct = cp; coldDigitMkt = ix; coldDigitD = cd; }
+
+    // Differs signal
+    if (hp > bestDiffPct) { bestDiffPct = hp; bestDiff = { ix: ix, d: hd, pct: Math.round(hp*10)/10 }; }
+
+    // Over1/Under8
+    var o1pct = fr.slice(2).reduce(function(a,b){return a+b;},0)/tot*100;
+    var u8pct = fr.slice(0,8).reduce(function(a,b){return a+b;},0)/tot*100;
+    if (o1pct > bestO1Pct) { bestO1Pct = o1pct; bestO1 = { ix: ix, pct: Math.round(o1pct*10)/10 }; }
+    if (u8pct > bestU8Pct) { bestU8Pct = u8pct; bestU8 = { ix: ix, pct: Math.round(u8pct*10)/10 }; }
+
+    // Over4/Under5
+    var o4pct = [5,6,7,8,9].reduce(function(a,d){return a+fr[d];},0)/tot*100;
+    var u5pct = [0,1,2,3,4].reduce(function(a,d){return a+fr[d];},0)/tot*100;
+    if (o4pct > bestO4Pct) { bestO4Pct = o4pct; bestO4 = { ix: ix, pct: Math.round(o4pct*10)/10 }; }
+    if (u5pct > bestU5Pct) { bestU5Pct = u5pct; bestU5 = { ix: ix, pct: Math.round(u5pct*10)/10 }; }
+
+    // Even/Odd
+    var evenPct = [0,2,4,6,8].reduce(function(a,d){return a+fr[d];},0)/tot*100;
+    var oddPct = 100 - evenPct;
+    if (evenPct > bestEvenPct) { bestEvenPct = evenPct; bestEven = { ix: ix, pct: Math.round(evenPct*10)/10 }; }
+    if (oddPct > bestOddPct) { bestOddPct = oddPct; bestOdd = { ix: ix, pct: Math.round(oddPct*10)/10 }; }
+
+    // Rising/Falling (last 20 ticks)
+    if (prices.length >= 20) {
+      var last20 = prices.slice(-20);
+      var rising = 0, falling = 0;
+      for (var i = 1; i < last20.length; i++) {
+        if (last20[i] > last20[i-1]) rising++;
+        else if (last20[i] < last20[i-1]) falling++;
+      }
+      var rPct = rising / 19 * 100;
+      var fPct = falling / 19 * 100;
+      if (rPct > mostRisingPct) { mostRisingPct = rPct; mostRising = { ix: ix, pct: Math.round(rPct*10)/10 }; }
+      if (fPct > mostFallingPct) { mostFallingPct = fPct; mostFalling = { ix: ix, pct: Math.round(fPct*10)/10 }; }
+    }
+  });
+
+  var cards = [
+    { lbl: 'BEST DIFFERS', val: bestDiff ? bestDiff.ix.n : '--', sub: bestDiff ? 'Digit '+bestDiff.d+' @ '+bestDiff.pct+'%' : '--', col: 'var(--green)' },
+    { lbl: 'BEST OVER 1', val: bestO1 ? bestO1.ix.n : '--', sub: bestO1 ? bestO1.pct+'% win rate' : '--', col: 'var(--blue)' },
+    { lbl: 'BEST UNDER 8', val: bestU8 ? bestU8.ix.n : '--', sub: bestU8 ? bestU8.pct+'% win rate' : '--', col: 'var(--accent)' },
+    { lbl: 'MOST EVEN', val: bestEven ? bestEven.ix.n : '--', sub: bestEven ? bestEven.pct+'% even' : '--', col: 'var(--purple)' },
+    { lbl: 'MOST ODD', val: bestOdd ? bestOdd.ix.n : '--', sub: bestOdd ? bestOdd.pct+'% odd' : '--', col: 'var(--purple)' },
+    { lbl: 'MOST RISING', val: mostRising ? mostRising.ix.n : '--', sub: mostRising ? mostRising.pct+'% up ticks' : '--', col: 'var(--profit)' },
+    { lbl: 'MOST FALLING', val: mostFalling ? mostFalling.ix.n : '--', sub: mostFalling ? mostFalling.pct+'% down ticks' : '--', col: 'var(--loss)' },
+    { lbl: 'MOST OVER 4', val: bestO4 ? bestO4.ix.n : '--', sub: bestO4 ? bestO4.pct+'% > digit 4' : '--', col: 'var(--yellow)' },
+    { lbl: 'MOST UNDER 5', val: bestU5 ? bestU5.ix.n : '--', sub: bestU5 ? bestU5.pct+'% < digit 5' : '--', col: 'var(--yellow)' },
+    { lbl: 'HOT DIGIT', val: hotDigitMkt ? hotDigitMkt.n : '--', sub: hotDigitMkt ? 'Digit '+hotDigitD+' @ '+Math.round(hotDigitVal*10)/10+'%' : '--', col: 'var(--green)' },
+  ];
+
+  el.innerHTML = cards.map(function(card) {
+    return '<div class="mi-card"><div class="mi-card-lbl">'+card.lbl+'</div><div class="mi-card-val" style="color:'+card.col+'">'+card.val+'</div><div class="mi-card-sub">'+card.sub+'</div></div>';
+  }).join('');
+}
+
+// ── OVER/UNDER RANK TABLE ─────────────────────────────
+function buildMiOURank() {
+  var tbody = g('miOURankBody'); if (!tbody) return;
+  var barriers = [
+    { n: 'OVER 1 / UNDER 8', overMin: 2, underMax: 7, overLbl: 'OV1', underLbl: 'UN8' },
+    { n: 'OVER 2 / UNDER 7', overMin: 3, underMax: 6, overLbl: 'OV2', underLbl: 'UN7' },
+    { n: 'OVER 3 / UNDER 6', overMin: 4, underMax: 5, overLbl: 'OV3', underLbl: 'UN6' },
+    { n: 'OVER 4 / UNDER 5', overMin: 5, underMax: 4, overLbl: 'OV4', underLbl: 'UN5' },
+    { n: 'EVEN / ODD', overMin: -1, underMax: -1, overLbl: 'EVEN', underLbl: 'ODD', special: 'eo' }
+  ];
+
+  var html = '';
+  barriers.forEach(function(b) {
+    var bestO = null, bestOPct = 0, bestU = null, bestUPct = 0;
+    IDX.forEach(function(ix) {
+      var s = ST[ix.s]; if (!s || s.digits.length < 30) return;
+      var fr = s.freq; var tot = fr.reduce(function(a,b){return a+b;},0) || 1;
+      var oPct, uPct;
+      if (b.special === 'eo') {
+        oPct = [0,2,4,6,8].reduce(function(a,d){return a+fr[d];},0)/tot*100;
+        uPct = 100 - oPct;
+      } else {
+        oPct = fr.slice(b.overMin).reduce(function(a,v){return a+v;},0)/tot*100;
+        uPct = fr.slice(0, b.underMax+1).reduce(function(a,v){return a+v;},0)/tot*100;
+      }
+      if (oPct > bestOPct) { bestOPct = oPct; bestO = { n: ix.n, pct: Math.round(oPct*10)/10 }; }
+      if (uPct > bestUPct) { bestUPct = uPct; bestU = { n: ix.n, pct: Math.round(uPct*10)/10 }; }
+    });
+    var oCol = bestOPct >= 80 ? 'var(--profit)' : bestOPct >= 70 ? 'var(--yellow)' : 'var(--text)';
+    var uCol = bestUPct >= 80 ? 'var(--profit)' : bestUPct >= 70 ? 'var(--yellow)' : 'var(--text)';
+    html += '<tr>';
+    html += '<td><span style="font-weight:700;color:var(--accent)">'+b.n+'</span></td>';
+    html += '<td>'+(bestU ? bestU.n : '--')+'</td>';
+    html += '<td class="r"><span style="color:'+uCol+';font-weight:700">'+(bestU ? bestU.pct+'%' : '--')+'</span></td>';
+    html += '<td>'+(bestO ? bestO.n : '--')+'</td>';
+    html += '<td class="r"><span style="color:'+oCol+';font-weight:700">'+(bestO ? bestO.pct+'%' : '--')+'</span></td>';
+    html += '</tr>';
+  });
+  tbody.innerHTML = html;
+}
+
+// ── DIFFERS TABLE ─────────────────────────────────────
+function buildMiDiffers() {
+  var tbody = g('miDiffersBody'); if (!tbody) return;
+  var rows = [];
+  IDX.forEach(function(ix) {
+    var s = ST[ix.s]; if (!s || s.digits.length < 30) return;
+    var fr = s.freq; var tot = fr.reduce(function(a,b){return a+b;},0) || 1;
+    var mxF = Math.max.apply(null, fr), mnF = Math.min.apply(null, fr);
+    var hd = fr.indexOf(mxF), cd = fr.indexOf(mnF);
+    var hp = Math.round(mxF/tot*1000)/10;
+    var cp = Math.round(mnF/tot*1000)/10;
+    var sig = hp >= 18 ? 'HOT' : hp >= 15 ? 'WARM' : 'NEU';
+    rows.push({ n: ix.n, hd: hd, hp: hp, cd: cd, cp: cp, sig: sig, score: hp });
+  });
+  rows.sort(function(a,b){return b.score - a.score;});
+  var html = rows.map(function(r) {
+    var sigBadge = r.sig === 'HOT' ? '<span class="badge-hot">HOT</span>' : r.sig === 'WARM' ? '<span style="background:rgba(255,214,0,.1);color:var(--yellow);padding:1px 5px;border-radius:3px;font-size:7px;font-weight:700;">WARM</span>' : '<span class="badge-neu">NEU</span>';
+    var hpBar = '<div class="mi-bar"><div class="mi-bar-fill" style="width:'+Math.min(100,r.hp/25*100)+'%;background:var(--green)"></div></div>';
+    return '<tr><td style="font-weight:700">'+r.n+'</td><td><strong style="color:var(--green)">'+r.hd+'</strong></td><td class="r">'+hpBar+' '+r.hp+'%</td><td><strong style="color:var(--loss)">'+r.cd+'</strong></td><td class="r" style="color:var(--dim)">'+r.cp+'%</td><td>'+sigBadge+'</td></tr>';
+  }).join('');
+  tbody.innerHTML = html;
+}
+
+// ── TREND TABLE ───────────────────────────────────────
+function buildMiTrend() {
+  var tbody = g('miTrendBody'); if (!tbody) return;
+  var rows = [];
+  IDX.forEach(function(ix) {
+    var s = ST[ix.s]; if (!s || s.prices.length < 20) return;
+    var prices = s.prices;
+    var last20 = prices.slice(-20);
+    var fr = s.freq; var tot = fr.reduce(function(a,b){return a+b;},0) || 1;
+    var rising = 0, falling = 0, unchanged = 0;
+    for (var i = 1; i < last20.length; i++) {
+      if (last20[i] > last20[i-1]) rising++;
+      else if (last20[i] < last20[i-1]) falling++;
+      else unchanged++;
+    }
+    var rPct = Math.round(rising/19*1000)/10;
+    var fPct = Math.round(falling/19*1000)/10;
+    var dir = rPct > 55 ? 'UP' : fPct > 55 ? 'DOWN' : 'FLAT';
+    var dirCol = dir === 'UP' ? 'var(--profit)' : dir === 'DOWN' ? 'var(--loss)' : 'var(--yellow)';
+    var dirArrow = dir === 'UP' ? '&#8679;' : dir === 'DOWN' ? '&#8681;' : '&#8680;';
+    var evenPct = Math.round([0,2,4,6,8].reduce(function(a,d){return a+fr[d];},0)/tot*1000)/10;
+    var oddPct = Math.round(100 - evenPct);
+    rows.push({ n: ix.n, dir: dir, dirCol: dirCol, dirArrow: dirArrow, rPct: rPct, fPct: fPct, evenPct: evenPct, oddPct: oddPct, score: Math.max(rPct, fPct) });
+  });
+  rows.sort(function(a,b){ return b.score - a.score; });
+  var html = rows.map(function(r) {
+    return '<tr><td style="font-weight:700">'+r.n+'</td><td><span style="color:'+r.dirCol+';font-weight:700">'+r.dirArrow+' '+r.dir+'</span></td><td class="r" style="color:var(--profit)">'+r.rPct+'%</td><td class="r" style="color:var(--loss)">'+r.fPct+'%</td><td class="r" style="color:var(--blue)">'+r.evenPct+'%</td><td class="r" style="color:var(--purple)">'+r.oddPct+'%</td></tr>';
+  }).join('');
+  tbody.innerHTML = html;
+}
+
+// Track history load progress
+function onHistoryLoaded(sym) {
+  _miReady++;
+  var badge = g('histLoadBadge');
+  if (badge) {
+    if (_miReady >= IDX.length) {
+      badge.textContent = 'READY';
+      badge.style.background = 'rgba(0,230,118,.1)';
+      badge.style.color = 'var(--green)';
+      badge.style.borderColor = 'rgba(0,230,118,.25)';
+    } else {
+      badge.textContent = _miReady + '/' + IDX.length + ' LOADED';
+    }
+  }
+  sel('liveCnt', _miReady + '/' + IDX.length);
+  updateMktIntel();
+}
+// ══════════════════════════════════════════════════════
+// END MARKET INTELLIGENCE ENGINE
+// ══════════════════════════════════════════════════════
+
+// ── HISTORY PRELOAD ─────────────────────────────────
+function onHistory(sym, history) {
+  if (!sym || !history || !history.prices) return;
+  var s = ST[sym]; if (!s) return;
+  var prices = history.prices;
+  var times = history.times || [];
+  var dp = (IDX.find(function(i){return i.s===sym;})||{dp:3}).dp;
+  // Process all historical ticks
+  for (var i = 0; i < prices.length; i++) {
+    var p = parseFloat(prices[i]);
+    if (isNaN(p)) continue;
+    var d = parseInt(p.toFixed(dp).slice(-1));
+    s.prices.push(p);
+    s.digits.push(d);
+    if (s.digits.length > s.db) { var r=s.digits.shift(); s.freq[r]=Math.max(0,s.freq[r]-1); }
+    s.freq[d]++;
+    s.last = p;
+    s.ticks++;
+    totalTicks++;
+  }
+  s.conn = true;
+  // Update tick count display
+  var tc = g('tickCount');
+  if (tc) { tc.textContent = totalTicks.toLocaleString(); tc.style.color = totalTicks < 500 ? 'var(--loss)' : totalTicks < 1000 ? 'var(--yellow)' : 'var(--green)'; }
+  // Trigger SIL calibration with preloaded data
+  if (!SIL.cal) silCalib(sym);
+  // Update analysis displays
+  _anaCache[sym] = null; // clear cache to force recalc
+  try { updateRow(sym); updateDC(sym); } catch(e) {}
+  updateMktIntel();
+  var ix = IDX.find(function(i){return i.s===sym;});
+  log('pi','[HIST] '+ix.n+': '+prices.length+' ticks loaded','info');
+  onHistoryLoaded(sym);
+  // Check if all markets loaded
+  var loaded = IDX.filter(function(i){return ST[i.s].ticks>0;}).length;
+  if (loaded === IDX.length) {
+    log('pi','[HIST] All '+loaded+' markets ready. Analysis live.','success');
+    silUpdate(); silBar(); updateSum(); updateMktIntel();
+  }
+}
+
 function onTick(tk){
   var s=ST[tk.symbol];if(!s)return;_lastMsg=Date.now();
   var p=parseFloat(tk.quote);var d=parseInt(String(Math.round(p*100)).slice(-1));
