@@ -951,23 +951,49 @@ function findBest(minScore,tgt){
     var s=ST[sym],ix=IDX.find(function(i){return i.s===sym;});
     if(!s||!s.conn||s.digits.length<(ix?ix.mt:60))return null;
     try{
-      // Use shared ANA cache - single source of truth
       var a=ANA[sym]||ana(sym);
-      if(!a.isCon||a.grade==='SKIP'||a.grade==='C')return null;
-      if(a.score<minScore||!a.chi2sig||!a.hotRecent)return null;
+      // Gate 1: must be consolidating
+      if(!a.isCon)return null;
+      // Gate 2: hot digit must be >= 15% (fresh and active)
       if(a.rawHP<15)return null;
-      return{sym:sym,a:a,score:a.score+(a.grade==='A'?20:0)+a.hotRecentPct*0.5};
+      // Gate 3: hot digit must NOT be fading (recent >= prev)
+      // Use hotRecentPct from analysis - if digit appeared in last 20 ticks
+      if(a.hotRecentPct<10)return null;
+      // Gate 4: score threshold (relaxed - skip only SKIP grade)
+      if(a.grade==='SKIP')return null;
+      if(a.score<minScore)return null;
+      // Analysis tab signal alignment - difRec drives the decision
+      var sigStrength = a.difRec.c==='sb'?30 : a.difRec.c==='by'?15 : 0;
+      return{sym:sym,a:a,score:a.score+sigStrength+a.hotRecentPct*0.5};
     }catch(e){return null;}
   };
-  if(tgt&&tgt!=='AUTO'){return check(tgt);}
-  var best=null,bs=0;IDX.forEach(function(ix){try{var r=check(ix.s);if(r&&r.score>bs){bs=r.score;best=r;}}catch(e){}});
-  return best&&best.score>=minScore?best:null;
+  if(tgt&&tgt!=='AUTO'){
+    var r=check(tgt);
+    // Selected market: even if score low, fire if rawHP >= 15% and isCon
+    if(!r){
+      var s=ST[tgt],ix=IDX.find(function(i){return i.s===tgt;});
+      if(s&&s.conn&&s.digits.length>=(ix?ix.mt:60)){
+        try{
+          var a=ANA[tgt]||ana(tgt);
+          if(a.isCon&&a.rawHP>=15){
+            return{sym:tgt,a:a,score:a.score};
+          }
+        }catch(e){}
+      }
+    }
+    return r;
+  }
+  var best=null,bs=0;
+  IDX.forEach(function(ix){try{var r=check(ix.s);if(r&&r.score>bs){bs=r.score;best=r;}}catch(e){}});
+  return best;
 }
-function findRec(recMode,lockedDir){
+
+function findRec(recMode,lockedDir,lockedSym){
   var isO1U8=recMode==='O1U8',isO3U6=recMode==='O3U6';
   var overMin=isO1U8?2:isO3U6?4:3,underMax=isO1U8?7:isO3U6?5:6;
   var best=null,bs=0;
-  IDX.forEach(function(ix){
+  var _recList=lockedSym?IDX.filter(function(i){return i.s===lockedSym;}):IDX;
+  _recList.forEach(function(ix){
     var s=ST[ix.s];if(!s||!s.conn||s.digits.length<ix.mt)return;
     try{
       var a=ana(ix.s);if(!a.isCon||a.grade==='SKIP')return;
@@ -1066,18 +1092,47 @@ function findEO(minLean,tgt){
   var check=function(sym){
     var s=ST[sym],ix=IDX.find(function(i){return i.s===sym;});
     if(!s||!s.conn||s.digits.length<(ix?ix.mt:60))return null;
-    var a=ANA[sym]||ana(sym);if(!a.isCon||!a.chi2sig)return null;
-    var dir=a.ep>=a.op?'EVEN':'ODD';var leanPct=Math.max(a.ep,a.op);if(leanPct<minLean)return null;
-    var fresh=checkEOFresh(sym,dir);if(!fresh.ok)return null;if(fresh.rPct<minLean-3)return null;
+    var a=ANA[sym]||ana(sym);
+    if(!a.isCon)return null;
+    var dir=a.ep>=a.op?'EVEN':'ODD';
+    var leanPct=Math.max(a.ep,a.op);
+    // Use analysis tab signal - eoRec drives decision
+    var sigOk=a.eoRec.c==='sb'||a.eoRec.c==='by';
+    if(!sigOk&&leanPct<minLean)return null;
+    // Allow if analysis tab shows signal even if lean slightly below threshold
+    var effectiveLean=sigOk?Math.max(leanPct,minLean-3):leanPct;
+    if(effectiveLean<minLean-3)return null;
+    // Fresh check - relaxed: just confirm recent ticks align
+    var fresh=checkEOFresh(sym,dir);
+    if(fresh.delta<-5)return null; // only block if momentum strongly against
     var ev=silEV(sym);if(ev.bad)return null;
-    return{sym:sym,dir:dir,lean:Math.round(leanPct*10)/10,fresh:fresh,score:leanPct+(a.score/10)+(fresh.delta>0?10:0)};
+    var sigBonus=a.eoRec.c==='sb'?20:a.eoRec.c==='by'?10:0;
+    return{sym:sym,dir:dir,lean:Math.round(leanPct*10)/10,fresh:fresh,
+      score:leanPct+(a.score/10)+(fresh.delta>0?8:0)+sigBonus};
   };
-  if(tgt&&tgt!=='AUTO'){try{return check(tgt);}catch(e){return null;}}
-  var best=null,bs=0;IDX.forEach(function(ix){try{var r=check(ix.s);if(r&&r.score>bs){bs=r.score;best=r;}}catch(e){}});
+  if(tgt&&tgt!=='AUTO'){
+    try{
+      var r=check(tgt);
+      // Selected: fire even if lean below threshold if analysis shows signal
+      if(!r){
+        var s=ST[tgt];
+        if(s&&s.conn&&s.digits.length>=(IDX.find(function(i){return i.s===tgt;})||{mt:60}).mt){
+          var a=ANA[tgt]||ana(tgt);
+          if(a&&a.isCon&&(a.eoRec.c==='sb'||a.eoRec.c==='by')){
+            var dir=a.ep>=a.op?'EVEN':'ODD';
+            var fresh=checkEOFresh(tgt,dir);
+            if(fresh.delta>=-5)return{sym:tgt,dir:dir,lean:Math.round(Math.max(a.ep,a.op)*10)/10,fresh:fresh,score:50+a.score/10};
+          }
+        }
+      }
+      return r;
+    }catch(e){return null;}
+  }
+  var best=null,bs=0;
+  IDX.forEach(function(ix){try{var r=check(ix.s);if(r&&r.score>bs){bs=r.score;best=r;}}catch(e){}});
   return best;
 }
 
-// STAKE - full martingale all modes: S1=base, S2=base*mult, S3=S2*mult...
 function calcStake(step,base,mult){
   if(step===0)return base;
   var s=base;for(var i=0;i<step;i++)s=Math.round(s*mult*100)/100;return s;
@@ -1151,7 +1206,7 @@ function piTick(sym){
   setState('scanning');
   var minScore=getAdaptedThreshold('pioneer','minScore',parseInt(gv('piMinScore'))||50);
   if(AI.piStep===0){
-    var mkt=findBest(minScore,gv('piIndex')||'AUTO');
+    var _piIdx=gv('piIndex')||'AUTO';AI.piLockedSym=_piIdx!=='AUTO'?_piIdx:null;var mkt=findBest(minScore,_piIdx);
     if(!mkt){
       if(AI.piWaitSince===0)AI.piWaitSince=Date.now();
       if(Date.now()-AI.piWaitSince>90000){AI.piNoSigPause=Date.now()+300000;AI.piWaitSince=0;log('pi','No signal 90s - pausing 5min','warn');pushErr('info','Pioneer paused','');}
@@ -1180,7 +1235,9 @@ function piTick(sym){
   } else {
     if(AI.piFireAt>0&&Date.now()<AI.piFireAt){setState('waiting');return;}AI.piFireAt=0;
     var recMode=gv('piRecovery')||'O2U7';
-    var rec=findRec(recMode,AI.piStep>=2?AI.piDir:null);
+    // If market selected: lock recovery to same market
+    var _piLocked=AI.piLockedSym;
+    var rec=findRec(recMode,AI.piStep>=2?AI.piDir:null,_piLocked);
     if(!rec){setState('waiting');waitLog('S'+(AI.piStep+1)+' scanning...');return;}
     if(AI.piStep===1&&rec.direction)AI.piDir=rec.direction;
     var prev=AI.piLastCand;
@@ -1294,7 +1351,8 @@ function bbTick(sym){
     var ld=s4.digits[s4.digits.length-1];AI.bbLastDig=ld;AI.bbActiveSym=activeSym;
     var ix4=IDX.find(function(i){return i.s===activeSym;});
     var stake=parseFloat(gv('bbStake'))||1;
-    log('bb','BB S1 | '+ix4.n+' | DIFF d.'+ld+' | $'+stake.toFixed(2),'info');
+    var _bbIdx=gv('bbIndex')||'AUTO';AI.bbLockedSym=_bbIdx!=='AUTO'?activeSym:null;
+    log('bb','BB S1'+(AI.bbLockedSym?' [LOCKED]':'')+' | '+ix4.n+' | DIFF d.'+ld+' | $'+stake.toFixed(2),'info');
     AI._lastPiScore=null;AI._lastHotPct=null;AI._lastRSI=null;AI._lastBBW=null;AI._lastLean=null;AI._lastTicksSurvived=null;
     ladState('bb',0,true);lastTradeTime=now;
     placeTrade(activeSym,'DIGITDIFF',stake,ld,'DIFF d.'+ld,'boyboy');
@@ -1302,7 +1360,9 @@ function bbTick(sym){
     var bbRec=gv('bbRec')||'O2U7';var isO1=bbRec==='O1U8',isO3=bbRec==='O3U6';
     var oMin=isO1?2:isO3?4:3,uMax=isO1?7:isO3?5:6;
     var bestR=null,bk=0;
-    IDX.forEach(function(ix5){
+    // If market selected: lock recovery to same market
+    var _bbLockList=AI.bbLockedSym?IDX.filter(function(i){return i.s===AI.bbLockedSym;}):IDX;
+    _bbLockList.forEach(function(ix5){
       var s5=ST[ix5.s];if(!s5||!s5.conn||s5.digits.length<ix5.mt)return;
       var bDir=AI.bbDir||(s5.digits.filter(function(d){return d>=oMin;}).length/s5.digits.length>=0.5?'OVER':'UNDER');
       var allDig=s5.digits;
@@ -1337,7 +1397,8 @@ function eoTick(){
   if(EQ.eoS<=-sl){log('eo','EO SL hit','danger');stopMode();return;}
   setState('scanning');
   var minLean=getAdaptedThreshold('evenodd','minLean',parseFloat(gv('eoLean'))||57);
-  var mkt=findEO(minLean,gv('eoIndex')||'AUTO');
+  var _eoIdx=gv('eoIndex')||'AUTO';AI.eoLockedSym=_eoIdx!=='AUTO'?_eoIdx:null;
+  var mkt=findEO(minLean,AI.eoStep>0&&AI.eoLockedSym?AI.eoLockedSym:_eoIdx);
   if(!mkt){
     if(AI.eoWaitSince===0)AI.eoWaitSince=Date.now();
     if(Date.now()-AI.eoWaitSince>90000){AI.eoPauseUntil=Date.now()+300000;AI.eoWaitSince=0;log('eo','EO no signal - pausing','warn');}
@@ -1349,13 +1410,10 @@ function eoTick(){
   var mdEl=g('eoMomD');if(mdEl){var dt=mkt.fresh.delta;mdEl.textContent=(dt>=3?'RISE':dt<=-3?'FADE':'HOLD')+' '+dt+'%';mdEl.style.color=dt>=3?'var(--green)':dt<=-3?'var(--loss)':'var(--yellow)';}
   var mkEl=g('eoMktD');if(mkEl){var ixE=IDX.find(function(i){return i.s===mkt.sym;});mkEl.textContent=ixE?ixE.n:mkt.sym;}
   if(AI.eoStep===0){
-    var prev=AI.eoLastCand;var same=prev&&prev.sym===mkt.sym&&prev.dir===mkt.dir;
-    if(same)AI.eoConfirm++;else AI.eoConfirm=1;
+    // No confirm delay - analysis tab signal is sufficient
     AI.eoLastCand={sym:mkt.sym,dir:mkt.dir};
-    if(AI.eoConfirm<2){setState('waiting');log('eo','EO confirming ('+AI.eoConfirm+'/2)...','warn');return;}
-    AI.eoConfirm=0;AI.eoLastCand=null;
   }
-  AI.eoDir=mkt.dir; // re-scan direction each step - no lock
+  AI.eoDir=mkt.dir;AI.eoLockedSym=mkt.sym; // lock market for chain
   var ix7=IDX.find(function(i){return i.s===mkt.sym;});
   var base4=parseFloat(gv('eoStake'))||1,mult4=parseFloat(gv('eoMult'))||2.1;
   var _eoBaseStake=calcStake(AI.eoStep,base4,mult4);
@@ -1542,10 +1600,10 @@ function stopMode(){
 function resetAll(){
   stopMode();
   AI.wins=0;AI.losses=0;AI.totalPnl=0;AI.sessPnl=0;AI.consecLoss=0;AI.inTrade=false;AI.pendingResult=false;AI.activeCid=null;
-  AI.piStep=0;AI.piDir=null;AI.piConfirm=0;AI.piLastCand=null;AI.piFireAt=0;AI.piWaitSince=0;AI.piPauseUntil=0;AI.piNoSigPause=0;AI.piTrigLogT=0;
+  AI.piStep=0;AI.piDir=null;AI.piConfirm=0;AI.piLastCand=null;AI.piFireAt=0;AI.piWaitSince=0;AI.piPauseUntil=0;AI.piNoSigPause=0;AI.piTrigLogT=0;AI.piLockedSym=null;
   AI.pwStep=0;AI.pwDir=null;AI.pwPrev=null;AI.pwWaitSince=0;AI.pwPauseUntil=0;AI.pwLastLost=null;AI.pwSelectedSym=null;
-  AI.bbStep=0;AI.bbDir=null;AI.bbLastDig=null;AI.bbPauseUntil=0;
-  AI.eoStep=0;AI.eoDir=null;AI.eoConfirm=0;AI.eoLastCand=null;AI.eoWaitSince=0;AI.eoPauseUntil=0;AI.acActiveCid=null;AI.acTicks=0;AI.acEntryStake=0;AI.acPauseUntil=0;AI.acWaitSince=0;AI.acRuns=0;AI._cashoutRetryTimer=null;
+  AI.bbStep=0;AI.bbDir=null;AI.bbLastDig=null;AI.bbPauseUntil=0;AI.bbLockedSym=null;
+  AI.eoStep=0;AI.eoDir=null;AI.eoConfirm=0;AI.eoLastCand=null;AI.eoWaitSince=0;AI.eoPauseUntil=0;AI.eoLockedSym=null;AI.acActiveCid=null;AI.acTicks=0;AI.acEntryStake=0;AI.acPauseUntil=0;AI.acWaitSince=0;AI.acRuns=0;AI._cashoutRetryTimer=null;
   EQ.pi=[0];EQ.pw=[0];EQ.bb=[0];EQ.eo=[0];EQ.ac=[0];EQ.piS=0;EQ.pwS=0;EQ.bbS=0;EQ.eoS=0;EQ.acS=0;
   _trades=0;_tPnl=0;
   g('tlogBody').innerHTML='';sel('tlogCnt','0 trades');
