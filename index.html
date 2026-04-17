@@ -1,188 +1,1527 @@
 <!DOCTYPE html>
-<html>
-<head>
-  <title>Business Management System</title>
-  <style>
-    body { font-family: Arial; margin: 20px; }
-    input, button, select { margin: 5px; padding: 5px; }
-    .hidden { display: none; }
-    .card { border: 1px solid #ccc; padding: 10px; margin: 10px 0; }
-  </style>
-</head>
 
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>JSRUAH HOME — Business Management System</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg: #0a0d14;
+  --surface: #111520;
+  --surface2: #181d2e;
+  --surface3: #1e2438;
+  --border: #272f47;
+  --border2: #303a5a;
+  --accent: #4f8ef7;
+  --accent2: #7b61ff;
+  --accent3: #00d4aa;
+  --accent4: #f7934f;
+  --danger: #f74f6a;
+  --warn: #f7c94f;
+  --text: #e8ecf8;
+  --text2: #9ba3c0;
+  --text3: #6470a0;
+  --gold: #d4a84b;
+  --green: #3dd68c;
+  --radius: 12px;
+  --radius2: 8px;
+  --shadow: 0 4px 24px rgba(0,0,0,0.4);
+  --shadow2: 0 2px 12px rgba(0,0,0,0.3);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);font-size:14px;overflow:hidden}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:var(--surface)}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+
+/* ─── LOGIN ─── */
+#loginPage{position:fixed;inset:0;background:linear-gradient(135deg,#0a0d14 0%,#0d1226 50%,#0a1420 100%);display:flex;align-items:center;justify-content:center;z-index:1000}
+#loginPage::before{content:’’;position:absolute;inset:0;background:radial-gradient(ellipse 60% 50% at 50% 30%,rgba(79,142,247,.08) 0%,transparent 70%)}
+.login-card{width:420px;background:var(–surface);border:1px solid var(–border);border-radius:20px;padding:48px 40px;position:relative;overflow:hidden}
+.login-card::before{content:’’;position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(–accent),var(–accent2),var(–accent3))}
+.login-logo{text-align:center;margin-bottom:36px}
+.login-logo .brand{font-family:‘Syne’,sans-serif;font-size:28px;font-weight:800;letter-spacing:-0.5px;background:linear-gradient(135deg,#fff 40%,var(–accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.login-logo .sub{font-size:12px;color:var(–text3);letter-spacing:2px;text-transform:uppercase;margin-top:4px}
+.login-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(212,168,75,.1);border:1px solid rgba(212,168,75,.2);border-radius:20px;padding:4px 12px;font-size:11px;color:var(–gold);letter-spacing:1px;margin-bottom:32px}
+.role-tabs{display:flex;gap:8px;margin-bottom:24px}
+.role-tab{flex:1;padding:10px;border:1px solid var(–border);border-radius:var(–radius2);background:transparent;color:var(–text2);font-family:‘DM Sans’,sans-serif;font-size:13px;cursor:pointer;transition:all .2s}
+.role-tab.active{background:var(–accent);border-color:var(–accent);color:#fff}
+.field-group{margin-bottom:16px}
+.field-group label{display:block;font-size:12px;color:var(–text2);margin-bottom:6px;letter-spacing:.5px}
+.field-group input,select,textarea{width:100%;background:var(–surface2);border:1px solid var(–border);border-radius:var(–radius2);padding:11px 14px;color:var(–text);font-family:‘DM Sans’,sans-serif;font-size:14px;outline:none;transition:border-color .2s}
+.field-group input:focus,.field-group select:focus,.field-group textarea:focus{border-color:var(–accent)}
+.btn-primary{width:100%;padding:13px;background:linear-gradient(135deg,var(–accent),var(–accent2));border:none;border-radius:var(–radius2);color:#fff;font-family:‘Syne’,sans-serif;font-size:14px;font-weight:700;letter-spacing:.5px;cursor:pointer;transition:opacity .2s;margin-top:8px}
+.btn-primary:hover{opacity:.88}
+.login-hint{text-align:center;font-size:12px;color:var(–text3);margin-top:20px}
+
+/* ─── APP SHELL ─── */
+#app{display:none;height:100vh;flex-direction:row}
+/* sidebar */
+.sidebar{width:240px;min-width:240px;background:var(–surface);border-right:1px solid var(–border);display:flex;flex-direction:column;height:100vh;overflow-y:auto}
+.sidebar-head{padding:20px 20px 16px;border-bottom:1px solid var(–border)}
+.sidebar-brand{font-family:‘Syne’,sans-serif;font-size:16px;font-weight:800;background:linear-gradient(135deg,#fff,var(–accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.sidebar-sub{font-size:10px;color:var(–text3);letter-spacing:1.5px;text-transform:uppercase;margin-top:2px}
+.sidebar-user{display:flex;align-items:center;gap:10px;padding:14px 20px;border-bottom:1px solid var(–border);background:var(–surface2)}
+.user-avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(–accent),var(–accent2));display:flex;align-items:center;justify-content:center;font-family:‘Syne’,sans-serif;font-size:13px;font-weight:700;color:#fff;flex-shrink:0}
+.user-name{font-size:13px;font-weight:600;color:var(–text)}
+.user-role{font-size:10px;color:var(–accent);letter-spacing:.5px;text-transform:uppercase}
+nav{flex:1;padding:12px 0}
+.nav-section{padding:0 12px;margin-bottom:4px}
+.nav-section-label{font-size:10px;color:var(–text3);letter-spacing:1.5px;text-transform:uppercase;padding:8px 8px 4px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(–radius2);cursor:pointer;transition:all .15s;color:var(–text2);font-size:13px;font-weight:500;margin-bottom:1px}
+.nav-item:hover{background:var(–surface2);color:var(–text)}
+.nav-item.active{background:rgba(79,142,247,.12);color:var(–accent);border-left:2px solid var(–accent)}
+.nav-icon{font-size:15px;width:20px;text-align:center}
+.sidebar-foot{padding:16px;border-top:1px solid var(–border)}
+.btn-logout{width:100%;padding:9px;background:transparent;border:1px solid var(–border);border-radius:var(–radius2);color:var(–text3);cursor:pointer;font-size:13px;transition:all .2s}
+.btn-logout:hover{border-color:var(–danger);color:var(–danger)}
+
+/* ─── MAIN ─── */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:0 28px;height:60px;border-bottom:1px solid var(–border);background:var(–surface);flex-shrink:0}
+.page-title{font-family:‘Syne’,sans-serif;font-size:18px;font-weight:700}
+.topbar-right{display:flex;align-items:center;gap:16px}
+.topbar-date{font-size:12px;color:var(–text3);font-family:‘JetBrains Mono’,monospace}
+.badge-notif{background:var(–danger);color:#fff;border-radius:50%;width:18px;height:18px;font-size:10px;display:flex;align-items:center;justify-content:center}
+.content{flex:1;overflow-y:auto;padding:28px}
+
+/* ─── PAGES ─── */
+.page{display:none}
+.page.active{display:block}
+
+/* ─── STATS CARDS ─── */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px}
+.stat-card{background:var(–surface);border:1px solid var(–border);border-radius:var(–radius);padding:20px;position:relative;overflow:hidden}
+.stat-card::after{content:’’;position:absolute;top:0;right:0;width:60px;height:60px;border-radius:50%;opacity:.06;background:var(–c)}
+.stat-card .sc-label{font-size:11px;color:var(–text3);letter-spacing:.8px;text-transform:uppercase;margin-bottom:8px}
+.stat-card .sc-val{font-family:‘Syne’,sans-serif;font-size:26px;font-weight:700;color:var(–text)}
+.stat-card .sc-sub{font-size:12px;color:var(–text2);margin-top:4px}
+.stat-card .sc-icon{position:absolute;top:16px;right:16px;font-size:22px;opacity:.7}
+
+/* ─── TABLES ─── */
+.card{background:var(–surface);border:1px solid var(–border);border-radius:var(–radius);overflow:hidden;margin-bottom:20px}
+.card-head{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(–border)}
+.card-title{font-family:‘Syne’,sans-serif;font-size:14px;font-weight:700}
+.card-actions{display:flex;gap:8px}
+.btn{padding:8px 16px;border-radius:var(–radius2);font-family:‘DM Sans’,sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;border:none;display:inline-flex;align-items:center;gap:6px}
+.btn-sm{padding:5px 11px;font-size:12px}
+.btn-accent{background:var(–accent);color:#fff}
+.btn-accent:hover{opacity:.85}
+.btn-ghost{background:transparent;border:1px solid var(–border);color:var(–text2)}
+.btn-ghost:hover{border-color:var(–border2);color:var(–text)}
+.btn-danger{background:rgba(247,79,106,.12);border:1px solid rgba(247,79,106,.25);color:var(–danger)}
+.btn-danger:hover{background:rgba(247,79,106,.22)}
+.btn-success{background:rgba(61,214,140,.1);border:1px solid rgba(61,214,140,.25);color:var(–green)}
+.btn-warn{background:rgba(247,201,79,.1);border:1px solid rgba(247,201,79,.25);color:var(–warn)}
+table{width:100%;border-collapse:collapse}
+thead tr{background:var(–surface2)}
+th{padding:11px 16px;text-align:left;font-size:11px;color:var(–text3);font-weight:600;letter-spacing:.8px;text-transform:uppercase;border-bottom:1px solid var(–border)}
+td{padding:12px 16px;border-bottom:1px solid var(–border);font-size:13px;color:var(–text2)}
+td:first-child{color:var(–text);font-weight:500}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(–surface2)}
+.badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
+.badge-green{background:rgba(61,214,140,.1);color:var(–green)}
+.badge-red{background:rgba(247,79,106,.1);color:var(–danger)}
+.badge-blue{background:rgba(79,142,247,.1);color:var(–accent)}
+.badge-gold{background:rgba(212,168,75,.1);color:var(–gold)}
+.badge-warn{background:rgba(247,201,79,.1);color:var(–warn)}
+.badge-purple{background:rgba(123,97,255,.1);color:var(–accent2)}
+
+/* ─── SEARCH BAR ─── */
+.search-bar{display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap}
+.search-input{flex:1;min-width:200px;background:var(–surface2);border:1px solid var(–border);border-radius:var(–radius2);padding:9px 14px;color:var(–text);font-family:‘DM Sans’,sans-serif;font-size:13px;outline:none}
+.search-input:focus{border-color:var(–accent)}
+select{background:var(–surface2);border:1px solid var(–border);border-radius:var(–radius2);padding:9px 14px;color:var(–text);font-family:‘DM Sans’,sans-serif;font-size:13px;outline:none;cursor:pointer}
+select:focus{border-color:var(–accent)}
+
+/* ─── MODAL ─── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:500;display:none;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.open{display:flex}
+.modal{background:var(–surface);border:1px solid var(–border);border-radius:16px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;position:relative}
+.modal-head{padding:20px 24px 16px;border-bottom:1px solid var(–border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(–surface);z-index:1}
+.modal-title{font-family:‘Syne’,sans-serif;font-size:16px;font-weight:700}
+.modal-close{background:transparent;border:none;color:var(–text3);font-size:20px;cursor:pointer;line-height:1;padding:4px}
+.modal-close:hover{color:var(–text)}
+.modal-body{padding:24px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.form-group{margin-bottom:14px}
+.form-group label{display:block;font-size:12px;color:var(–text2);margin-bottom:5px}
+.form-group input,.form-group select,.form-group textarea{width:100%;background:var(–surface2);border:1px solid var(–border);border-radius:var(–radius2);padding:10px 12px;color:var(–text);font-family:‘DM Sans’,sans-serif;font-size:13px;outline:none;transition:border-color .2s}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(–accent)}
+.form-group textarea{resize:vertical;min-height:80px}
+.modal-foot{padding:16px 24px;border-top:1px solid var(–border);display:flex;justify-content:flex-end;gap:10px;position:sticky;bottom:0;background:var(–surface)}
+
+/* ─── ACCOUNTING ─── */
+.acc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px}
+.acc-card{background:var(–surface);border:1px solid var(–border);border-radius:var(–radius);padding:20px;text-align:center}
+.acc-card .av{font-family:‘Syne’,sans-serif;font-size:24px;font-weight:700;margin-bottom:4px}
+.acc-card .al{font-size:11px;color:var(–text3);letter-spacing:.8px;text-transform:uppercase}
+.profit-pos{color:var(–green)}
+.profit-neg{color:var(–danger)}
+.divider{height:1px;background:var(–border);margin:20px 0}
+
+/* ─── LIPA POLE POLE ─── */
+.lpp-progress{width:100%;height:6px;background:var(–surface2);border-radius:3px;overflow:hidden}
+.lpp-bar{height:100%;border-radius:3px;background:linear-gradient(90deg,var(–accent3),var(–accent));transition:width .3s}
+
+/* ─── EMPTY STATE ─── */
+.empty-state{text-align:center;padding:60px 20px;color:var(–text3)}
+.empty-state .es-icon{font-size:40px;margin-bottom:12px;opacity:.4}
+.empty-state p{font-size:14px}
+
+/* ─── TOAST ─── */
+#toast{position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:8px}
+.toast-item{background:var(–surface);border:1px solid var(–border);border-radius:var(–radius2);padding:12px 16px;min-width:260px;font-size:13px;animation:slideUp .2s ease;box-shadow:var(–shadow)}
+.toast-item.success{border-left:3px solid var(–green)}
+.toast-item.error{border-left:3px solid var(–danger)}
+.toast-item.info{border-left:3px solid var(–accent)}
+@keyframes slideUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+/* ─── CHARTS ─── */
+.mini-chart{height:60px;position:relative;overflow:hidden}
+canvas.spark{width:100%!important;height:60px!important}
+
+/* ─── SCROLLABLE TABLE ─── */
+.table-wrap{overflow-x:auto}
+
+/* ─── RESPONSIVE ADJUSTMENTS ─── */
+@media(max-width:900px){
+.stats-grid{grid-template-columns:1fr 1fr}
+.acc-grid{grid-template-columns:1fr 1fr}
+.sidebar{width:200px;min-width:200px}
+}
+
+.amount-ksh{font-family:‘JetBrains Mono’,monospace;font-size:13px}
+.text-green{color:var(–green)}
+.text-red{color:var(–danger)}
+.text-gold{color:var(–gold)}
+.text-accent{color:var(–accent)}
+.text-muted{color:var(–text3)}
+.fw700{font-weight:700}
+
+/* Tabs */
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(–border);margin-bottom:20px}
+.tab{padding:10px 18px;font-size:13px;font-weight:500;color:var(–text3);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s}
+.tab.active{color:var(–accent);border-bottom-color:var(–accent)}
+.tab:hover:not(.active){color:var(–text)}
+.tab-pane{display:none}.tab-pane.active{display:block}
+
+/* Summary row */
+.summary-row{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:20px}
+.summary-pill{background:var(–surface2);border:1px solid var(–border);border-radius:8px;padding:8px 16px;font-size:12px;color:var(–text2)}
+.summary-pill span{font-family:‘JetBrains Mono’,monospace;font-weight:600;color:var(–text);margin-left:6px}
+</style>
+
+</head>
 <body>
 
-<h2>🔐 Login</h2>
-<div id="login">
-  <input id="username" placeholder="Username">
-  <input id="password" type="password" placeholder="Password">
-  <button onclick="login()">Login</button>
+<!-- ═══════════════ LOGIN ═══════════════ -->
+
+<div id="loginPage">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="brand">JSRUAH HOME</div>
+      <div class="sub">Business Management System</div>
+    </div>
+    <div style="text-align:center;margin-bottom:24px">
+      <div class="login-badge">⭐ PREMIUM EDITION</div>
+    </div>
+    <div class="role-tabs">
+      <button class="role-tab active" onclick="setRole('manager')">👔 Manager</button>
+      <button class="role-tab" onclick="setRole('agent')">🧑‍💼 Sales Agent</button>
+    </div>
+    <div class="field-group">
+      <label>USERNAME</label>
+      <input id="loginUser" type="text" placeholder="Enter username"/>
+    </div>
+    <div class="field-group">
+      <label>PASSWORD</label>
+      <input id="loginPass" type="password" placeholder="Enter password"/>
+    </div>
+    <button class="btn-primary" onclick="doLogin()">SIGN IN →</button>
+    <div class="login-hint">Manager: admin / admin123 &nbsp;|&nbsp; Agent: agent / agent123</div>
+  </div>
 </div>
 
-<div id="app" class="hidden">
+<!-- ═══════════════ APP ═══════════════ -->
 
-<h2>📦 Inventory</h2>
-<div class="card">
-  <input id="pname" placeholder="Product Name">
-  <input id="pprice" placeholder="Selling Price">
-  <button onclick="addProduct()">Add Product</button>
+<div id="app">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-head">
+      <div class="sidebar-brand">JSRUAH HOME</div>
+      <div class="sidebar-sub">BMS Premium</div>
+    </div>
+    <div class="sidebar-user">
+      <div class="user-avatar" id="sideAvatar">M</div>
+      <div>
+        <div class="user-name" id="sideUser">Manager</div>
+        <div class="user-role" id="sideRole">Manager</div>
+      </div>
+    </div>
+    <nav>
+      <div class="nav-section">
+        <div class="nav-section-label">Overview</div>
+        <div class="nav-item active" onclick="nav('dashboard')"><span class="nav-icon">📊</span>Dashboard</div>
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-label">Operations</div>
+        <div class="nav-item" onclick="nav('inventory')"><span class="nav-icon">📦</span>Inventory</div>
+        <div class="nav-item" onclick="nav('sales')"><span class="nav-icon">🛒</span>Sales</div>
+        <div class="nav-item" onclick="nav('purchases')"><span class="nav-icon">🚚</span>Purchases</div>
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-label">Finance</div>
+        <div class="nav-item manager-only" onclick="nav('accounting')"><span class="nav-icon">📒</span>Accounting</div>
+        <div class="nav-item manager-only" onclick="nav('expenses')"><span class="nav-icon">💸</span>Expenses</div>
+        <div class="nav-item" onclick="nav('lpp')"><span class="nav-icon">📅</span>Lipa Pole Pole</div>
+      </div>
+      <div class="nav-section manager-only">
+        <div class="nav-section-label">Reports</div>
+        <div class="nav-item" onclick="nav('reports')"><span class="nav-icon">📈</span>Reports</div>
+      </div>
+    </nav>
+    <div class="sidebar-foot">
+      <button class="btn-logout" onclick="doLogout()">⏏ Sign Out</button>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+
+  <div class="main">
+    <div class="topbar">
+      <div class="page-title" id="pageTitle">Dashboard</div>
+      <div class="topbar-right">
+        <div class="topbar-date" id="topDate"></div>
+      </div>
+    </div>
+    <div class="content">
+
+```
+  <!-- ══ DASHBOARD ══ -->
+  <div class="page active" id="page-dashboard">
+    <div class="stats-grid" id="dashStats"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div class="card">
+        <div class="card-head"><div class="card-title">Recent Sales</div><button class="btn btn-sm btn-ghost" onclick="nav('sales')">View All</button></div>
+        <div class="table-wrap"><table><thead><tr><th>Item</th><th>Qty</th><th>Amount</th><th>Date</th></tr></thead><tbody id="dashSales"></tbody></table></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div class="card-title">Low Stock Alert</div></div>
+        <div class="table-wrap"><table><thead><tr><th>Product</th><th>Stock</th><th>Status</th></tr></thead><tbody id="dashLowStock"></tbody></table></div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px">
+      <div class="card">
+        <div class="card-head"><div class="card-title">Pending Lipa Pole Pole</div><button class="btn btn-sm btn-ghost" onclick="nav('lpp')">View All</button></div>
+        <div id="dashLpp"></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div class="card-title">Recent Expenses</div></div>
+        <div class="table-wrap"><table><thead><tr><th>Description</th><th>Amount</th><th>Date</th></tr></thead><tbody id="dashExpenses"></tbody></table></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ INVENTORY ══ -->
+  <div class="page" id="page-inventory">
+    <div class="search-bar">
+      <input class="search-input" id="invSearch" placeholder="🔍  Search products..." oninput="renderInventory()"/>
+      <select id="invCatFilter" onchange="renderInventory()"><option value="">All Categories</option></select>
+      <button class="btn btn-accent" onclick="openModal('invModal')">+ Add Product</button>
+    </div>
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">Product Inventory</div>
+        <div id="invSummary" style="font-size:12px;color:var(--text3)"></div>
+      </div>
+      <div class="table-wrap"><table><thead><tr><th>SKU</th><th>Product Name</th><th>Category</th><th>Qty</th><th>Buy Price</th><th>Sell Price</th><th>Value</th><th>Status</th><th>Actions</th></tr></thead><tbody id="invTable"></tbody></table></div>
+    </div>
+  </div>
+
+  <!-- ══ SALES ══ -->
+  <div class="page" id="page-sales">
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('salesTab','new-sale')">🛒 New Sale</div>
+      <div class="tab" onclick="switchTab('salesTab','sale-history')">📋 Sale History</div>
+    </div>
+    <div id="salesTab">
+      <div class="tab-pane active" id="new-sale">
+        <div style="display:grid;grid-template-columns:1fr 380px;gap:20px">
+          <div>
+            <div class="search-bar">
+              <input class="search-input" id="saleSearch" placeholder="🔍  Search product to add..." oninput="renderSaleItems()"/>
+            </div>
+            <div class="card">
+              <div class="card-head"><div class="card-title">Products</div></div>
+              <div class="table-wrap"><table><thead><tr><th>Product</th><th>Stock</th><th>Price</th><th></th></tr></thead><tbody id="saleItemsTable"></tbody></table></div>
+            </div>
+          </div>
+          <div>
+            <div class="card" style="position:sticky;top:0">
+              <div class="card-head"><div class="card-title">🧾 Sale Cart</div><button class="btn btn-sm btn-danger" onclick="clearCart()">Clear</button></div>
+              <div style="padding:16px">
+                <div id="cartItems"></div>
+                <div class="divider"></div>
+                <div style="margin-bottom:12px">
+                  <div class="form-group">
+                    <label>Customer Name</label>
+                    <input id="saleCustomer" type="text" placeholder="Walk-in Customer"/>
+                  </div>
+                  <div class="form-group">
+                    <label>Payment Method</label>
+                    <select id="salePayment">
+                      <option>Cash</option>
+                      <option>M-Pesa</option>
+                      <option>Bank Transfer</option>
+                      <option>Lipa Pole Pole</option>
+                      <option>Credit</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label>Discount (KSh)</label>
+                    <input id="saleDiscount" type="number" value="0" oninput="updateCartTotal()"/>
+                  </div>
+                </div>
+                <div style="background:var(--surface2);border-radius:8px;padding:14px;margin-bottom:14px">
+                  <div style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:13px"><span style="color:var(--text3)">Subtotal</span><span class="amount-ksh" id="cartSubtotal">KSh 0</span></div>
+                  <div style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:13px"><span style="color:var(--text3)">Discount</span><span class="amount-ksh text-red" id="cartDiscountDisplay">- KSh 0</span></div>
+                  <div class="divider" style="margin:10px 0"></div>
+                  <div style="display:flex;justify-content:space-between"><span style="font-weight:700">TOTAL</span><span class="amount-ksh fw700" id="cartTotal" style="font-size:18px;color:var(--accent)">KSh 0</span></div>
+                </div>
+                <button class="btn btn-accent" style="width:100%" onclick="completeSale()">✓ Complete Sale</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="tab-pane" id="sale-history">
+        <div class="search-bar">
+          <input class="search-input" id="saleHistSearch" placeholder="🔍  Search sales..." oninput="renderSaleHistory()"/>
+          <select id="saleHistFilter" onchange="renderSaleHistory()">
+            <option value="">All Payments</option>
+            <option>Cash</option><option>M-Pesa</option><option>Bank Transfer</option><option>Lipa Pole Pole</option><option>Credit</option>
+          </select>
+        </div>
+        <div id="saleHistSummary" class="summary-row"></div>
+        <div class="card">
+          <div class="card-head"><div class="card-title">Sales History</div></div>
+          <div class="table-wrap"><table><thead><tr><th>#</th><th>Customer</th><th>Items</th><th>Total</th><th>Payment</th><th>Agent</th><th>Date</th><th>Actions</th></tr></thead><tbody id="saleHistTable"></tbody></table></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ PURCHASES ══ -->
+  <div class="page" id="page-purchases">
+    <div class="search-bar">
+      <input class="search-input" id="purSearch" placeholder="🔍  Search purchases..." oninput="renderPurchases()"/>
+      <button class="btn btn-accent" onclick="openModal('purModal')">+ Record Purchase</button>
+    </div>
+    <div id="purSummary" class="summary-row"></div>
+    <div class="card">
+      <div class="card-head"><div class="card-title">Purchase Orders</div></div>
+      <div class="table-wrap"><table><thead><tr><th>#</th><th>Product</th><th>Supplier</th><th>Qty</th><th>Unit Cost</th><th>Total</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead><tbody id="purTable"></tbody></table></div>
+    </div>
+  </div>
+
+  <!-- ══ ACCOUNTING ══ -->
+  <div class="page" id="page-accounting">
+    <div class="acc-grid" id="accCards"></div>
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('accTabs','acc-pl')">📊 P&L Statement</div>
+      <div class="tab" onclick="switchTab('accTabs','acc-cashflow')">💰 Cash Flow</div>
+      <div class="tab" onclick="switchTab('accTabs','acc-ledger')">📒 Ledger</div>
+    </div>
+    <div id="accTabs">
+      <div class="tab-pane active" id="acc-pl">
+        <div class="card">
+          <div class="card-head"><div class="card-title">Profit & Loss Statement</div><div id="plPeriod" style="font-size:12px;color:var(--text3)"></div></div>
+          <div style="padding:20px" id="plContent"></div>
+        </div>
+      </div>
+      <div class="tab-pane" id="acc-cashflow">
+        <div class="card">
+          <div class="card-head"><div class="card-title">Cash Flow Summary</div></div>
+          <div style="padding:20px" id="cfContent"></div>
+        </div>
+      </div>
+      <div class="tab-pane" id="acc-ledger">
+        <div class="card">
+          <div class="card-head"><div class="card-title">General Ledger</div></div>
+          <div class="table-wrap"><table><thead><tr><th>Date</th><th>Description</th><th>Type</th><th>Debit</th><th>Credit</th><th>Balance</th></tr></thead><tbody id="ledgerTable"></tbody></table></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ EXPENSES ══ -->
+  <div class="page" id="page-expenses">
+    <div class="search-bar">
+      <input class="search-input" id="expSearch" placeholder="🔍  Search expenses..." oninput="renderExpenses()"/>
+      <select id="expCatFilter" onchange="renderExpenses()">
+        <option value="">All Categories</option>
+        <option>Rent</option><option>Utilities</option><option>Salaries</option><option>Transport</option><option>Marketing</option><option>Supplies</option><option>Maintenance</option><option>Other</option>
+      </select>
+      <button class="btn btn-accent" onclick="openModal('expModal')">+ Add Expense</button>
+    </div>
+    <div id="expSummary" class="summary-row"></div>
+    <div class="card">
+      <div class="card-head"><div class="card-title">Expense Records</div></div>
+      <div class="table-wrap"><table><thead><tr><th>#</th><th>Description</th><th>Category</th><th>Amount</th><th>Paid Via</th><th>Date</th><th>Actions</th></tr></thead><tbody id="expTable"></tbody></table></div>
+    </div>
+  </div>
+
+  <!-- ══ LIPA POLE POLE ══ -->
+  <div class="page" id="page-lpp">
+    <div class="search-bar">
+      <input class="search-input" id="lppSearch" placeholder="🔍  Search customers..." oninput="renderLpp()"/>
+      <select id="lppFilter" onchange="renderLpp()">
+        <option value="">All Status</option>
+        <option>Active</option><option>Completed</option><option>Overdue</option>
+      </select>
+      <button class="btn btn-accent" onclick="openModal('lppModal')">+ New Installment Plan</button>
+    </div>
+    <div id="lppSummary" class="summary-row"></div>
+    <div id="lppCards"></div>
+  </div>
+
+  <!-- ══ REPORTS ══ -->
+  <div class="page" id="page-reports">
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px">
+      <div class="card" style="cursor:pointer" onclick="genReport('sales')"><div style="padding:24px;text-align:center"><div style="font-size:32px;margin-bottom:10px">📊</div><div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:6px">Sales Report</div><div style="font-size:12px;color:var(--text3)">Revenue, units sold, top products</div></div></div>
+      <div class="card" style="cursor:pointer" onclick="genReport('inventory')"><div style="padding:24px;text-align:center"><div style="font-size:32px;margin-bottom:10px">📦</div><div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:6px">Inventory Report</div><div style="font-size:12px;color:var(--text3)">Stock levels, valuation, movement</div></div></div>
+      <div class="card" style="cursor:pointer" onclick="genReport('profit')"><div style="padding:24px;text-align:center"><div style="font-size:32px;margin-bottom:10px">💰</div><div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:6px">Profit Report</div><div style="font-size:12px;color:var(--text3)">Gross/Net profit, margins</div></div></div>
+    </div>
+    <div id="reportOutput"></div>
+  </div>
+
+</div><!-- /content -->
+```
+
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<!-- ═══════════════ MODALS ═══════════════ -->
+
+<!-- Inventory Modal -->
+
+<div class="modal-overlay" id="invModal">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title" id="invModalTitle">Add Product</div>
+      <button class="modal-close" onclick="closeModal('invModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="invEditId"/>
+      <div class="form-row">
+        <div class="form-group"><label>Product Name *</label><input id="invName" type="text" placeholder="e.g. Ceramic Vase"/></div>
+        <div class="form-group"><label>SKU</label><input id="invSku" type="text" placeholder="Auto-generated"/></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Category *</label>
+          <select id="invCat">
+            <option>Utensils</option><option>Decorative</option><option>Kitchenware</option><option>Furniture</option><option>Textiles</option><option>Electronics</option><option>Other</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Unit</label><input id="invUnit" type="text" placeholder="pcs / set / kg"/></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Buying Price (KSh) *</label><input id="invBuyPrice" type="number" placeholder="0"/></div>
+        <div class="form-group"><label>Selling Price (KSh) *</label><input id="invSellPrice" type="number" placeholder="0"/></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Opening Stock *</label><input id="invQty" type="number" placeholder="0"/></div>
+        <div class="form-group"><label>Low Stock Alert</label><input id="invLow" type="number" placeholder="5"/></div>
+      </div>
+      <div class="form-group"><label>Description</label><textarea id="invDesc" placeholder="Product description..."></textarea></div>
+    </div>
+    <div class="modal-foot"><button class="btn btn-ghost" onclick="closeModal('invModal')">Cancel</button><button class="btn btn-accent" onclick="saveInventory()">Save Product</button></div>
+  </div>
 </div>
 
-<ul id="productList"></ul>
+<!-- Purchase Modal -->
 
-<h2>📥 Purchases (Stock In)</h2>
-<div class="card">
-  <select id="purchaseProduct"></select>
-  <input id="purchaseQty" placeholder="Quantity">
-  <input id="purchaseCost" placeholder="Cost Price">
-  <button onclick="addPurchase()">Add Purchase</button>
+<div class="modal-overlay" id="purModal">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title" id="purModalTitle">Record Purchase</div>
+      <button class="modal-close" onclick="closeModal('purModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="purEditId"/>
+      <div class="form-row">
+        <div class="form-group"><label>Product *</label>
+          <select id="purProduct"></select>
+        </div>
+        <div class="form-group"><label>Supplier</label><input id="purSupplier" type="text" placeholder="Supplier name"/></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Quantity *</label><input id="purQty" type="number" placeholder="0"/></div>
+        <div class="form-group"><label>Unit Cost (KSh) *</label><input id="purCost" type="number" placeholder="0"/></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Date *</label><input id="purDate" type="date"/></div>
+        <div class="form-group"><label>Payment Status</label>
+          <select id="purStatus"><option>Paid</option><option>Pending</option><option>Partial</option></select>
+        </div>
+      </div>
+      <div class="form-group"><label>Notes</label><textarea id="purNotes" placeholder="Any notes..."></textarea></div>
+    </div>
+    <div class="modal-foot"><button class="btn btn-ghost" onclick="closeModal('purModal')">Cancel</button><button class="btn btn-accent" onclick="savePurchase()">Save Purchase</button></div>
+  </div>
 </div>
 
-<h2>🛒 Sales</h2>
-<div class="card">
-  <select id="saleProduct"></select>
-  <input id="saleQty" placeholder="Quantity">
-  <button onclick="addToCart()">Add to Cart</button>
+<!-- Expense Modal -->
+
+<div class="modal-overlay" id="expModal">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title" id="expModalTitle">Add Expense</div>
+      <button class="modal-close" onclick="closeModal('expModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="expEditId"/>
+      <div class="form-group"><label>Description *</label><input id="expDesc" type="text" placeholder="e.g. Monthly rent"/></div>
+      <div class="form-row">
+        <div class="form-group"><label>Category *</label>
+          <select id="expCat">
+            <option>Rent</option><option>Utilities</option><option>Salaries</option><option>Transport</option><option>Marketing</option><option>Supplies</option><option>Maintenance</option><option>Other</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Amount (KSh) *</label><input id="expAmount" type="number" placeholder="0"/></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Date *</label><input id="expDate" type="date"/></div>
+        <div class="form-group"><label>Paid Via</label>
+          <select id="expPaid"><option>Cash</option><option>M-Pesa</option><option>Bank Transfer</option></select>
+        </div>
+      </div>
+      <div class="form-group"><label>Notes</label><textarea id="expNotes" placeholder="Additional notes..."></textarea></div>
+    </div>
+    <div class="modal-foot"><button class="btn btn-ghost" onclick="closeModal('expModal')">Cancel</button><button class="btn btn-accent" onclick="saveExpense()">Save Expense</button></div>
+  </div>
 </div>
 
-<ul id="cart"></ul>
-<button onclick="checkout()">Checkout</button>
+<!-- LPP Modal -->
 
-<h2>👤 Customers</h2>
-<div class="card">
-  <input id="cname" placeholder="Customer Name">
-  <button onclick="addCustomer()">Add Customer</button>
+<div class="modal-overlay" id="lppModal">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title" id="lppModalTitle">New Installment Plan</div>
+      <button class="modal-close" onclick="closeModal('lppModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="lppEditId"/>
+      <div class="form-row">
+        <div class="form-group"><label>Customer Name *</label><input id="lppCustomer" type="text" placeholder="Customer name"/></div>
+        <div class="form-group"><label>Phone *</label><input id="lppPhone" type="text" placeholder="07XX XXX XXX"/></div>
+      </div>
+      <div class="form-group"><label>Item Description *</label><input id="lppItem" type="text" placeholder="e.g. Sofa Set 5 Seater"/></div>
+      <div class="form-row">
+        <div class="form-group"><label>Total Price (KSh) *</label><input id="lppTotal" type="number" placeholder="0"/></div>
+        <div class="form-group"><label>Deposit Paid (KSh)</label><input id="lppDeposit" type="number" placeholder="0"/></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Installment Amount (KSh)</label><input id="lppInstall" type="number" placeholder="0"/></div>
+        <div class="form-group"><label>Frequency</label>
+          <select id="lppFreq"><option>Weekly</option><option>Bi-Weekly</option><option>Monthly</option></select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Start Date *</label><input id="lppStart" type="date"/></div>
+        <div class="form-group"><label>Due Date</label><input id="lppDue" type="date"/></div>
+      </div>
+      <div class="form-group"><label>Notes</label><textarea id="lppNotes" placeholder="Any notes..."></textarea></div>
+    </div>
+    <div class="modal-foot"><button class="btn btn-ghost" onclick="closeModal('lppModal')">Cancel</button><button class="btn btn-accent" onclick="saveLpp()">Create Plan</button></div>
+  </div>
 </div>
 
-<ul id="customers"></ul>
+<!-- LPP Payment Modal -->
 
-<h2>💳 Lipa Pole Pole</h2>
-<div class="card">
-  <select id="debtCustomer"></select>
-  <input id="debtAmount" placeholder="Amount">
-  <button onclick="addDebt()">Add Debt</button>
+<div class="modal-overlay" id="lppPayModal">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-head">
+      <div class="modal-title">Record Payment</div>
+      <button class="modal-close" onclick="closeModal('lppPayModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="lppPayId"/>
+      <div class="form-group"><label>Payment Amount (KSh) *</label><input id="lppPayAmount" type="number" placeholder="0"/></div>
+      <div class="form-group"><label>Payment Date *</label><input id="lppPayDate" type="date"/></div>
+      <div class="form-group"><label>Method</label>
+        <select id="lppPayMethod"><option>Cash</option><option>M-Pesa</option><option>Bank Transfer</option></select>
+      </div>
+      <div class="form-group"><label>Notes</label><input id="lppPayNote" type="text" placeholder="Reference / note"/></div>
+    </div>
+    <div class="modal-foot"><button class="btn btn-ghost" onclick="closeModal('lppPayModal')">Cancel</button><button class="btn btn-accent" onclick="saveLppPayment()">Record Payment</button></div>
+  </div>
 </div>
 
-<ul id="debts"></ul>
+<!-- Confirm Delete Modal -->
 
-<h2>📊 Reports</h2>
-<div id="reports"></div>
-
+<div class="modal-overlay" id="confirmModal">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-head"><div class="modal-title">Confirm Delete</div><button class="modal-close" onclick="closeModal('confirmModal')">✕</button></div>
+    <div class="modal-body"><p style="color:var(--text2)">Are you sure you want to delete this record? This action cannot be undone.</p></div>
+    <div class="modal-foot"><button class="btn btn-ghost" onclick="closeModal('confirmModal')">Cancel</button><button class="btn btn-danger" id="confirmDeleteBtn">Delete</button></div>
+  </div>
 </div>
+
+<!-- Toast -->
+
+<div id="toast"></div>
 
 <script>
-let products = JSON.parse(localStorage.getItem('products')) || [];
-let sales = JSON.parse(localStorage.getItem('sales')) || [];
-let purchases = JSON.parse(localStorage.getItem('purchases')) || [];
-let customers = JSON.parse(localStorage.getItem('customers')) || [];
-let debts = JSON.parse(localStorage.getItem('debts')) || [];
-let cart = [];
+// ══════════════════════════════════════════
+// DATA LAYER — localStorage persistence
+// ══════════════════════════════════════════
+const DB_KEY = 'jsruah_bms_v1';
+let DB = {};
 
-function saveAll() {
-  localStorage.setItem('products', JSON.stringify(products));
-  localStorage.setItem('sales', JSON.stringify(sales));
-  localStorage.setItem('purchases', JSON.stringify(purchases));
-  localStorage.setItem('customers', JSON.stringify(customers));
-  localStorage.setItem('debts', JSON.stringify(debts));
+function loadDB(){
+  const raw = localStorage.getItem(DB_KEY);
+  if(raw){ try{ DB = JSON.parse(raw); }catch(e){ DB = {}; } }
+  // Defaults
+  DB.users = DB.users || [{id:'u1',name:'Manager',username:'admin',password:'admin123',role:'manager'},{id:'u2',name:'John Agent',username:'agent',password:'agent123',role:'agent'}];
+  DB.inventory = DB.inventory || seedInventory();
+  DB.sales = DB.sales || seedSales();
+  DB.purchases = DB.purchases || seedPurchases();
+  DB.expenses = DB.expenses || seedExpenses();
+  DB.lpp = DB.lpp || seedLpp();
+  DB.nextId = DB.nextId || {inv:100,sale:200,pur:300,exp:400,lpp:500};
+  saveDB();
+}
+function saveDB(){ localStorage.setItem(DB_KEY, JSON.stringify(DB)); }
+function nid(k){ DB.nextId[k]++; saveDB(); return DB.nextId[k]; }
+
+function seedInventory(){
+  return [
+    {id:'INV001',sku:'SKU001',name:'Ceramic Dinner Set',category:'Utensils',unit:'set',buyPrice:1800,sellPrice:3200,qty:25,lowAlert:5,desc:'6-piece ceramic dinner set'},
+    {id:'INV002',sku:'SKU002',name:'Bamboo Serving Tray',category:'Utensils',unit:'pcs',buyPrice:450,sellPrice:850,qty:40,lowAlert:8,desc:'Natural bamboo serving tray'},
+    {id:'INV003',sku:'SKU003',name:'Decorative Wall Clock',category:'Decorative',unit:'pcs',buyPrice:1200,sellPrice:2500,qty:15,lowAlert:3,desc:'Modern wall clock'},
+    {id:'INV004',sku:'SKU004',name:'Scented Candle Set',category:'Decorative',unit:'set',buyPrice:380,sellPrice:750,qty:3,lowAlert:5,desc:'3-piece scented candles'},
+    {id:'INV005',sku:'SKU005',name:'Non-stick Cookware Set',category:'Kitchenware',unit:'set',buyPrice:3500,sellPrice:6800,qty:12,lowAlert:3,desc:'5-piece non-stick set'},
+    {id:'INV006',sku:'SKU006',name:'Decorative Vase',category:'Decorative',unit:'pcs',buyPrice:600,sellPrice:1200,qty:2,lowAlert:4,desc:'Hand-painted ceramic vase'},
+  ];
+}
+function seedSales(){
+  const today = new Date();
+  return [
+    {id:201,customer:'Jane Mwangi',items:[{productId:'INV001',name:'Ceramic Dinner Set',qty:1,price:3200}],total:3200,discount:0,payment:'M-Pesa',agent:'Manager',date:fmt(today),ts:Date.now()-86400000*1},
+    {id:202,customer:'Peter Kamau',items:[{productId:'INV002',name:'Bamboo Serving Tray',qty:2,price:850}],total:1700,discount:0,payment:'Cash',agent:'John Agent',date:fmt(new Date(Date.now()-86400000)),ts:Date.now()-86400000},
+    {id:203,customer:'Mary Wanjiru',items:[{productId:'INV005',name:'Non-stick Cookware Set',qty:1,price:6800}],total:6500,discount:300,payment:'Lipa Pole Pole',agent:'Manager',date:fmt(new Date(Date.now()-86400000*2)),ts:Date.now()-86400000*2},
+  ];
+}
+function seedPurchases(){
+  return [
+    {id:301,product:'INV001',productName:'Ceramic Dinner Set',supplier:'Nairobi Ceramics Ltd',qty:20,cost:1800,total:36000,date:'2025-06-01',status:'Paid',notes:''},
+    {id:302,product:'INV005',productName:'Non-stick Cookware Set',supplier:'KitchenWorld Kenya',qty:10,cost:3500,total:35000,date:'2025-06-05',status:'Paid',notes:''},
+  ];
+}
+function seedExpenses(){
+  return [
+    {id:401,desc:'Monthly Shop Rent',category:'Rent',amount:25000,paidVia:'M-Pesa',date:'2025-06-01',notes:'June rent'},
+    {id:402,desc:'Electricity Bill',category:'Utilities',amount:4500,paidVia:'M-Pesa',date:'2025-06-03',notes:'KPLC prepaid'},
+    {id:403,desc:'Sales Agent Salary',category:'Salaries',amount:18000,paidVia:'M-Pesa',date:'2025-05-31',notes:'May salary'},
+  ];
+}
+function seedLpp(){
+  return [
+    {id:501,customer:'Alice Njeri',phone:'0712345678',item:'Sofa Set 3+2+1',total:45000,deposit:10000,paid:22000,installAmount:4000,freq:'Monthly',startDate:'2025-04-01',dueDate:'2025-12-01',notes:'',payments:[
+      {amount:4000,date:'2025-04-30',method:'M-Pesa',note:'APR'},
+      {amount:4000,date:'2025-05-31',method:'M-Pesa',note:'MAY'},
+      {amount:4000,date:'2025-06-30',method:'M-Pesa',note:'JUN'},
+    ]},
+    {id:502,customer:'David Ochieng',phone:'0756789012',item:'Bedroom Set Queen',total:38000,deposit:8000,paid:16000,installAmount:3000,freq:'Monthly',startDate:'2025-03-01',dueDate:'2025-11-01',notes:'',payments:[
+      {amount:3000,date:'2025-03-31',method:'Cash',note:''},
+      {amount:3000,date:'2025-04-30',method:'M-Pesa',note:''},
+      {amount:2000,date:'2025-05-31',method:'Cash',note:'partial'},
+    ]},
+  ];
+}
+function fmt(d){ return d instanceof Date ? d.toISOString().split('T')[0] : d; }
+
+// ══════════════════════════════════════════
+// AUTH
+// ══════════════════════════════════════════
+let currentUser = null;
+let selectedRole = 'manager';
+
+function setRole(r){
+  selectedRole = r;
+  document.querySelectorAll('.role-tab').forEach((t,i)=>t.classList.toggle('active',i===(r==='manager'?0:1)));
+}
+function doLogin(){
+  const u = document.getElementById('loginUser').value.trim();
+  const p = document.getElementById('loginPass').value.trim();
+  const user = DB.users.find(x=>x.username===u && x.password===p && x.role===selectedRole);
+  if(!user){ toast('Invalid credentials','error'); return; }
+  currentUser = user;
+  document.getElementById('loginPage').style.display='none';
+  document.getElementById('app').style.display='flex';
+  document.getElementById('sideUser').textContent = user.name;
+  document.getElementById('sideRole').textContent = user.role.charAt(0).toUpperCase()+user.role.slice(1);
+  document.getElementById('sideAvatar').textContent = user.name.charAt(0).toUpperCase();
+  document.querySelectorAll('.manager-only').forEach(el=>el.style.display=(user.role==='manager'?'':'none'));
+  nav('dashboard');
+  updateClock();
+  setInterval(updateClock,1000);
+}
+function doLogout(){
+  currentUser=null;
+  document.getElementById('loginPage').style.display='flex';
+  document.getElementById('app').style.display='none';
+  document.getElementById('loginUser').value='';
+  document.getElementById('loginPass').value='';
+}
+function updateClock(){
+  const d=new Date();
+  document.getElementById('topDate').textContent=d.toLocaleDateString('en-KE',{weekday:'short',day:'2-digit',month:'short',year:'numeric'})+' '+d.toLocaleTimeString('en-KE',{hour:'2-digit',minute:'2-digit'});
 }
 
-function login() {
-  document.getElementById('login').classList.add('hidden');
-  document.getElementById('app').classList.remove('hidden');
-  render();
+// ══════════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════════
+const pageTitles={dashboard:'Dashboard',inventory:'Inventory Management',sales:'Sales',purchases:'Purchases & Stock-In',accounting:'Accounting',expenses:'Expenses',lpp:'Lipa Pole Pole',reports:'Reports'};
+function nav(p){
+  document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));
+  const pg=document.getElementById('page-'+p);
+  if(pg) pg.classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(el=>{if(el.onclick&&el.onclick.toString().includes("'"+p+"'"))el.classList.add('active');});
+  document.getElementById('pageTitle').textContent=pageTitles[p]||p;
+  // render page
+  if(p==='dashboard') renderDashboard();
+  if(p==='inventory') renderInventory();
+  if(p==='sales'){ renderSaleItems(); renderSaleHistory(); }
+  if(p==='purchases'){ populatePurProducts(); renderPurchases(); }
+  if(p==='accounting') renderAccounting();
+  if(p==='expenses') renderExpenses();
+  if(p==='lpp') renderLpp();
+}
+function switchTab(containerId, tabId){
+  const container=document.getElementById(containerId);
+  const panes=container.querySelectorAll('.tab-pane');
+  panes.forEach(p=>p.classList.remove('active'));
+  const active=document.getElementById(tabId);
+  if(active) active.classList.add('active');
+  // update tab headers
+  const tabsBar=container.previousElementSibling;
+  if(tabsBar&&tabsBar.classList.contains('tabs')){
+    tabsBar.querySelectorAll('.tab').forEach((t,i)=>{
+      t.classList.toggle('active',document.querySelector(`#${containerId} .tab-pane:nth-child(${i+1})`)?document.querySelector(`#${containerId} .tab-pane:nth-child(${i+1})`).id===tabId:false);
+    });
+  }
 }
 
-function addProduct() {
-  let name = pname.value;
-  let price = Number(pprice.value);
-  products.push({ id: Date.now(), name, price, stock: 0 });
-  saveAll(); render();
-}
+// ══════════════════════════════════════════
+// DASHBOARD
+// ══════════════════════════════════════════
+function renderDashboard(){
+  const totalSalesRev = DB.sales.reduce((s,x)=>s+x.total,0);
+  const totalPur = DB.purchases.reduce((s,x)=>s+x.total,0);
+  const totalExp = DB.expenses.reduce((s,x)=>s+x.amount,0);
+  const invValue = DB.inventory.reduce((s,x)=>s+(x.qty*x.buyPrice),0);
+  const profit = totalSalesRev - totalPur - totalExp;
+  const lowStock = DB.inventory.filter(x=>x.qty<=x.lowAlert).length;
 
-function render() {
-  productList.innerHTML = products.map(p => 
-    `<li>${p.name} | Stock: ${p.stock}</li>`).join('');
-
-  purchaseProduct.innerHTML = saleProduct.innerHTML =
-    products.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
-
-  customersList();
-  reportsView();
-}
-
-function addPurchase() {
-  let id = Number(purchaseProduct.value);
-  let qty = Number(purchaseQty.value);
-  let cost = Number(purchaseCost.value);
-
-  let p = products.find(x => x.id === id);
-  p.stock += qty;
-
-  purchases.push({ id: Date.now(), productId: id, qty, cost });
-  saveAll(); render();
-}
-
-function addToCart() {
-  let id = Number(saleProduct.value);
-  let qty = Number(saleQty.value);
-
-  let p = products.find(x => x.id === id);
-  if (p.stock < qty) return alert("Not enough stock");
-
-  cart.push({ id, qty, price: p.price });
-  cartView();
-}
-
-function cartView() {
-  cart.innerHTML = cart.map(c => `<li>${c.qty}</li>`).join('');
-}
-
-function checkout() {
-  let total = 0;
-
-  cart.forEach(c => {
-    let p = products.find(x => x.id === c.id);
-    p.stock -= c.qty;
-    total += c.qty * c.price;
-  });
-
-  sales.push({ id: Date.now(), total });
-  cart = [];
-  saveAll(); render();
-}
-
-function addCustomer() {
-  customers.push({ id: Date.now(), name: cname.value });
-  saveAll(); render();
-}
-
-function customersList() {
-  customers.innerHTML = customers.map(c => `<li>${c.name}</li>`).join('');
-  debtCustomer.innerHTML = customers.map(c => 
-    `<option value="${c.id}">${c.name}</option>`).join('');
-}
-
-function addDebt() {
-  debts.push({
-    id: Date.now(),
-    customerId: Number(debtCustomer.value),
-    amount: Number(debtAmount.value)
-  });
-  saveAll(); render();
-}
-
-function reportsView() {
-  let totalSales = sales.reduce((a, b) => a + b.total, 0);
-  let totalPurchases = purchases.reduce((a, b) => a + (b.qty * b.cost), 0);
-
-  reports.innerHTML = `
-    <p>Total Sales: ${totalSales}</p>
-    <p>Total Purchases: ${totalPurchases}</p>
-    <p>Profit: ${totalSales - totalPurchases}</p>
+  document.getElementById('dashStats').innerHTML = `
+    <div class="stat-card" style="--c:var(--accent)">
+      <div class="sc-icon">🛒</div>
+      <div class="sc-label">Total Sales Revenue</div>
+      <div class="sc-val">${ksh(totalSalesRev)}</div>
+      <div class="sc-sub">${DB.sales.length} transactions</div>
+    </div>
+    <div class="stat-card" style="--c:var(--accent3)">
+      <div class="sc-icon">📦</div>
+      <div class="sc-label">Inventory Value</div>
+      <div class="sc-val">${ksh(invValue)}</div>
+      <div class="sc-sub">${DB.inventory.length} products</div>
+    </div>
+    <div class="stat-card" style="--c:var(--danger)">
+      <div class="sc-icon">💸</div>
+      <div class="sc-label">Total Expenses</div>
+      <div class="sc-val">${ksh(totalExp)}</div>
+      <div class="sc-sub">All time</div>
+    </div>
+    <div class="stat-card" style="--c:${profit>=0?'var(--green)':'var(--danger)'}">
+      <div class="sc-icon">📊</div>
+      <div class="sc-label">Net Profit</div>
+      <div class="sc-val ${profit>=0?'text-green':'text-red'}">${ksh(profit)}</div>
+      <div class="sc-sub">${lowStock} low stock alerts</div>
+    </div>
   `;
+
+  // Recent sales
+  const rSales = [...DB.sales].sort((a,b)=>b.ts-a.ts).slice(0,5);
+  document.getElementById('dashSales').innerHTML = rSales.length ? rSales.map(s=>`
+    <tr><td>${s.items.map(i=>i.name).join(', ')}</td><td>${s.items.reduce((t,i)=>t+i.qty,0)}</td>
+    <td class="amount-ksh text-green">${ksh(s.total)}</td><td>${s.date}</td></tr>`).join('') : emptyRow(4);
+
+  // Low stock
+  const low = DB.inventory.filter(x=>x.qty<=x.lowAlert);
+  document.getElementById('dashLowStock').innerHTML = low.length ? low.map(p=>`
+    <tr><td>${p.name}</td><td>${p.qty}</td>
+    <td><span class="badge ${p.qty===0?'badge-red':'badge-warn'}">${p.qty===0?'Out of Stock':'Low Stock'}</span></td></tr>`).join('') : `<tr><td colspan="3" style="text-align:center;color:var(--text3);padding:20px">✅ All stock levels OK</td></tr>`;
+
+  // LPP
+  const pending = DB.lpp.filter(l=>l.paid<l.total);
+  document.getElementById('dashLpp').innerHTML = pending.length ? pending.slice(0,3).map(l=>{
+    const pct=Math.round((l.paid/l.total)*100);
+    return `<div style="padding:14px 20px;border-bottom:1px solid var(--border)">
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+        <span style="font-weight:600">${l.customer}</span>
+        <span class="amount-ksh" style="font-size:12px;color:var(--accent)">${ksh(l.paid)} / ${ksh(l.total)}</span>
+      </div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:8px">${l.item}</div>
+      <div class="lpp-progress"><div class="lpp-bar" style="width:${pct}%"></div></div>
+      <div style="font-size:11px;color:var(--text3);margin-top:4px">${pct}% paid</div>
+    </div>`;}).join('') : `<div style="padding:20px;text-align:center;color:var(--text3)">No pending installments</div>`;
+
+  // Expenses
+  const rExp = [...DB.expenses].sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,5);
+  document.getElementById('dashExpenses').innerHTML = rExp.length ? rExp.map(e=>`
+    <tr><td>${e.desc}</td><td class="amount-ksh text-red">${ksh(e.amount)}</td><td>${e.date}</td></tr>`).join('') : emptyRow(3);
 }
 
-render();
+// ══════════════════════════════════════════
+// INVENTORY
+// ══════════════════════════════════════════
+function renderInventory(){
+  const search=(document.getElementById('invSearch').value||'').toLowerCase();
+  const catFilter=document.getElementById('invCatFilter').value;
+  // populate filter
+  const cats=[...new Set(DB.inventory.map(x=>x.category))];
+  const cf=document.getElementById('invCatFilter');
+  const cv=cf.value;
+  cf.innerHTML='<option value="">All Categories</option>'+cats.map(c=>`<option ${c===cv?'selected':''}>${c}</option>`).join('');
+  cf.value=cv;
+  let data=DB.inventory.filter(p=>(!search||(p.name+p.sku+p.category).toLowerCase().includes(search))&&(!catFilter||p.category===catFilter));
+  const totalVal=data.reduce((s,x)=>s+(x.qty*x.sellPrice),0);
+  document.getElementById('invSummary').textContent=`${data.length} products | Value: ${ksh(totalVal)}`;
+  document.getElementById('invTable').innerHTML = data.length ? data.map(p=>{
+    const stat=p.qty===0?'Out of Stock':p.qty<=p.lowAlert?'Low Stock':'In Stock';
+    const bc=p.qty===0?'badge-red':p.qty<=p.lowAlert?'badge-warn':'badge-green';
+    const margin=p.buyPrice>0?Math.round(((p.sellPrice-p.buyPrice)/p.buyPrice)*100):0;
+    return `<tr>
+      <td><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text3)">${p.sku||p.id}</span></td>
+      <td>${p.name}<br><span style="font-size:11px;color:var(--text3)">${p.desc||''}</span></td>
+      <td>${p.category}</td>
+      <td style="font-family:'JetBrains Mono',monospace">${p.qty} ${p.unit||''}</td>
+      <td class="amount-ksh">${ksh(p.buyPrice)}</td>
+      <td class="amount-ksh">${ksh(p.sellPrice)}</td>
+      <td class="amount-ksh">${ksh(p.qty*p.sellPrice)} <span style="font-size:10px;color:var(--accent)">(+${margin}%)</span></td>
+      <td><span class="badge ${bc}">${stat}</span></td>
+      <td>
+        <button class="btn btn-sm btn-ghost" onclick="editInventory('${p.id}')">✏️</button>
+        <button class="btn btn-sm btn-danger" onclick="confirmDelete(()=>deleteInventory('${p.id}'))">🗑</button>
+      </td>
+    </tr>`;}).join('') : emptyRow(9,'No products found');
+}
+function openAddInventory(){
+  clearForm(['invEditId','invName','invSku','invDesc','invBuyPrice','invSellPrice','invQty','invLow']);
+  document.getElementById('invModalTitle').textContent='Add Product';
+  document.getElementById('invEditId').value='';
+  openModal('invModal');
+}
+function editInventory(id){
+  const p=DB.inventory.find(x=>x.id===id);
+  if(!p) return;
+  document.getElementById('invModalTitle').textContent='Edit Product';
+  document.getElementById('invEditId').value=p.id;
+  document.getElementById('invName').value=p.name;
+  document.getElementById('invSku').value=p.sku||'';
+  document.getElementById('invCat').value=p.category;
+  document.getElementById('invUnit').value=p.unit||'';
+  document.getElementById('invBuyPrice').value=p.buyPrice;
+  document.getElementById('invSellPrice').value=p.sellPrice;
+  document.getElementById('invQty').value=p.qty;
+  document.getElementById('invLow').value=p.lowAlert||5;
+  document.getElementById('invDesc').value=p.desc||'';
+  openModal('invModal');
+}
+function saveInventory(){
+  const name=document.getElementById('invName').value.trim();
+  const buyPrice=parseFloat(document.getElementById('invBuyPrice').value)||0;
+  const sellPrice=parseFloat(document.getElementById('invSellPrice').value)||0;
+  const qty=parseInt(document.getElementById('invQty').value)||0;
+  if(!name||!sellPrice){ toast('Product name and selling price required','error'); return; }
+  const editId=document.getElementById('invEditId').value;
+  if(editId){
+    const idx=DB.inventory.findIndex(x=>x.id===editId);
+    if(idx>-1){
+      DB.inventory[idx]={...DB.inventory[idx],name,sku:document.getElementById('invSku').value,category:document.getElementById('invCat').value,unit:document.getElementById('invUnit').value,buyPrice,sellPrice,qty,lowAlert:parseInt(document.getElementById('invLow').value)||5,desc:document.getElementById('invDesc').value};
+      toast('Product updated','success');
+    }
+  } else {
+    const id='INV'+String(nid('inv')).padStart(3,'0');
+    const sku=document.getElementById('invSku').value||'SKU'+String(DB.nextId.inv).padStart(3,'0');
+    DB.inventory.push({id,sku,name,category:document.getElementById('invCat').value,unit:document.getElementById('invUnit').value,buyPrice,sellPrice,qty,lowAlert:parseInt(document.getElementById('invLow').value)||5,desc:document.getElementById('invDesc').value});
+    toast('Product added','success');
+  }
+  saveDB(); closeModal('invModal'); renderInventory();
+}
+function deleteInventory(id){ DB.inventory=DB.inventory.filter(x=>x.id!==id); saveDB(); renderInventory(); toast('Product deleted'); }
+
+// ══════════════════════════════════════════
+// SALES
+// ══════════════════════════════════════════
+let cart=[];
+function renderSaleItems(){
+  const search=(document.getElementById('saleSearch').value||'').toLowerCase();
+  const data=DB.inventory.filter(p=>p.qty>0&&(!search||(p.name+p.category).toLowerCase().includes(search)));
+  document.getElementById('saleItemsTable').innerHTML=data.length?data.map(p=>`
+    <tr><td>${p.name}<br><span style="font-size:11px;color:var(--text3)">${p.category}</span></td>
+    <td style="font-family:'JetBrains Mono',monospace">${p.qty} ${p.unit||''}</td>
+    <td class="amount-ksh">${ksh(p.sellPrice)}</td>
+    <td><button class="btn btn-sm btn-accent" onclick="addToCart('${p.id}')">+ Add</button></td></tr>`).join(''):emptyRow(4,'No products available');
+}
+function addToCart(id){
+  const p=DB.inventory.find(x=>x.id===id);
+  if(!p) return;
+  const existing=cart.find(c=>c.productId===id);
+  if(existing){
+    if(existing.qty>=p.qty){ toast('Not enough stock','error'); return; }
+    existing.qty++;
+  } else {
+    cart.push({productId:id,name:p.name,price:p.sellPrice,qty:1,maxQty:p.qty});
+  }
+  renderCart();
+}
+function renderCart(){
+  if(!cart.length){
+    document.getElementById('cartItems').innerHTML='<div style="text-align:center;color:var(--text3);padding:20px;font-size:13px">Cart is empty</div>';
+    updateCartTotal(); return;
+  }
+  document.getElementById('cartItems').innerHTML=cart.map((c,i)=>`
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;padding:10px;background:var(--surface2);border-radius:8px">
+      <div style="flex:1"><div style="font-size:13px;font-weight:600">${c.name}</div><div class="amount-ksh" style="font-size:12px;color:var(--accent)">${ksh(c.price)} × ${c.qty} = ${ksh(c.price*c.qty)}</div></div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <button class="btn btn-sm btn-ghost" onclick="cartQty(${i},-1)" style="padding:3px 8px">−</button>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:13px">${c.qty}</span>
+        <button class="btn btn-sm btn-ghost" onclick="cartQty(${i},1)" style="padding:3px 8px">+</button>
+        <button class="btn btn-sm btn-danger" onclick="removeCart(${i})" style="padding:3px 8px">✕</button>
+      </div>
+    </div>`).join('');
+  updateCartTotal();
+}
+function cartQty(i,d){
+  const p=DB.inventory.find(x=>x.id===cart[i].productId);
+  cart[i].qty=Math.max(1,Math.min(cart[i].qty+d,p?p.qty:999));
+  renderCart();
+}
+function removeCart(i){ cart.splice(i,1); renderCart(); }
+function clearCart(){ cart=[]; renderCart(); }
+function updateCartTotal(){
+  const sub=cart.reduce((s,c)=>s+(c.price*c.qty),0);
+  const disc=parseFloat(document.getElementById('saleDiscount').value)||0;
+  const total=Math.max(0,sub-disc);
+  document.getElementById('cartSubtotal').textContent=ksh(sub);
+  document.getElementById('cartDiscountDisplay').textContent='- '+ksh(disc);
+  document.getElementById('cartTotal').textContent=ksh(total);
+}
+function completeSale(){
+  if(!cart.length){ toast('Cart is empty','error'); return; }
+  const customer=document.getElementById('saleCustomer').value||'Walk-in Customer';
+  const payment=document.getElementById('salePayment').value;
+  const disc=parseFloat(document.getElementById('saleDiscount').value)||0;
+  const sub=cart.reduce((s,c)=>s+(c.price*c.qty),0);
+  const total=Math.max(0,sub-disc);
+  // deduct stock
+  cart.forEach(c=>{
+    const idx=DB.inventory.findIndex(x=>x.id===c.productId);
+    if(idx>-1) DB.inventory[idx].qty=Math.max(0,DB.inventory[idx].qty-c.qty);
+  });
+  const sale={id:nid('sale'),customer,items:cart.map(c=>({productId:c.productId,name:c.name,qty:c.qty,price:c.price})),total,discount:disc,payment,agent:currentUser.name,date:fmt(new Date()),ts:Date.now()};
+  DB.sales.unshift(sale);
+  saveDB();
+  clearCart();
+  document.getElementById('saleCustomer').value='';
+  document.getElementById('saleDiscount').value='0';
+  renderSaleItems();
+  renderSaleHistory();
+  toast('Sale completed! '+ksh(total),'success');
+}
+function renderSaleHistory(){
+  const search=(document.getElementById('saleHistSearch').value||'').toLowerCase();
+  const filter=document.getElementById('saleHistFilter').value;
+  let data=[...DB.sales].sort((a,b)=>b.ts-a.ts).filter(s=>(!search||(s.customer+s.items.map(i=>i.name).join()).toLowerCase().includes(search))&&(!filter||s.payment===filter));
+  const total=data.reduce((s,x)=>s+x.total,0);
+  document.getElementById('saleHistSummary').innerHTML=`
+    <div class="summary-pill">Transactions<span>${data.length}</span></div>
+    <div class="summary-pill">Total Revenue<span>${ksh(total)}</span></div>
+    <div class="summary-pill">Avg Sale<span>${data.length?ksh(Math.round(total/data.length)):ksh(0)}</span></div>`;
+  document.getElementById('saleHistTable').innerHTML=data.length?data.map(s=>`
+    <tr>
+      <td>#${s.id}</td>
+      <td>${s.customer}</td>
+      <td style="font-size:12px">${s.items.map(i=>`${i.name} ×${i.qty}`).join(', ')}</td>
+      <td class="amount-ksh text-green">${ksh(s.total)}</td>
+      <td><span class="badge badge-blue">${s.payment}</span></td>
+      <td>${s.agent}</td>
+      <td>${s.date}</td>
+      <td>${currentUser&&currentUser.role==='manager'?`<button class="btn btn-sm btn-danger" onclick="confirmDelete(()=>deleteSale(${s.id}))">🗑</button>`:'—'}</td>
+    </tr>`).join(''):emptyRow(8,'No sales found');
+}
+function deleteSale(id){
+  DB.sales=DB.sales.filter(x=>x.id!==id);
+  saveDB(); renderSaleHistory(); renderDashboard(); toast('Sale deleted');
+}
+
+// ══════════════════════════════════════════
+// PURCHASES
+// ══════════════════════════════════════════
+function populatePurProducts(){
+  const sel=document.getElementById('purProduct');
+  sel.innerHTML=DB.inventory.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
+}
+function renderPurchases(){
+  const search=(document.getElementById('purSearch').value||'').toLowerCase();
+  let data=[...DB.purchases].sort((a,b)=>new Date(b.date)-new Date(a.date)).filter(p=>(!search||(p.productName+p.supplier).toLowerCase().includes(search)));
+  const total=data.reduce((s,x)=>s+x.total,0);
+  document.getElementById('purSummary').innerHTML=`
+    <div class="summary-pill">Orders<span>${data.length}</span></div>
+    <div class="summary-pill">Total Spent<span>${ksh(total)}</span></div>`;
+  document.getElementById('purTable').innerHTML=data.length?data.map(p=>`
+    <tr>
+      <td>#${p.id}</td>
+      <td>${p.productName}</td>
+      <td>${p.supplier||'—'}</td>
+      <td style="font-family:'JetBrains Mono',monospace">${p.qty}</td>
+      <td class="amount-ksh">${ksh(p.cost)}</td>
+      <td class="amount-ksh text-red">${ksh(p.total)}</td>
+      <td>${p.date}</td>
+      <td><span class="badge ${p.status==='Paid'?'badge-green':p.status==='Pending'?'badge-warn':'badge-blue'}">${p.status}</span></td>
+      <td>
+        <button class="btn btn-sm btn-ghost" onclick="editPurchase(${p.id})">✏️</button>
+        <button class="btn btn-sm btn-danger" onclick="confirmDelete(()=>deletePurchase(${p.id}))">🗑</button>
+      </td>
+    </tr>`).join(''):emptyRow(9,'No purchases found');
+}
+function editPurchase(id){
+  const p=DB.purchases.find(x=>x.id===id);
+  if(!p) return;
+  populatePurProducts();
+  document.getElementById('purModalTitle').textContent='Edit Purchase';
+  document.getElementById('purEditId').value=p.id;
+  document.getElementById('purProduct').value=p.product;
+  document.getElementById('purSupplier').value=p.supplier;
+  document.getElementById('purQty').value=p.qty;
+  document.getElementById('purCost').value=p.cost;
+  document.getElementById('purDate').value=p.date;
+  document.getElementById('purStatus').value=p.status;
+  document.getElementById('purNotes').value=p.notes||'';
+  openModal('purModal');
+}
+function savePurchase(){
+  const product=document.getElementById('purProduct').value;
+  const qty=parseInt(document.getElementById('purQty').value)||0;
+  const cost=parseFloat(document.getElementById('purCost').value)||0;
+  const date=document.getElementById('purDate').value;
+  if(!product||!qty||!cost||!date){ toast('Fill required fields','error'); return; }
+  const prod=DB.inventory.find(x=>x.id===product);
+  const productName=prod?prod.name:product;
+  const total=qty*cost;
+  const editId=document.getElementById('purEditId').value;
+  if(editId){
+    const idx=DB.purchases.findIndex(x=>x.id==editId);
+    if(idx>-1){
+      const old=DB.purchases[idx];
+      // reverse old stock change
+      const pi=DB.inventory.findIndex(x=>x.id===old.product);
+      if(pi>-1) DB.inventory[pi].qty-=old.qty;
+      DB.purchases[idx]={...old,product,productName,supplier:document.getElementById('purSupplier').value,qty,cost,total,date,status:document.getElementById('purStatus').value,notes:document.getElementById('purNotes').value};
+      if(pi>-1) DB.inventory[pi].qty+=qty;
+      toast('Purchase updated','success');
+    }
+  } else {
+    DB.purchases.unshift({id:nid('pur'),product,productName,supplier:document.getElementById('purSupplier').value,qty,cost,total,date,status:document.getElementById('purStatus').value,notes:document.getElementById('purNotes').value});
+    // add to stock
+    const pi=DB.inventory.findIndex(x=>x.id===product);
+    if(pi>-1) DB.inventory[pi].qty+=qty;
+    // update buy price
+    if(pi>-1) DB.inventory[pi].buyPrice=cost;
+    toast('Purchase recorded + stock updated','success');
+  }
+  saveDB(); closeModal('purModal'); renderPurchases(); renderInventory();
+}
+function deletePurchase(id){
+  const p=DB.purchases.find(x=>x.id===id);
+  if(p){
+    const pi=DB.inventory.findIndex(x=>x.id===p.product);
+    if(pi>-1) DB.inventory[pi].qty=Math.max(0,DB.inventory[pi].qty-p.qty);
+  }
+  DB.purchases=DB.purchases.filter(x=>x.id!==id);
+  saveDB(); renderPurchases(); toast('Purchase deleted');
+}
+
+// ══════════════════════════════════════════
+// EXPENSES
+// ══════════════════════════════════════════
+function renderExpenses(){
+  const search=(document.getElementById('expSearch').value||'').toLowerCase();
+  const cat=document.getElementById('expCatFilter').value;
+  let data=[...DB.expenses].sort((a,b)=>new Date(b.date)-new Date(a.date)).filter(e=>(!search||(e.desc+e.category).toLowerCase().includes(search))&&(!cat||e.category===cat));
+  const total=data.reduce((s,x)=>s+x.amount,0);
+  document.getElementById('expSummary').innerHTML=`
+    <div class="summary-pill">Records<span>${data.length}</span></div>
+    <div class="summary-pill">Total Expenses<span class="text-red">${ksh(total)}</span></div>`;
+  document.getElementById('expTable').innerHTML=data.length?data.map(e=>`
+    <tr>
+      <td>#${e.id}</td>
+      <td>${e.desc}</td>
+      <td><span class="badge badge-purple">${e.category}</span></td>
+      <td class="amount-ksh text-red">${ksh(e.amount)}</td>
+      <td>${e.paidVia}</td>
+      <td>${e.date}</td>
+      <td>
+        <button class="btn btn-sm btn-ghost" onclick="editExpense(${e.id})">✏️</button>
+        <button class="btn btn-sm btn-danger" onclick="confirmDelete(()=>deleteExpense(${e.id}))">🗑</button>
+      </td>
+    </tr>`).join(''):emptyRow(7,'No expenses found');
+}
+function editExpense(id){
+  const e=DB.expenses.find(x=>x.id===id);
+  if(!e) return;
+  document.getElementById('expModalTitle').textContent='Edit Expense';
+  document.getElementById('expEditId').value=e.id;
+  document.getElementById('expDesc').value=e.desc;
+  document.getElementById('expCat').value=e.category;
+  document.getElementById('expAmount').value=e.amount;
+  document.getElementById('expDate').value=e.date;
+  document.getElementById('expPaid').value=e.paidVia;
+  document.getElementById('expNotes').value=e.notes||'';
+  openModal('expModal');
+}
+function saveExpense(){
+  const desc=document.getElementById('expDesc').value.trim();
+  const amount=parseFloat(document.getElementById('expAmount').value)||0;
+  const date=document.getElementById('expDate').value;
+  if(!desc||!amount||!date){ toast('Fill required fields','error'); return; }
+  const editId=document.getElementById('expEditId').value;
+  const obj={desc,category:document.getElementById('expCat').value,amount,paidVia:document.getElementById('expPaid').value,date,notes:document.getElementById('expNotes').value};
+  if(editId){
+    const idx=DB.expenses.findIndex(x=>x.id==editId);
+    if(idx>-1){ DB.expenses[idx]={...DB.expenses[idx],...obj}; toast('Expense updated','success'); }
+  } else {
+    DB.expenses.unshift({id:nid('exp'),...obj});
+    toast('Expense added','success');
+  }
+  saveDB(); closeModal('expModal'); renderExpenses();
+}
+function deleteExpense(id){ DB.expenses=DB.expenses.filter(x=>x.id!==id); saveDB(); renderExpenses(); toast('Expense deleted'); }
+
+// ══════════════════════════════════════════
+// LIPA POLE POLE
+// ══════════════════════════════════════════
+function renderLpp(){
+  const search=(document.getElementById('lppSearch').value||'').toLowerCase();
+  const filter=document.getElementById('lppFilter').value;
+  let data=[...DB.lpp].filter(l=>{
+    const match=(!search||(l.customer+l.item+l.phone).toLowerCase().includes(search));
+    const bal=l.total-l.paid;
+    const stat=bal<=0?'Completed':new Date(l.dueDate)<new Date()&&bal>0?'Overdue':'Active';
+    return match&&(!filter||stat===filter);
+  });
+  const totalOut=DB.lpp.reduce((s,l)=>s+(l.total-l.paid),0);
+  const totalCollected=DB.lpp.reduce((s,l)=>s+l.paid,0);
+  document.getElementById('lppSummary').innerHTML=`
+    <div class="summary-pill">Plans<span>${DB.lpp.length}</span></div>
+    <div class="summary-pill">Collected<span class="text-green">${ksh(totalCollected)}</span></div>
+    <div class="summary-pill">Outstanding<span class="text-red">${ksh(totalOut)}</span></div>`;
+  document.getElementById('lppCards').innerHTML=data.length?data.map(l=>{
+    const bal=l.total-l.paid;
+    const pct=Math.min(100,Math.round((l.paid/l.total)*100));
+    const stat=bal<=0?'Completed':new Date(l.dueDate)<new Date()&&bal>0?'Overdue':'Active';
+    const bc=stat==='Completed'?'badge-green':stat==='Overdue'?'badge-red':'badge-blue';
+    return `<div class="card" style="margin-bottom:12px">
+      <div class="card-head">
+        <div>
+          <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:15px">${l.customer}</div>
+          <div style="font-size:12px;color:var(--text3)">${l.phone} &nbsp;·&nbsp; ${l.item}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="badge ${bc}">${stat}</span>
+          <button class="btn btn-sm btn-success" onclick="openLppPay(${l.id})">💳 Pay</button>
+          <button class="btn btn-sm btn-ghost" onclick="editLpp(${l.id})">✏️</button>
+          <button class="btn btn-sm btn-danger" onclick="confirmDelete(()=>deleteLpp(${l.id}))">🗑</button>
+        </div>
+      </div>
+      <div style="padding:16px 20px">
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
+          <div><div style="font-size:11px;color:var(--text3);margin-bottom:3px">TOTAL</div><div class="amount-ksh fw700">${ksh(l.total)}</div></div>
+          <div><div style="font-size:11px;color:var(--text3);margin-bottom:3px">PAID</div><div class="amount-ksh text-green fw700">${ksh(l.paid)}</div></div>
+          <div><div style="font-size:11px;color:var(--text3);margin-bottom:3px">BALANCE</div><div class="amount-ksh text-red fw700">${ksh(bal)}</div></div>
+          <div><div style="font-size:11px;color:var(--text3);margin-bottom:3px">INSTALLMENT</div><div class="amount-ksh">${ksh(l.installAmount)} / ${l.freq}</div></div>
+        </div>
+        <div class="lpp-progress" style="height:8px;margin-bottom:6px"><div class="lpp-bar" style="width:${pct}%"></div></div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3)"><span>${pct}% complete</span><span>Due: ${l.dueDate}</span></div>
+        ${l.payments&&l.payments.length?`<div style="margin-top:14px;border-top:1px solid var(--border);padding-top:12px">
+          <div style="font-size:11px;color:var(--text3);margin-bottom:8px;letter-spacing:.8px">PAYMENT HISTORY</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">${l.payments.slice(-5).map(p=>`<span style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11px"><span class="text-green">${ksh(p.amount)}</span> · ${p.date} · ${p.method}</span>`).join('')}</div>
+        </div>`:''}
+      </div>
+    </div>`;}).join(''):emptyRow(1,'No installment plans found');
+}
+function editLpp(id){
+  const l=DB.lpp.find(x=>x.id===id);
+  if(!l) return;
+  document.getElementById('lppModalTitle').textContent='Edit Plan';
+  document.getElementById('lppEditId').value=l.id;
+  document.getElementById('lppCustomer').value=l.customer;
+  document.getElementById('lppPhone').value=l.phone;
+  document.getElementById('lppItem').value=l.item;
+  document.getElementById('lppTotal').value=l.total;
+  document.getElementById('lppDeposit').value=l.deposit;
+  document.getElementById('lppInstall').value=l.installAmount;
+  document.getElementById('lppFreq').value=l.freq;
+  document.getElementById('lppStart').value=l.startDate;
+  document.getElementById('lppDue').value=l.dueDate;
+  document.getElementById('lppNotes').value=l.notes||'';
+  openModal('lppModal');
+}
+function saveLpp(){
+  const customer=document.getElementById('lppCustomer').value.trim();
+  const phone=document.getElementById('lppPhone').value.trim();
+  const item=document.getElementById('lppItem').value.trim();
+  const total=parseFloat(document.getElementById('lppTotal').value)||0;
+  const deposit=parseFloat(document.getElementById('lppDeposit').value)||0;
+  const startDate=document.getElementById('lppStart').value;
+  if(!customer||!item||!total||!startDate){ toast('Fill required fields','error'); return; }
+  const editId=document.getElementById('lppEditId').value;
+  const obj={customer,phone,item,total,deposit,installAmount:parseFloat(document.getElementById('lppInstall').value)||0,freq:document.getElementById('lppFreq').value,startDate,dueDate:document.getElementById('lppDue').value,notes:document.getElementById('lppNotes').value};
+  if(editId){
+    const idx=DB.lpp.findIndex(x=>x.id==editId);
+    if(idx>-1){ DB.lpp[idx]={...DB.lpp[idx],...obj}; toast('Plan updated','success'); }
+  } else {
+    DB.lpp.unshift({id:nid('lpp'),...obj,paid:deposit,payments:deposit>0?[{amount:deposit,date:startDate,method:'Cash',note:'Deposit'}]:[]});
+    toast('Plan created','success');
+  }
+  saveDB(); closeModal('lppModal'); renderLpp();
+}
+function deleteLpp(id){ DB.lpp=DB.lpp.filter(x=>x.id!==id); saveDB(); renderLpp(); toast('Plan deleted'); }
+function openLppPay(id){
+  document.getElementById('lppPayId').value=id;
+  document.getElementById('lppPayAmount').value='';
+  document.getElementById('lppPayDate').value=fmt(new Date());
+  document.getElementById('lppPayNote').value='';
+  openModal('lppPayModal');
+}
+function saveLppPayment(){
+  const id=parseInt(document.getElementById('lppPayId').value);
+  const amount=parseFloat(document.getElementById('lppPayAmount').value)||0;
+  const date=document.getElementById('lppPayDate').value;
+  if(!amount||!date){ toast('Fill required fields','error'); return; }
+  const idx=DB.lpp.findIndex(x=>x.id===id);
+  if(idx>-1){
+    DB.lpp[idx].paid=Math.min(DB.lpp[idx].total,DB.lpp[idx].paid+amount);
+    if(!DB.lpp[idx].payments) DB.lpp[idx].payments=[];
+    DB.lpp[idx].payments.push({amount,date,method:document.getElementById('lppPayMethod').value,note:document.getElementById('lppPayNote').value});
+    toast('Payment recorded','success');
+  }
+  saveDB(); closeModal('lppPayModal'); renderLpp();
+}
+
+// ══════════════════════════════════════════
+// ACCOUNTING
+// ══════════════════════════════════════════
+function renderAccounting(){
+  const totalRevenue=DB.sales.reduce((s,x)=>s+x.total,0);
+  const totalCOGS=DB.purchases.reduce((s,x)=>s+x.total,0);
+  const totalExp=DB.expenses.reduce((s,x)=>s+x.amount,0);
+  const grossProfit=totalRevenue-totalCOGS;
+  const netProfit=grossProfit-totalExp;
+  const grossMargin=totalRevenue>0?((grossProfit/totalRevenue)*100).toFixed(1):0;
+
+  document.getElementById('accCards').innerHTML=`
+    <div class="acc-card"><div class="av text-green">${ksh(totalRevenue)}</div><div class="al">Total Revenue</div></div>
+    <div class="acc-card"><div class="av text-red">${ksh(totalCOGS+totalExp)}</div><div class="al">Total Costs</div></div>
+    <div class="acc-card"><div class="av ${netProfit>=0?'profit-pos':'profit-neg'}">${ksh(netProfit)}</div><div class="al">Net Profit / Loss</div></div>
+  `;
+
+  // P&L
+  document.getElementById('plContent').innerHTML=`
+    <div style="max-width:600px">
+      <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700;margin-bottom:4px">JSRUAH HOME</div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:24px;letter-spacing:.5px">PROFIT & LOSS STATEMENT</div>
+      
+      <div style="margin-bottom:20px">
+        <div style="font-size:11px;color:var(--text3);letter-spacing:1px;margin-bottom:12px;text-transform:uppercase">Income</div>
+        <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)"><span>Sales Revenue</span><span class="amount-ksh text-green">${ksh(totalRevenue)}</span></div>
+        <div style="display:flex;justify-content:space-between;padding:10px 0;font-weight:700"><span>TOTAL INCOME</span><span class="amount-ksh text-green fw700">${ksh(totalRevenue)}</span></div>
+      </div>
+
+      <div style="margin-bottom:20px">
+        <div style="font-size:11px;color:var(--text3);letter-spacing:1px;margin-bottom:12px;text-transform:uppercase">Cost of Goods Sold</div>
+        <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)"><span>Purchases / Stock Cost</span><span class="amount-ksh text-red">${ksh(totalCOGS)}</span></div>
+        <div style="display:flex;justify-content:space-between;padding:10px 0;font-weight:700"><span>GROSS PROFIT <span style="font-size:11px;color:var(--accent);font-weight:400">(Margin: ${grossMargin}%)</span></span><span class="amount-ksh ${grossProfit>=0?'text-green':'text-red'} fw700">${ksh(grossProfit)}</span></div>
+      </div>
+
+      <div style="margin-bottom:20px">
+        <div style="font-size:11px;color:var(--text3);letter-spacing:1px;margin-bottom:12px;text-transform:uppercase">Operating Expenses</div>
+        ${Object.entries(DB.expenses.reduce((acc,e)=>{acc[e.category]=(acc[e.category]||0)+e.amount;return acc},{})).map(([k,v])=>`<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px dashed var(--border)"><span style="color:var(--text2)">${k}</span><span class="amount-ksh">${ksh(v)}</span></div>`).join('')}
+        <div style="display:flex;justify-content:space-between;padding:10px 0;font-weight:700"><span>TOTAL EXPENSES</span><span class="amount-ksh text-red fw700">${ksh(totalExp)}</span></div>
+      </div>
+
+      <div style="background:${netProfit>=0?'rgba(61,214,140,.08)':'rgba(247,79,106,.08)'};border:1px solid ${netProfit>=0?'rgba(61,214,140,.2)':'rgba(247,79,106,.2)'};border-radius:10px;padding:16px;display:flex;justify-content:space-between;align-items:center">
+        <span style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700">NET PROFIT / LOSS</span>
+        <span class="amount-ksh fw700" style="font-size:22px;${netProfit>=0?'color:var(--green)':'color:var(--danger)'}">${ksh(netProfit)}</span>
+      </div>
+    </div>`;
+
+  // Cash Flow
+  const cashIn=totalRevenue;
+  const cashOut=totalCOGS+totalExp;
+  document.getElementById('cfContent').innerHTML=`
+    <div style="max-width:600px">
+      <div class="acc-card" style="margin-bottom:12px;text-align:left;display:flex;justify-content:space-between;align-items:center">
+        <div><div style="font-size:11px;color:var(--text3);margin-bottom:4px">CASH INFLOWS</div><div class="av text-green">${ksh(cashIn)}</div></div>
+        <div style="font-size:32px">📥</div>
+      </div>
+      <div class="acc-card" style="margin-bottom:12px;text-align:left;display:flex;justify-content:space-between;align-items:center">
+        <div><div style="font-size:11px;color:var(--text3);margin-bottom:4px">CASH OUTFLOWS</div><div class="av text-red">${ksh(cashOut)}</div></div>
+        <div style="font-size:32px">📤</div>
+      </div>
+      <div class="acc-card" style="text-align:left;display:flex;justify-content:space-between;align-items:center;border-color:${cashIn-cashOut>=0?'rgba(61,214,140,.3)':'rgba(247,79,106,.3)'}">
+        <div><div style="font-size:11px;color:var(--text3);margin-bottom:4px">NET CASH POSITION</div><div class="av ${cashIn-cashOut>=0?'text-green':'text-red'}">${ksh(cashIn-cashOut)}</div></div>
+        <div style="font-size:32px">💰</div>
+      </div>
+    </div>`;
+
+  // Ledger
+  const entries=[];
+  let bal=0;
+  DB.sales.forEach(s=>entries.push({date:s.date,desc:`Sale to ${s.customer}`,type:'Revenue',debit:s.total,credit:0,ts:s.ts}));
+  DB.purchases.forEach(p=>entries.push({date:p.date,desc:`Purchase: ${p.productName}`,type:'COGS',debit:0,credit:p.total,ts:new Date(p.date).getTime()}));
+  DB.expenses.forEach(e=>entries.push({date:e.date,desc:e.desc,type:'Expense',debit:0,credit:e.amount,ts:new Date(e.date).getTime()}));
+  entries.sort((a,b)=>a.ts-b.ts);
+  document.getElementById('ledgerTable').innerHTML=entries.length?entries.map(e=>{
+    bal+=e.debit-e.credit;
+    return `<tr>
+      <td>${e.date}</td>
+      <td>${e.desc}</td>
+      <td><span class="badge ${e.type==='Revenue'?'badge-green':e.type==='COGS'?'badge-blue':'badge-red'}">${e.type}</span></td>
+      <td class="amount-ksh text-green">${e.debit?ksh(e.debit):'—'}</td>
+      <td class="amount-ksh text-red">${e.credit?ksh(e.credit):'—'}</td>
+      <td class="amount-ksh ${bal>=0?'text-green':'text-red'}">${ksh(bal)}</td>
+    </tr>`;}).join(''):emptyRow(6,'No ledger entries');
+}
+
+// ══════════════════════════════════════════
+// REPORTS
+// ══════════════════════════════════════════
+function genReport(type){
+  let html='';
+  if(type==='sales'){
+    const total=DB.sales.reduce((s,x)=>s+x.total,0);
+    const byMethod=DB.sales.reduce((acc,s)=>{acc[s.payment]=(acc[s.payment]||0)+s.total;return acc},{});
+    const byProduct={};
+    DB.sales.forEach(s=>s.items.forEach(i=>{byProduct[i.name]=(byProduct[i.name]||{units:0,rev:0});byProduct[i.name].units+=i.qty;byProduct[i.name].rev+=i.qty*i.price;}));
+    const top=Object.entries(byProduct).sort((a,b)=>b[1].rev-a[1].rev).slice(0,5);
+    html=`<div class="card"><div class="card-head"><div class="card-title">📊 Sales Report</div></div><div style="padding:20px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px">
+        <div><div style="font-size:11px;color:var(--text3);margin-bottom:4px">TOTAL REVENUE</div><div style="font-family:'Syne',sans-serif;font-size:28px;font-weight:700;color:var(--green)">${ksh(total)}</div></div>
+        <div><div style="font-size:11px;color:var(--text3);margin-bottom:4px">TOTAL TRANSACTIONS</div><div style="font-family:'Syne',sans-serif;font-size:28px;font-weight:700">${DB.sales.length}</div></div>
+      </div>
+      <div style="margin-bottom:20px"><div style="font-size:12px;color:var(--text3);margin-bottom:10px;letter-spacing:.8px">REVENUE BY PAYMENT METHOD</div>
+        ${Object.entries(byMethod).map(([k,v])=>`<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px dashed var(--border)"><span>${k}</span><span class="amount-ksh text-green">${ksh(v)}</span></div>`).join('')}
+      </div>
+      <div><div style="font-size:12px;color:var(--text3);margin-bottom:10px;letter-spacing:.8px">TOP 5 PRODUCTS</div>
+        <table><thead><tr><th>Product</th><th>Units Sold</th><th>Revenue</th></tr></thead><tbody>
+        ${top.map(([n,d])=>`<tr><td>${n}</td><td>${d.units}</td><td class="amount-ksh text-green">${ksh(d.rev)}</td></tr>`).join('')}
+        </tbody></table>
+      </div>
+    </div></div>`;
+  } else if(type==='inventory'){
+    const val=DB.inventory.reduce((s,x)=>s+(x.qty*x.buyPrice),0);
+    const low=DB.inventory.filter(x=>x.qty<=x.lowAlert);
+    html=`<div class="card"><div class="card-head"><div class="card-title">📦 Inventory Report</div></div><div style="padding:20px">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px">
+        <div style="background:var(--surface2);border-radius:8px;padding:14px"><div style="font-size:11px;color:var(--text3);margin-bottom:4px">TOTAL PRODUCTS</div><div style="font-size:24px;font-weight:700">${DB.inventory.length}</div></div>
+        <div style="background:var(--surface2);border-radius:8px;padding:14px"><div style="font-size:11px;color:var(--text3);margin-bottom:4px">STOCK VALUE</div><div style="font-size:24px;font-weight:700;color:var(--accent)">${ksh(val)}</div></div>
+        <div style="background:var(--surface2);border-radius:8px;padding:14px"><div style="font-size:11px;color:var(--text3);margin-bottom:4px">LOW STOCK</div><div style="font-size:24px;font-weight:700;color:var(--warn)">${low.length}</div></div>
+      </div>
+      <table><thead><tr><th>Product</th><th>Category</th><th>Qty</th><th>Buy Price</th><th>Sell Price</th><th>Value</th><th>Status</th></tr></thead><tbody>
+      ${DB.inventory.map(p=>{const s=p.qty===0?'Out of Stock':p.qty<=p.lowAlert?'Low Stock':'OK';return `<tr><td>${p.name}</td><td>${p.category}</td><td>${p.qty}</td><td class="amount-ksh">${ksh(p.buyPrice)}</td><td class="amount-ksh">${ksh(p.sellPrice)}</td><td class="amount-ksh">${ksh(p.qty*p.buyPrice)}</td><td><span class="badge ${p.qty===0?'badge-red':p.qty<=p.lowAlert?'badge-warn':'badge-green'}">${s}</span></td></tr>`;}).join('')}
+      </tbody></table>
+    </div></div>`;
+  } else if(type==='profit'){
+    const rev=DB.sales.reduce((s,x)=>s+x.total,0);
+    const cogs=DB.purchases.reduce((s,x)=>s+x.total,0);
+    const exp=DB.expenses.reduce((s,x)=>s+x.amount,0);
+    const gross=rev-cogs;
+    const net=gross-exp;
+    html=`<div class="card"><div class="card-head"><div class="card-title">💰 Profit Report</div></div><div style="padding:20px">
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+        <div style="background:rgba(61,214,140,.08);border:1px solid rgba(61,214,140,.2);border-radius:10px;padding:20px;text-align:center">
+          <div style="font-size:11px;color:var(--text3);margin-bottom:8px">GROSS PROFIT</div>
+          <div style="font-size:28px;font-weight:700;font-family:'Syne',sans-serif;color:var(--green)">${ksh(gross)}</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:4px">Margin: ${rev>0?((gross/rev)*100).toFixed(1):0}%</div>
+        </div>
+        <div style="background:rgba(247,79,106,.08);border:1px solid rgba(247,79,106,.2);border-radius:10px;padding:20px;text-align:center">
+          <div style="font-size:11px;color:var(--text3);margin-bottom:8px">TOTAL EXPENSES</div>
+          <div style="font-size:28px;font-weight:700;font-family:'Syne',sans-serif;color:var(--danger)">${ksh(exp)}</div>
+        </div>
+        <div style="background:${net>=0?'rgba(61,214,140,.08)':'rgba(247,79,106,.08)'};border:1px solid ${net>=0?'rgba(61,214,140,.2)':'rgba(247,79,106,.2)'};border-radius:10px;padding:20px;text-align:center">
+          <div style="font-size:11px;color:var(--text3);margin-bottom:8px">NET PROFIT</div>
+          <div style="font-size:28px;font-weight:700;font-family:'Syne',sans-serif;${net>=0?'color:var(--green)':'color:var(--danger)'}">${ksh(net)}</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:4px">Net Margin: ${rev>0?((net/rev)*100).toFixed(1):0}%</div>
+        </div>
+      </div>
+    </div></div>`;
+  }
+  document.getElementById('reportOutput').innerHTML=html;
+  toast('Report generated','info');
+}
+
+// ══════════════════════════════════════════
+// UTILITIES
+// ══════════════════════════════════════════
+function ksh(v){ return 'KSh '+Number(v||0).toLocaleString('en-KE'); }
+function emptyRow(cols,msg='No data'){
+  return `<tr><td colspan="${cols}" style="text-align:center;padding:40px;color:var(--text3)">${msg}</td></tr>`;
+}
+function openModal(id){
+  document.getElementById(id).classList.add('open');
+  document.getElementById(id).style.display='flex';
+}
+function closeModal(id){
+  document.getElementById(id).classList.remove('open');
+  document.getElementById(id).style.display='none';
+}
+function confirmDelete(fn){
+  const modal=document.getElementById('confirmModal');
+  openModal('confirmModal');
+  document.getElementById('confirmDeleteBtn').onclick=()=>{ fn(); closeModal('confirmModal'); };
+}
+function clearForm(ids){ ids.forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; }); }
+function toast(msg,type='info'){
+  const t=document.getElementById('toast');
+  const el=document.createElement('div');
+  el.className=`toast-item ${type}`;
+  el.textContent=msg;
+  t.appendChild(el);
+  setTimeout(()=>el.remove(),3000);
+}
+
+// Close modals on overlay click
+document.querySelectorAll('.modal-overlay').forEach(o=>{
+  o.addEventListener('click',function(e){ if(e.target===this) closeModal(this.id); });
+});
+
+// ══════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════
+loadDB();
+// Set today's date defaults
+document.getElementById('purDate').value=fmt(new Date());
+document.getElementById('expDate').value=fmt(new Date());
+document.getElementById('lppStart').value=fmt(new Date());
 </script>
 
 </body>
