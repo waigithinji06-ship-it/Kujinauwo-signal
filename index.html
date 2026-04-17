@@ -7,7 +7,6 @@
 <title>JS RUAH HOME — Business Suite</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=DM+Sans:wght@300;400;500;600&display=swap');
-/* Fallback if Google Fonts blocked */
 :root {
   --font-display: 'Cormorant Garamond', 'Georgia', 'Times New Roman', serif;
   --font-body: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -357,11 +356,7 @@ tbody td strong{color:var(–text);font-weight:600;}
 
 <div id="app">
 
-  <!-- Sidebar Overlay -->
-
   <div id="sideOverlay" onclick="toggleSidebar()"></div>
-
-  <!-- Floating Sidebar -->
 
   <div class="sidebar" id="sidebar">
     <div class="sb-brand">
@@ -396,8 +391,6 @@ tbody td strong{color:var(–text);font-weight:600;}
       <button class="btn-logout" onclick="doLogout()">🚪 Sign Out</button>
     </div>
   </div>
-
-  <!-- Main -->
 
   <div class="main" id="mainArea">
     <div class="topbar">
@@ -771,7 +764,6 @@ function tryParse(s){ try{return JSON.parse(s);}catch(e){return deepCopy(DEFAULT
 function deepCopy(o){ return JSON.parse(JSON.stringify(o)); }
 function save(){ localStorage.setItem('jsruah_v2',JSON.stringify(DB)); }
 
-// Auto-save every 30s as belt-and-suspenders
 setInterval(save, 30000);
 
 function setDate(){
@@ -790,12 +782,15 @@ function openM(id){ document.getElementById(id).classList.add('open'); }
 
 // ── AUTH ──
 var loginRole='manager';
-function selRole(r){ loginRole=r; document.querySelectorAll('.role-tab').forEach(function(t){t.classList.remove('active');}); document.getElementById('rtab-'+r).classList.add('active'); }
+function selRole(r){
+  loginRole=r;
+  document.querySelectorAll('.role-tab').forEach(function(t){t.classList.remove('active');});
+  document.getElementById('rtab-'+r).classList.add('active');
+}
 
 function doLogin(){
   var u=document.getElementById('lUser').value.trim();
   var p=document.getElementById('lPass').value.trim();
-  // Re-init DB in case localStorage was blank on first load
   if(!DB||!DB.credentials){ DB=deepCopy(DEFAULTS); save(); }
   var c=DB.credentials[loginRole];
   if(u===c.user && p===c.pass){
@@ -854,7 +849,7 @@ var pgMeta={
 };
 
 function goPage(pg){
-  if(window.innerWidth<=900){ // auto-close sidebar on mobile
+  if(window.innerWidth<=900){
     document.getElementById('sidebar').classList.remove('open');
     document.getElementById('sideOverlay').classList.remove('open');
   }
@@ -990,10 +985,10 @@ function saveProd(){
   if(!name||!cat||sell<=0){toast('Fill required fields (Name, Category, Selling Price)','error');return;}
   if(editProdId){
     var i=DB.products.findIndex(function(p){return p.id===editProdId;});
-    if(i>-1) DB.products[i]={id:editProdId,name,cat,buy,sell,stock,unit,desc};
+    if(i>-1) DB.products[i]={id:editProdId,name:name,cat:cat,buy:buy,sell:sell,stock:stock,unit:unit,desc:desc};
     toast('Product updated ✅','success');
   } else {
-    DB.products.push({id:uid(),name,cat,buy,sell,stock,unit,desc});
+    DB.products.push({id:uid(),name:name,cat:cat,buy:buy,sell:sell,stock:stock,unit:unit,desc:desc});
     toast('Product added ✅','success');
   }
   save(); closeM('mProduct'); renderInventory(); populateCatF();
@@ -1036,11 +1031,9 @@ function renderPurchases(){
 }
 
 function openAddPurchase(){
-  // Populate product dropdown
   var sel=document.getElementById('purProd');
   sel.innerHTML='<option value="">— Select existing product —</option>'+
     DB.products.map(function(p){return'<option value="'+p.id+'">'+p.name+'</option>';}).join('');
-  // Auto-fill sell price when product selected
   sel.onchange=function(){
     var p=DB.products.find(function(x){return x.id===sel.value;});
     if(p){
@@ -1073,16 +1066,14 @@ function savePurchase(){
   var ts=dateVal?new Date(dateVal).getTime():Date.now();
 
   if(selProdId){
-    // Existing product — update stock and buying price
     var pi=DB.products.findIndex(function(p){return p.id===selProdId;});
     if(pi>-1){
       DB.products[pi].stock+=qty;
-      DB.products[pi].buy=unitCost; // update buying price
+      DB.products[pi].buy=unitCost;
       if(sellPrice>0) DB.products[pi].sell=sellPrice;
       productName=DB.products[pi].name;
     }
   } else {
-    // New product — create entry
     var newId=uid();
     DB.products.push({id:newId,name:newProdName,cat:cat,buy:unitCost,sell:sellPrice||Math.round(unitCost*1.3),stock:qty,unit:'pcs',desc:''});
     productName=newProdName;
@@ -1091,11 +1082,10 @@ function savePurchase(){
 
   DB.purchases.push({
     id:uid(), product:productName, productId:selProdId||null,
-    supplier, qty, unitCost, totalCost:qty*unitCost,
-    sellPrice, cat, date:ts, notes
+    supplier:supplier, qty:qty, unitCost:unitCost, totalCost:qty*unitCost,
+    sellPrice:sellPrice, cat:cat, date:ts, notes:notes
   });
 
-  // Record as expense in accounting
   DB.expenses.push({id:uid(),desc:'Purchase: '+productName+(supplier?' from '+supplier:''),amount:qty*unitCost,cat:'Supplies',ts:ts,isPurchase:true});
 
   save(); closeM('mPurchase'); renderPurchases(); populateCatF();
@@ -1190,12 +1180,12 @@ function checkout(){
     if(p) p.stock-=item.qty;
   });
   var sid=uid();
-  var sale={id:sid,ts:Date.now(),customer,items:cart.slice(),total,payMethod:payMode,status:'completed'};
+  var sale={id:sid,ts:Date.now(),customer:customer,items:cart.slice(),total:total,payMethod:payMode,status:'completed'};
   DB.sales.push(sale);
   if(payMode==='lpp'){
     var down=parseFloat(document.getElementById('lppDownpay').value)||0;
     var plan=document.getElementById('lppPosPlan').value;
-    DB.lpp.push({id:uid(),customer,phone:'',item:cart.map(function(c){return c.name;}).join(', '),total,paid:down,plan,status:down>=total?'completed':'active',ts:Date.now(),notes:'From POS',payments:down>0?[{ts:Date.now(),amount:down,method:'downpayment',note:'Down payment'}]:[]});
+    DB.lpp.push({id:uid(),customer:customer,phone:'',item:cart.map(function(c){return c.name;}).join(', '),total:total,paid:down,plan:plan,status:down>=total?'completed':'active',ts:Date.now(),notes:'From POS',payments:down>0?[{ts:Date.now(),amount:down,method:'downpayment',note:'Down payment'}]:[]});
     sale.total=down;
   }
   save();
@@ -1284,7 +1274,7 @@ var plan=document.getElementById(‘lppPlan’).value;
 var notes=document.getElementById(‘lppNotes’).value.trim();
 if(!customer||!item||total<=0){toast(‘Fill required fields’,‘error’);return;}
 if(down>total){toast(‘Down payment cannot exceed total’,‘error’);return;}
-DB.lpp.push({id:uid(),customer,phone,item,total,paid:down,plan,status:down>=total?‘completed’:‘active’,ts:Date.now(),notes,payments:down>0?[{ts:Date.now(),amount:down,method:‘cash’,note:‘Down payment’}]:[]});
+DB.lpp.push({id:uid(),customer:customer,phone:phone,item:item,total:total,paid:down,plan:plan,status:down>=total?‘completed’:‘active’,ts:Date.now(),notes:notes,payments:down>0?[{ts:Date.now(),amount:down,method:‘cash’,note:‘Down payment’}]:[]});
 save(); closeM(‘mLPP’); renderLPP(); toast(‘Installment plan created ✅’,‘success’);
 }
 
@@ -1411,7 +1401,7 @@ var i=DB.expenses.findIndex(function(e){return e.id===editExpId;});
 if(i>-1){DB.expenses[i].desc=desc;DB.expenses[i].amount=amt;DB.expenses[i].cat=cat;}
 toast(‘Expense updated ✅’,‘success’);
 } else {
-DB.expenses.push({id:uid(),desc,amount:amt,cat,ts:Date.now()});
+DB.expenses.push({id:uid(),desc:desc,amount:amt,cat:cat,ts:Date.now()});
 toast(‘Expense added ✅’,‘success’);
 }
 save(); closeM(‘mExpense’); renderAccounting();
