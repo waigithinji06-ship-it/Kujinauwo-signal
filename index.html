@@ -1,172 +1,205 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>JS RUAH HOME — Fixed</title>
+<title>Business System</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
 <style>
-:root{
-  --bg:#0a0c10;
-  --bg2:#11151c;
-  --text:#e8e6e0;
-  --gold:#c9a84c;
-}
-
-body{
-  margin:0;
-  font-family: Arial, sans-serif;
-  background:var(--bg);
-  color:var(--text);
-}
-
-/* LOGIN */
-#loginScreen{
-  position:fixed;
-  inset:0;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-}
-
-.login-box{
-  background:var(--bg2);
-  padding:30px;
-  border-radius:10px;
-  width:300px;
-}
-
-input{
-  width:100%;
-  padding:10px;
-  margin:8px 0;
-  border:none;
-  border-radius:6px;
-}
-
-button{
-  width:100%;
-  padding:10px;
-  border:none;
-  background:var(--gold);
-  cursor:pointer;
-  font-weight:bold;
-}
-
-.role-tab{
-  display:inline-block;
-  padding:6px 10px;
-  margin-bottom:10px;
-  cursor:pointer;
-  background:#222;
-}
-
-.role-tab.active{
-  background:var(--gold);
-  color:black;
-}
-
-#error{
-  color:red;
-  display:none;
-}
-
-/* APP */
-#app{
-  display:none;
-  padding:20px;
-}
+body{font-family:Arial;margin:0;background:#0a0c10;color:#fff}
+.container{padding:20px}
+input,button,select{padding:10px;margin:5px;width:100%}
+button{background:#c9a84c;border:none;font-weight:bold}
+#app{display:none}
+.card{background:#111;padding:15px;margin:10px 0;border-radius:8px}
 </style>
 </head>
 
 <body>
 
 <!-- LOGIN -->
-<div id="loginScreen">
-  <div class="login-box">
-    <h2>Login</h2>
-
-    <div>
-      <span class="role-tab active" id="rtab-manager" onclick="selRole('manager')">Manager</span>
-      <span class="role-tab" id="rtab-sales" onclick="selRole('sales')">Sales</span>
-    </div>
-
-    <input id="lUser" placeholder="Username">
-    <input id="lPass" type="password" placeholder="Password">
-
-    <button onclick="doLogin()">Sign In</button>
-    <div id="error">Invalid login</div>
-  </div>
+<div id="loginScreen" class="container">
+  <h2>Login</h2>
+  <select id="role">
+    <option value="manager">Manager</option>
+    <option value="sales">Sales</option>
+  </select>
+  <input id="user" placeholder="Username">
+  <input id="pass" type="password" placeholder="Password">
+  <button onclick="login()">Login</button>
+  <p id="err" style="color:red;display:none">Invalid</p>
 </div>
 
 <!-- APP -->
-<div id="app">
-  <h1>✅ System Loaded Successfully</h1>
-  <p>You are logged in.</p>
+<div id="app" class="container">
+  <h2>POS</h2>
+
+  <input id="cust" placeholder="Customer name">
+
+  <div id="products"></div>
+
+  <h3>Total: <span id="total">0</span></h3>
+
+  <select id="pay">
+    <option value="cash">Cash</option>
+    <option value="mpesa">M-Pesa</option>
+    <option value="lpp">Lipa Pole Pole</option>
+  </select>
+
+  <button onclick="checkout()">Complete Sale</button>
+
+  <hr>
+
+  <h3>Lipa Pole Pole</h3>
+  <div id="lppList"></div>
+
   <button onclick="logout()">Logout</button>
 </div>
 
 <script>
-// DEFAULT USERS
-const DEFAULTS = {
-  credentials:{
-    manager:{user:'manager',pass:'1234'},
-    sales:{user:'sales',pass:'1234'}
-  }
+const DEFAULTS={
+ credentials:{
+  manager:{user:'manager',pass:'1234'},
+  sales:{user:'sales',pass:'1234'}
+ },
+ products:[
+  {id:1,name:'Rice',price:100,stock:50},
+  {id:2,name:'Sugar',price:80,stock:40}
+ ],
+ sales:[],
+ lpp:[]
 };
 
-let DB = {};
-let role = "manager";
+let DB={},cart=[];
 
 // INIT
 function init(){
-  try{
-    let raw = localStorage.getItem("jsruah_v2");
-    DB = raw ? JSON.parse(raw) : DEFAULTS;
+ let raw=localStorage.getItem('sys');
+ DB=raw?JSON.parse(raw):DEFAULTS;
 
-    if(!DB.credentials){
-      DB = DEFAULTS;
-      save();
-    }
-  }catch(e){
-    DB = DEFAULTS;
-    save();
-  }
+ if(!DB.sales) DB.sales=[];
+ if(!DB.lpp) DB.lpp=[];
+
+ renderProducts();
+ renderLPP();
 }
 
 function save(){
-  localStorage.setItem("jsruah_v2", JSON.stringify(DB));
-}
-
-// ROLE SWITCH
-function selRole(r){
-  role = r;
-  document.querySelectorAll(".role-tab").forEach(el=>el.classList.remove("active"));
-  document.getElementById("rtab-"+r).classList.add("active");
+ localStorage.setItem('sys',JSON.stringify(DB));
 }
 
 // LOGIN
-function doLogin(){
-  let u = document.getElementById("lUser").value.trim();
-  let p = document.getElementById("lPass").value.trim();
+function login(){
+ let r=document.getElementById('role').value;
+ let u=document.getElementById('user').value;
+ let p=document.getElementById('pass').value;
 
-  let c = DB.credentials[role];
+ let c=DB.credentials[r];
 
-  if(u === c.user && p === c.pass){
-    document.getElementById("loginScreen").style.display="none";
-    document.getElementById("app").style.display="block";
-  }else{
-    document.getElementById("error").style.display="block";
-  }
+ if(u===c.user && p===c.pass){
+  document.getElementById('loginScreen').style.display='none';
+  document.getElementById('app').style.display='block';
+ }else{
+  document.getElementById('err').style.display='block';
+ }
 }
 
-// LOGOUT
 function logout(){
-  document.getElementById("loginScreen").style.display="flex";
-  document.getElementById("app").style.display="none";
+ location.reload();
 }
 
-// START
+// PRODUCTS
+function renderProducts(){
+ let div=document.getElementById('products');
+ div.innerHTML='';
+
+ DB.products.forEach(p=>{
+  let el=document.createElement('div');
+  el.className='card';
+  el.innerHTML=p.name+" - "+p.price+" ("+p.stock+")<br><button>Add</button>";
+  el.querySelector('button').onclick=()=>{
+    cart.push({...p,qty:1});
+    updateTotal();
+  };
+  div.appendChild(el);
+ });
+}
+
+// TOTAL
+function updateTotal(){
+ let t=cart.reduce((a,i)=>a+i.price*i.qty,0);
+ document.getElementById('total').innerText=t;
+}
+
+// CHECKOUT
+function checkout(){
+ if(cart.length===0) return alert("Empty");
+
+ let total=cart.reduce((a,i)=>a+i.price*i.qty,0);
+ let pay=document.getElementById('pay').value;
+ let cust=document.getElementById('cust').value||'Walk-in';
+
+ if(pay==='mpesa'){
+   stkPush(total);
+ }
+
+ if(pay==='lpp'){
+   createLPP(cust,total);
+ }
+
+ DB.sales.push({
+  customer:cust,
+  total:total,
+  items:cart,
+  date:Date.now()
+ });
+
+ save();
+
+ cart=[];
+ updateTotal();
+ alert("Saved!");
+ renderLPP();
+}
+
+// MPESA SIMULATION
+function stkPush(amount){
+ alert("STK Push sent to phone for KES "+amount);
+}
+
+// LPP
+function createLPP(name,total){
+ DB.lpp.push({
+  id:Date.now(),
+  name:name,
+  total:total,
+  paid:0
+ });
+}
+
+function payLPP(id){
+ let amt=prompt("Enter amount");
+ let l=DB.lpp.find(x=>x.id===id);
+ l.paid+=Number(amt);
+ save();
+ renderLPP();
+}
+
+function renderLPP(){
+ let div=document.getElementById('lppList');
+ div.innerHTML='';
+
+ DB.lpp.forEach(l=>{
+  let el=document.createElement('div');
+  el.className='card';
+  el.innerHTML=
+   l.name+" - "+l.paid+"/"+l.total+
+   "<br><button>Pay</button>";
+  el.querySelector('button').onclick=()=>payLPP(l.id);
+  div.appendChild(el);
+ });
+}
+
 init();
 </script>
 
