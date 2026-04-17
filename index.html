@@ -2,16 +2,16 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Business System</title>
+<title>Business System Pro</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <style>
 body{font-family:Arial;margin:0;background:#0a0c10;color:#fff}
-.container{padding:20px}
+.container{padding:15px}
 input,button,select{padding:10px;margin:5px;width:100%}
 button{background:#c9a84c;border:none;font-weight:bold}
+.card{background:#111;padding:10px;margin:8px 0;border-radius:6px}
 #app{display:none}
-.card{background:#111;padding:15px;margin:10px 0;border-radius:8px}
 </style>
 </head>
 
@@ -19,52 +19,59 @@ button{background:#c9a84c;border:none;font-weight:bold}
 
 <!-- LOGIN -->
 <div id="loginScreen" class="container">
-  <h2>Login</h2>
-  <select id="role">
-    <option value="manager">Manager</option>
-    <option value="sales">Sales</option>
-  </select>
-  <input id="user" placeholder="Username">
-  <input id="pass" type="password" placeholder="Password">
-  <button onclick="login()">Login</button>
-  <p id="err" style="color:red;display:none">Invalid</p>
+<h2>Login</h2>
+<select id="role">
+<option value="manager">Manager</option>
+<option value="sales">Sales</option>
+</select>
+<input id="user" placeholder="Username">
+<input id="pass" type="password" placeholder="Password">
+<button onclick="login()">Login</button>
+<p id="err" style="color:red;display:none">Invalid login</p>
 </div>
 
 <!-- APP -->
 <div id="app" class="container">
-  <h2>POS</h2>
 
-  <input id="cust" placeholder="Customer name">
+<h2>Dashboard</h2>
+<button onclick="dashboard()">View Report</button>
 
-  <div id="products"></div>
+<hr>
 
-  <h3>Total: <span id="total">0</span></h3>
+<h2>POS</h2>
+<input id="cust" placeholder="Customer name">
+<div id="products"></div>
 
-  <select id="pay">
-    <option value="cash">Cash</option>
-    <option value="mpesa">M-Pesa</option>
-    <option value="lpp">Lipa Pole Pole</option>
-  </select>
+<h3>Total: <span id="total">0</span></h3>
 
-  <button onclick="checkout()">Complete Sale</button>
+<select id="pay">
+<option value="cash">Cash</option>
+<option value="lpp">Lipa Pole Pole</option>
+</select>
 
-  <hr>
+<button onclick="checkout()">Complete Sale</button>
 
-  <h3>Lipa Pole Pole</h3>
-  <div id="lppList"></div>
+<hr>
 
-  <button onclick="logout()">Logout</button>
+<h2>Lipa Pole Pole</h2>
+<div id="lppList"></div>
+
+<hr>
+
+<button onclick="logout()">Logout</button>
+
 </div>
 
 <script>
+// ===== DATA =====
 const DEFAULTS={
  credentials:{
   manager:{user:'manager',pass:'1234'},
   sales:{user:'sales',pass:'1234'}
  },
  products:[
-  {id:1,name:'Rice',price:100,stock:50},
-  {id:2,name:'Sugar',price:80,stock:40}
+  {id:1,name:'Rice',price:100,buy:70,stock:50},
+  {id:2,name:'Sugar',price:80,buy:50,stock:40}
  ],
  sales:[],
  lpp:[]
@@ -72,7 +79,7 @@ const DEFAULTS={
 
 let DB={},cart=[];
 
-// INIT
+// ===== INIT =====
 function init(){
  let raw=localStorage.getItem('sys');
  DB=raw?JSON.parse(raw):DEFAULTS;
@@ -88,7 +95,7 @@ function save(){
  localStorage.setItem('sys',JSON.stringify(DB));
 }
 
-// LOGIN
+// ===== LOGIN =====
 function login(){
  let r=document.getElementById('role').value;
  let u=document.getElementById('user').value;
@@ -108,7 +115,7 @@ function logout(){
  location.reload();
 }
 
-// PRODUCTS
+// ===== PRODUCTS =====
 function renderProducts(){
  let div=document.getElementById('products');
  div.innerHTML='';
@@ -116,86 +123,144 @@ function renderProducts(){
  DB.products.forEach(p=>{
   let el=document.createElement('div');
   el.className='card';
-  el.innerHTML=p.name+" - "+p.price+" ("+p.stock+")<br><button>Add</button>";
+  el.innerHTML=
+   `${p.name} - ${p.price} (Stock:${p.stock})
+   <br><button>Add</button>`;
+
   el.querySelector('button').onclick=()=>{
+    if(p.stock<=0){
+      alert("Out of stock");
+      return;
+    }
     cart.push({...p,qty:1});
     updateTotal();
   };
+
   div.appendChild(el);
  });
 }
 
-// TOTAL
+// ===== TOTAL =====
 function updateTotal(){
  let t=cart.reduce((a,i)=>a+i.price*i.qty,0);
  document.getElementById('total').innerText=t;
 }
 
-// CHECKOUT
+// ===== CHECKOUT =====
 function checkout(){
- if(cart.length===0) return alert("Empty");
+ if(cart.length===0) return alert("Cart empty");
 
  let total=cart.reduce((a,i)=>a+i.price*i.qty,0);
  let pay=document.getElementById('pay').value;
  let cust=document.getElementById('cust').value||'Walk-in';
 
- if(pay==='mpesa'){
-   stkPush(total);
+ // stock check + reduce
+ for(let item of cart){
+  let p=DB.products.find(x=>x.id===item.id);
+  if(p.stock < item.qty){
+    alert("Not enough stock");
+    return;
+  }
+  p.stock -= item.qty;
  }
 
+ // LPP
  if(pay==='lpp'){
-   createLPP(cust,total);
+  DB.lpp.push({
+    id:Date.now(),
+    name:cust,
+    total:total,
+    paid:0,
+    status:"active"
+  });
  }
 
+ // SAVE SALE
  DB.sales.push({
+  id:Date.now(),
   customer:cust,
-  total:total,
   items:cart,
+  total:total,
   date:Date.now()
  });
 
  save();
 
+ printReceipt(DB.sales[DB.sales.length-1]);
+
  cart=[];
  updateTotal();
- alert("Saved!");
+ renderProducts();
  renderLPP();
+
+ alert("Sale saved");
 }
 
-// MPESA SIMULATION
-function stkPush(amount){
- alert("STK Push sent to phone for KES "+amount);
+// ===== RECEIPT =====
+function printReceipt(sale){
+ let w=window.open('', '', 'width=300');
+ w.document.write(`
+  <h3>Receipt</h3>
+  ${sale.customer}<hr>
+  ${sale.items.map(i=>`${i.name} x${i.qty} = ${i.price*i.qty}`).join("<br>")}
+  <hr>Total: ${sale.total}
+ `);
+ w.print();
 }
 
-// LPP
-function createLPP(name,total){
- DB.lpp.push({
-  id:Date.now(),
-  name:name,
-  total:total,
-  paid:0
- });
+// ===== DASHBOARD =====
+function dashboard(){
+ let today = new Date().setHours(0,0,0,0);
+
+ let todaySales = DB.sales.filter(s=>s.date>=today);
+
+ let revenue = DB.sales.reduce((a,s)=>a+s.total,0);
+
+ let cost = DB.sales.reduce((a,s)=>
+   a + s.items.reduce((x,i)=>{
+     let p=DB.products.find(p=>p.id==i.id);
+     return x+(p.buy*i.qty);
+   },0)
+ ,0);
+
+ let profit = revenue - cost;
+
+ alert(
+  "Today: "+todaySales.length+
+  "\nRevenue: "+revenue+
+  "\nProfit: "+profit
+ );
 }
 
-function payLPP(id){
- let amt=prompt("Enter amount");
- let l=DB.lpp.find(x=>x.id===id);
- l.paid+=Number(amt);
- save();
- renderLPP();
-}
-
+// ===== LPP =====
 function renderLPP(){
  let div=document.getElementById('lppList');
  div.innerHTML='';
 
  DB.lpp.forEach(l=>{
+  let bal = l.total - l.paid;
+
   let el=document.createElement('div');
   el.className='card';
   el.innerHTML=
-   l.name+" - "+l.paid+"/"+l.total+
-   "<br><button>Pay</button>";
-  el.querySelector('button').onclick=()=>payLPP(l.id);
+   `${l.name}<br>
+    Paid:${l.paid}<br>
+    Balance:${bal}<br>
+    Status:${l.status}
+    <br><button>Pay</button>`;
+
+  el.querySelector('button').onclick=()=>{
+    let amt=Number(prompt("Amount"));
+    l.paid += amt;
+
+    if(l.paid >= l.total){
+      l.status="completed";
+    }
+
+    save();
+    renderLPP();
+  };
+
   div.appendChild(el);
  });
 }
