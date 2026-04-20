@@ -6,15 +6,13 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
 <title>JSRUAH HOME — BMS Premium</title>
 <style>
-/* ═══ THEME VARIABLES ═══ */
+/* ═══ THEME VARIABLES — on :root so ALL elements inherit ═══ */
 :root{
   --ff:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
   --fm:'Courier New',Courier,monospace;
   --r:10px;--r2:7px;
   --sw:238px;--th:54px;--mb:58px;
-}
-/* DARK MODE (default) */
-body.dark{
+  /* Default = DARK */
   --bg:#0b0e17;--sf:#131826;--sf2:#1a2035;--sf3:#202640;
   --bd:#2a3550;--bd2:#354066;
   --ac:#4a8bf5;--ac2:#7b61ff;--ac3:#00c9a0;
@@ -23,8 +21,8 @@ body.dark{
   --gn:#33cc88;--gd:#cc9a3a;
   --sh:0 4px 20px rgba(0,0,0,.5);
 }
-/* LIGHT MODE */
-body.light{
+/* LIGHT MODE — switched by JS setting html[data-theme="light"] */
+html[data-theme="light"]{
   --bg:#f0f2f8;--sf:#ffffff;--sf2:#f5f7fc;--sf3:#eaeef7;
   --bd:#c8d0e8;--bd2:#b0bcd8;
   --ac:#2d6ee8;--ac2:#5a40d0;--ac3:#008a6a;
@@ -35,8 +33,9 @@ body.light{
 }
 
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html{font-size:14px;-webkit-text-size-adjust:100%}
-body{font-family:var(–ff);background:var(–bg);color:var(–tx);min-height:100vh;overflow-x:hidden;transition:background .2s,color .2s}
+/* Apply bg/color to BOTH html AND body so there are no white/dark gaps */
+html{font-size:14px;-webkit-text-size-adjust:100%;background:var(–bg);color:var(–tx)}
+body{font-family:var(–ff);background:var(–bg);color:var(–tx);min-height:100vh;overflow-x:hidden;transition:background .3s,color .3s}
 input,select,textarea,button{font-family:var(–ff)}
 ::-webkit-scrollbar{width:4px;height:4px}
 ::-webkit-scrollbar-track{background:transparent}
@@ -274,7 +273,7 @@ body *{visibility:hidden}
 </style>
 
 </head>
-<body class="dark">
+<body>
 
 <!-- LOGIN -->
 
@@ -806,14 +805,26 @@ function inRange(date,from,to){if(!from&&!to)return true;var d=new Date(date);if
 var isDark=true;
 function setTheme(dark){
   isDark=dark;
-  document.body.className=dark?'dark':'light';
+  /* Set on html element — variables defined on html[data-theme] cascade to everything */
+  document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+  /* Also set bg/color directly on both html and body as belt-and-suspenders */
+  var bg=dark?'#0b0e17':'#f0f2f8';
+  var tx=dark?'#e8edf8':'#1a1f2e';
+  document.documentElement.style.background=bg;
+  document.documentElement.style.color=tx;
+  document.body.style.background=bg;
+  document.body.style.color=tx;
   var label=dark?'&#x2600; Switch to Light Mode':'&#x1F319; Switch to Dark Mode';
   var loginLabel=dark?'&#x2600; Light':'&#x1F319; Dark';
   if(el('themeBtn'))el('themeBtn').innerHTML=label;
   if(el('loginThemeBtn'))el('loginThemeBtn').innerHTML=loginLabel;
   try{localStorage.setItem('jsruah_theme',dark?'dark':'light');}catch(e){}
 }
-function loadTheme(){try{var t=localStorage.getItem('jsruah_theme');if(t==='light')setTheme(false);}catch(e){}}
+function loadTheme(){
+  var saved='dark';
+  try{var t=localStorage.getItem('jsruah_theme');if(t==='light'||t==='dark')saved=t;}catch(e){}
+  setTheme(saved==='dark');
+}
 
 /* ─── AUTH ─── */
 function setRole(r){
