@@ -470,7 +470,7 @@ body *{visibility:hidden}
             <div class="ct">&#x1F4E6; Product Stock List</div>
             <div id="invSum" style="font-size:11px;color:var(--tx3);font-weight:700"></div>
           </div>
-          <div class="tw"><table><thead><tr><th>SKU</th><th>Product</th><th>Category</th><th>Qty</th><th>Buy Price</th><th>Sell Price</th><th>Stock Value</th><th>Status</th><th>Actions</th></tr></thead><tbody id="invT"></tbody></table></div>
+          <div class="tw"><table><thead><tr id="invTHead"><th>SKU</th><th>Product</th><th>Category</th><th>Qty</th><th class="mgr-col">Buy Price</th><th>Sell Price</th><th class="mgr-col">Stock Value</th><th>Status</th><th>Actions</th></tr></thead><tbody id="invT"></tbody></table></div>
         </div>
       </div>
       <!-- Adjustment log tab -->
@@ -513,6 +513,20 @@ body *{visibility:hidden}
                 <div class="fg2"><label>Payment Method</label>
                   <select id="sPay"><option>Cash</option><option>M-Pesa</option><option>Bank Transfer</option><option>Lipa Pole Pole</option><option>Credit</option></select>
                 </div>
+                <!-- LPP extra fields — shown only when Lipa Pole Pole selected -->
+                <div id="lppCartFields" style="display:none;background:var(--sf2);border:2px solid var(--ac);border-radius:var(--r2);padding:12px;margin-bottom:10px">
+                  <div style="font-size:10px;font-weight:800;color:var(--ac);letter-spacing:.6px;text-transform:uppercase;margin-bottom:10px">&#x1F4C5; Lipa Pole Pole Details</div>
+                  <div class="fg2"><label>Customer Phone *</label><input id="lppCartPhone" type="text" placeholder="07XX XXX XXX"/></div>
+                  <div class="fr">
+                    <div class="fg2"><label>Deposit Paid (KSh)</label><input id="lppCartDeposit" type="number" placeholder="0" value="0"/></div>
+                    <div class="fg2"><label>Installment (KSh)</label><input id="lppCartInst" type="number" placeholder="e.g. 2000"/></div>
+                  </div>
+                  <div class="fr">
+                    <div class="fg2"><label>Frequency</label><select id="lppCartFreq"><option>Weekly</option><option>Bi-Weekly</option><option>Monthly</option></select></div>
+                    <div class="fg2"><label>Due Date</label><input id="lppCartDue" type="date"/></div>
+                  </div>
+                  <div class="fg2"><label>Notes</label><input id="lppCartNote" type="text" placeholder="Any notes..."/></div>
+                </div>
                 <div class="fg2"><label>Discount (KSh)</label><input id="sDisc" type="number" value="0"/></div>
                 <div class="csum">
                   <div class="csr"><span>Subtotal</span><span class="mono" id="cSub">KSh 0</span></div>
@@ -554,7 +568,7 @@ body *{visibility:hidden}
     <div class="spills" id="purSm"></div>
     <div class="card">
       <div class="ch"><div class="ct">Purchase Orders</div></div>
-      <div class="tw"><table><thead><tr><th>#</th><th>Product</th><th>Supplier</th><th>Qty</th><th>Cost</th><th>Total</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead><tbody id="purT"></tbody></table></div>
+      <div class="tw"><table><thead><tr><th>#</th><th>Product</th><th>Supplier</th><th>Qty</th><th class="mgr-col">Unit Cost</th><th class="mgr-col">Total</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead><tbody id="purT"></tbody></table></div>
     </div>
   </div>
 
@@ -1019,9 +1033,13 @@ function doLogin(){
   el('sbR').textContent=user.role.charAt(0).toUpperCase()+user.role.slice(1);
   var mgr=document.querySelectorAll('.mgr');
   for(var j=0;j<mgr.length;j++)mgr[j].style.display=user.role==='manager'?'':'none';
-  // Hide add/edit inventory buttons for agents
+  // Hide add/edit inventory and purchase controls for agents
   if(user.role==='agent'){
     if(el('addInvBtn'))el('addInvBtn').style.display='none';
+    if(el('addPurBtn'))el('addPurBtn').style.display='none';
+    // Hide cost/total column headers
+    var mgrCols=document.querySelectorAll('.mgr-col');
+    for(var k=0;k<mgrCols.length;k++)mgrCols[k].style.display='none';
   }
   go('dashboard');
   setInterval(function(){
@@ -1089,14 +1107,20 @@ function rInv(){
   var tbv=data.reduce(function(s,x){return s+(x.qty*x.buy);},0);
   var lowCount=data.filter(function(x){return x.qty<=x.low;}).length;
   var outCount=data.filter(function(x){return x.qty===0;}).length;
+  var isAgent=CU&&CU.role==='agent';
   el('invSum').textContent=data.length+' products shown';
   if(el('invSumPills'))el('invSumPills').innerHTML=
     '<div class="sp">Products<span>'+data.length+'</span></div>'+
     '<div class="sp">Sell Value<span class="tg">'+K(tv)+'</span></div>'+
-    '<div class="sp">Cost Value<span class="ta">'+K(tbv)+'</span></div>'+
+    // Cost value only for manager
+    (!isAgent?'<div class="sp">Cost Value<span class="ta">'+K(tbv)+'</span></div>':'')+
     (lowCount?'<div class="sp">Low Stock<span style="color:var(--wn)">'+lowCount+'</span></div>':'')+
     (outCount?'<div class="sp">Out of Stock<span class="tr">'+outCount+'</span></div>':'');
-  var isAgent=CU&&CU.role==='agent';
+
+  // Hide/show buy price and stock value columns in header based on role
+  var mgrCols=document.querySelectorAll('.mgr-col');
+  for(var c=0;c<mgrCols.length;c++)mgrCols[c].style.display=isAgent?'none':'';
+
   el('invT').innerHTML=data.length?data.map(function(p){
     var st=p.qty===0?'Out':p.qty<=p.low?'Low':'OK';var bc=p.qty===0?'bg-r':p.qty<=p.low?'bg-w':'bg-g';
     var mg=p.buy>0?Math.round(((p.sell-p.buy)/p.buy)*100):0;
@@ -1107,18 +1131,21 @@ function rInv(){
          '<button class="btn bs bgh" data-edit-inv="'+p.id+'">&#x270F; Edit</button>'+
          '<button class="btn bs bdr" data-del-inv="'+p.id+'">Del</button>'+
        '</div>';
+    // Buy price and stock value cells — hidden for agent
+    var buyCell=isAgent?'':('<td class="mono">'+K(p.buy)+'</td>');
+    var valCell=isAgent?'':('<td class="mono">'+K(p.qty*p.sell)+' <span style="font-size:9px;color:var(--ac)">(+'+mg+'%)</span></td>');
     return'<tr>'+
       '<td><span class="mono" style="font-size:10px;color:var(--tx3)">'+p.sku+'</span></td>'+
       '<td><strong>'+p.name+'</strong><br><span style="font-size:10px;color:var(--tx3);font-weight:600">'+(p.desc||'')+'</span></td>'+
       '<td>'+p.cat+'</td>'+
       '<td class="mono" style="font-size:14px;font-weight:900;color:'+(p.qty===0?'var(--dn)':p.qty<=p.low?'var(--wn)':'var(--tx)')+'">'+p.qty+' <span style="font-size:10px;font-weight:600;color:var(--tx3)">'+(p.unit||'')+'</span></td>'+
-      '<td class="mono">'+K(p.buy)+'</td>'+
+      buyCell+
       '<td class="mono">'+K(p.sell)+'</td>'+
-      '<td class="mono">'+K(p.qty*p.sell)+' <span style="font-size:9px;color:var(--ac)">(+'+mg+'%)</span></td>'+
+      valCell+
       '<td><span class="badge '+bc+'">'+st+'</span></td>'+
       '<td>'+actions+'</td>'+
     '</tr>';
-  }).join(''):er(9,'No products found');
+  }).join(''):er(isAgent?7:9,'No products found');
   if(!isAgent){
     el('invT').querySelectorAll('[data-adj-inv]').forEach(function(b){b.addEventListener('click',function(){openAdj(this.getAttribute('data-adj-inv'));});});
     el('invT').querySelectorAll('[data-edit-inv]').forEach(function(b){b.addEventListener('click',function(){editInv(this.getAttribute('data-edit-inv'));});});
@@ -1280,13 +1307,67 @@ function completeSale(){
   if(!cart.length){toast('Cart is empty','error');return;}
   var cust=val('sCust')||'Walk-in Customer',pay=val('sPay'),disc=parseFloat(val('sDisc'))||0;
   var sub=cart.reduce(function(s,c){return s+(c.price*c.qty);},0),tot=Math.max(0,sub-disc);
+
+  // Validate LPP fields if needed
+  if(pay==='Lipa Pole Pole'){
+    var phone=val('lppCartPhone').trim();
+    if(!phone){toast('Phone number required for Lipa Pole Pole','error');return;}
+  }
+
+  // Deduct stock
   cart.forEach(function(c){var i=DB.inv.findIndex(function(x){return x.id===c.pid;});if(i>-1)DB.inv[i].qty=Math.max(0,DB.inv[i].qty-c.qty);});
+
   var sale={id:nid('sale'),cust:cust,items:cart.map(function(c){return{pid:c.pid,name:c.name,qty:c.qty,price:c.price};}),total:tot,disc:disc,pay:pay,agent:CU.name,date:td(),ts:Date.now()};
-  DB.sales.unshift(sale);sv();
+  DB.sales.unshift(sale);
+
+  // AUTO-CREATE LPP PLAN if payment is Lipa Pole Pole
+  if(pay==='Lipa Pole Pole'){
+    var dep=parseFloat(val('lppCartDeposit'))||0;
+    var inst=parseFloat(val('lppCartInst'))||0;
+    var freq=val('lppCartFreq')||'Monthly';
+    var due=val('lppCartDue')||'';
+    var note=val('lppCartNote')||'';
+    var phone=val('lppCartPhone').trim();
+    // Build item description from cart
+    var itemDesc=cart.map(function(c){return c.name+(c.qty>1?' x'+c.qty:'');}).join(', ');
+    var newPlan={
+      id:nid('lpp'),
+      cust:cust,
+      phone:phone,
+      item:itemDesc,
+      total:tot,
+      dep:dep,
+      paid:dep,
+      inst:inst,
+      freq:freq,
+      start:td(),
+      due:due,
+      notes:'Sale #'+sale.id+(note?' | '+note:''),
+      saleId:sale.id,
+      pays:dep>0?[{amt:dep,date:td(),meth:'Cash',note:'Deposit on sale #'+sale.id}]:[]
+    };
+    DB.lpp.unshift(newPlan);
+    toast('Lipa Pole Pole plan created for '+cust,'info');
+  }
+
+  sv();
   var sid=sale.id;
-  cart=[];rCart();el('sCust').value='';el('sDisc').value='0';rSaleItems();rSH();
+  cart=[];
+  rCart();
+  el('sCust').value='';
+  el('sDisc').value='0';
+  // Reset LPP fields
+  ['lppCartPhone','lppCartDeposit','lppCartInst','lppCartNote','lppCartDue'].forEach(function(id){var e=el(id);if(e){e.value=id==='lppCartDeposit'?'0':'';}});
+  el('sPay').value='Cash';
+  toggleLppCartFields();
+  rSaleItems();rSH();
   toast('Sale completed! '+K(tot),'success');
   setTimeout(function(){showReceipt(sid);},300);
+}
+
+function toggleLppCartFields(){
+  var lppF=el('lppCartFields');
+  if(lppF)lppF.style.display=val('sPay')==='Lipa Pole Pole'?'block':'none';
 }
 function rSH(){
   var s=val('shS').toLowerCase(),f=val('shF'),from=val('shFrom'),to=val('shTo');
@@ -1371,18 +1452,27 @@ function openPur(){fpProds();['peid','psup','pqty','pcost','pnotes'].forEach(fun
 function rPur(){
   var s=val('purS').toLowerCase();
   var sf=val('purStatF'),from=val('purFrom'),to=val('purTo');
+  var isAgent=CU&&CU.role==='agent';
   var data=[].concat(DB.pur).sort(function(a,b){return new Date(b.date)-new Date(a.date);}).filter(function(p){
     return(!s||(p.pn+p.sup).toLowerCase().indexOf(s)>-1)&&(!sf||p.stat===sf)&&inRange(p.date,from,to);
   });
   var tot=data.reduce(function(s,x){return s+x.total;},0);
   var qty=data.reduce(function(s,x){return s+x.qty;},0);
-  el('purSm').innerHTML='<div class="sp">Orders<span>'+data.length+'</span></div><div class="sp">Total Spent<span class="tr">'+K(tot)+'</span></div><div class="sp">Units Received<span>'+qty+'</span></div>';
+  // Agents don't see total spent
+  el('purSm').innerHTML='<div class="sp">Orders<span>'+data.length+'</span></div>'+
+    (!isAgent?'<div class="sp">Total Spent<span class="tr">'+K(tot)+'</span></div>':'')+
+    '<div class="sp">Units Received<span>'+qty+'</span></div>';
   el('purT').innerHTML=data.length?data.map(function(p){
     var bc=p.stat==='Paid'?'bg-g':p.stat==='Pending'?'bg-w':'bg-b';
-    return'<tr><td>#'+p.id+'</td><td>'+p.pn+'</td><td>'+(p.sup||'&#x2014;')+'</td><td class="mono">'+p.qty+'</td><td class="mono">'+K(p.cost)+'</td><td class="mono tr">'+K(p.total)+'</td><td>'+p.date+'</td><td><span class="badge '+bc+'">'+p.stat+'</span></td><td><button class="btn bs bgh" data-edit-pur="'+p.id+'">Edit</button> <button class="btn bs bdr" data-del-pur="'+p.id+'">Del</button></td></tr>';
-  }).join(''):er(9,'No purchases found');
-  el('purT').querySelectorAll('[data-edit-pur]').forEach(function(b){b.addEventListener('click',function(){editPur(parseInt(this.getAttribute('data-edit-pur')));});});
-  el('purT').querySelectorAll('[data-del-pur]').forEach(function(b){b.addEventListener('click',function(){var id=parseInt(this.getAttribute('data-del-pur'));cdel(function(){dPur(id);});});});
+    // Agent sees product, supplier, qty, date, status — NOT cost or total
+    var costCells=isAgent?'':('<td class="mono">'+K(p.cost)+'</td><td class="mono tr">'+K(p.total)+'</td>');
+    var actCells=(CU&&CU.role==='manager')?'<td><button class="btn bs bgh" data-edit-pur="'+p.id+'">Edit</button> <button class="btn bs bdr" data-del-pur="'+p.id+'">Del</button></td>':'<td>&#x2014;</td>';
+    return'<tr><td>#'+p.id+'</td><td>'+p.pn+'</td><td>'+(p.sup||'&#x2014;')+'</td><td class="mono">'+p.qty+'</td>'+costCells+'<td>'+p.date+'</td><td><span class="badge '+bc+'">'+p.stat+'</span></td>'+actCells+'</tr>';
+  }).join(''):er(isAgent?6:9,'No purchases found');
+  if(CU&&CU.role==='manager'){
+    el('purT').querySelectorAll('[data-edit-pur]').forEach(function(b){b.addEventListener('click',function(){editPur(parseInt(this.getAttribute('data-edit-pur')));});});
+    el('purT').querySelectorAll('[data-del-pur]').forEach(function(b){b.addEventListener('click',function(){var id=parseInt(this.getAttribute('data-del-pur'));cdel(function(){dPur(id);});});});
+  }
 }
 function editPur(id){
   var p=DB.pur.filter(function(x){return x.id===id;})[0];if(!p)return;fpProds();
@@ -1594,6 +1684,7 @@ function init(){
   el('clearCartBtn').addEventListener('click',function(){cart=[];rCart();});
   el('sDisc').addEventListener('input',updCart);
   el('completeSaleBtn').addEventListener('click',completeSale);
+  el('sPay').addEventListener('change',toggleLppCartFields);
   el('shS').addEventListener('input',rSH);el('shF').addEventListener('change',rSH);
   el('shFrom').addEventListener('change',rSH);el('shTo').addEventListener('change',rSH);
   el('shClearDates').addEventListener('click',function(){el('shFrom').value='';el('shTo').value='';rSH();});
