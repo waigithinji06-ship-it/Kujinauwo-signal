@@ -4,6 +4,12 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="JSRUAH HOME"/>
+<meta name="theme-color" content="#4a8bf5"/>
+<link rel="manifest" href="manifest.json"/>
 <title>JSRUAH HOME — BMS Premium</title>
 <style>
 /* ═══ THEME VARIABLES — on :root so ALL elements inherit ═══ */
@@ -1081,11 +1087,14 @@ function rDash(){
   var exp=DB.exp.reduce(function(s,x){return s+x.amt;},0);
   var inv=DB.inv.reduce(function(s,x){return s+(x.qty*x.buy);},0);
   var net=rev-pur-exp,low=DB.inv.filter(function(x){return x.qty<=x.low;}).length;
+  var isAgentDash=CU&&CU.role==='agent';
   el('dStats').innerHTML=
     '<div class="sc" style="--cc:var(--ac)"><div class="sci">&#x1F6D2;</div><div class="scl">Sales Revenue</div><div class="scv tg">'+K(rev)+'</div><div class="scs">'+DB.sales.length+' transactions</div></div>'+
-    '<div class="sc" style="--cc:var(--ac3)"><div class="sci">&#x1F4E6;</div><div class="scl">Inventory Value</div><div class="scv ta">'+K(inv)+'</div><div class="scs">'+DB.inv.length+' products</div></div>'+
-    '<div class="sc" style="--cc:var(--dn)"><div class="sci">&#x1F4B8;</div><div class="scl">Total Expenses</div><div class="scv tr">'+K(exp)+'</div><div class="scs">All time</div></div>'+
-    '<div class="sc" style="--cc:'+(net>=0?'var(--gn)':'var(--dn)')+'"><div class="sci">&#x1F4CA;</div><div class="scl">Net Profit</div><div class="scv '+(net>=0?'tg':'tr')+'">'+K(net)+'</div><div class="scs">'+low+' low stock alert'+(low!==1?'s':'')+'</div></div>';
+    (!isAgentDash?'<div class="sc" style="--cc:var(--ac3)"><div class="sci">&#x1F4E6;</div><div class="scl">Inventory Value</div><div class="scv ta">'+K(inv)+'</div><div class="scs">'+DB.inv.length+' products</div></div>':
+      '<div class="sc" style="--cc:var(--ac3)"><div class="sci">&#x1F4E6;</div><div class="scl">Products In Stock</div><div class="scv ta">'+DB.inv.filter(function(x){return x.qty>0;}).length+'</div><div class="scs">'+DB.inv.length+' total products</div></div>')+
+    (!isAgentDash?'<div class="sc" style="--cc:var(--dn)"><div class="sci">&#x1F4B8;</div><div class="scl">Total Expenses</div><div class="scv tr">'+K(exp)+'</div><div class="scs">All time</div></div>':'')+
+    (!isAgentDash?'<div class="sc" style="--cc:'+(net>=0?'var(--gn)':'var(--dn)')+'"><div class="sci">&#x1F4CA;</div><div class="scl">Net Profit</div><div class="scv '+(net>=0?'tg':'tr')+'">'+K(net)+'</div><div class="scs">'+low+' low stock alert'+(low!==1?'s':'')+'</div></div>':
+      '<div class="sc" style="--cc:var(--dn)"><div class="sci">&#x26A0;</div><div class="scl">Low Stock Items</div><div class="scv '+(low>0?'tr':'tg')+'">'+low+'</div><div class="scs">'+(low>0?'Need restocking':'All levels OK')+'</div></div>');
   var rs=[].concat(DB.sales).sort(function(a,b){return b.ts-a.ts;}).slice(0,5);
   el('dSales').innerHTML=rs.length?rs.map(function(s){return'<tr><td>'+s.items.map(function(i){return i.name;}).join(', ')+'</td><td class="mono tg">'+K(s.total)+'</td><td>'+s.date+'</td></tr>';}).join(''):er(3);
   var lows=DB.inv.filter(function(x){return x.qty<=x.low;});
@@ -1111,13 +1120,13 @@ function rInv(){
   el('invSum').textContent=data.length+' products shown';
   if(el('invSumPills'))el('invSumPills').innerHTML=
     '<div class="sp">Products<span>'+data.length+'</span></div>'+
-    '<div class="sp">Sell Value<span class="tg">'+K(tv)+'</span></div>'+
-    // Cost value only for manager
+    // Agents only see counts — no financial values
+    (!isAgent?'<div class="sp">Sell Value<span class="tg">'+K(tv)+'</span></div>':'')+
     (!isAgent?'<div class="sp">Cost Value<span class="ta">'+K(tbv)+'</span></div>':'')+
     (lowCount?'<div class="sp">Low Stock<span style="color:var(--wn)">'+lowCount+'</span></div>':'')+
     (outCount?'<div class="sp">Out of Stock<span class="tr">'+outCount+'</span></div>':'');
 
-  // Hide/show buy price and stock value columns in header based on role
+  // Hide/show manager-only columns in ALL tables
   var mgrCols=document.querySelectorAll('.mgr-col');
   for(var c=0;c<mgrCols.length;c++)mgrCols[c].style.display=isAgent?'none':'';
 
@@ -1131,21 +1140,23 @@ function rInv(){
          '<button class="btn bs bgh" data-edit-inv="'+p.id+'">&#x270F; Edit</button>'+
          '<button class="btn bs bdr" data-del-inv="'+p.id+'">Del</button>'+
        '</div>';
-    // Buy price and stock value cells — hidden for agent
+    // AGENT: no buy price cell, no stock value cell, no margin %
     var buyCell=isAgent?'':('<td class="mono">'+K(p.buy)+'</td>');
-    var valCell=isAgent?'':('<td class="mono">'+K(p.qty*p.sell)+' <span style="font-size:9px;color:var(--ac)">(+'+mg+'%)</span></td>');
+    // Sell price shown to agent but WITHOUT margin % (margin reveals profit)
+    var sellCell='<td class="mono">'+K(p.sell)+(isAgent?'':(' <span style="font-size:9px;color:var(--ac)">(+'+mg+'%)</span>'))+'</td>';
+    var valCell=isAgent?'':('<td class="mono">'+K(p.qty*p.sell)+'</td>');
     return'<tr>'+
       '<td><span class="mono" style="font-size:10px;color:var(--tx3)">'+p.sku+'</span></td>'+
       '<td><strong>'+p.name+'</strong><br><span style="font-size:10px;color:var(--tx3);font-weight:600">'+(p.desc||'')+'</span></td>'+
       '<td>'+p.cat+'</td>'+
       '<td class="mono" style="font-size:14px;font-weight:900;color:'+(p.qty===0?'var(--dn)':p.qty<=p.low?'var(--wn)':'var(--tx)')+'">'+p.qty+' <span style="font-size:10px;font-weight:600;color:var(--tx3)">'+(p.unit||'')+'</span></td>'+
       buyCell+
-      '<td class="mono">'+K(p.sell)+'</td>'+
+      sellCell+
       valCell+
       '<td><span class="badge '+bc+'">'+st+'</span></td>'+
       '<td>'+actions+'</td>'+
     '</tr>';
-  }).join(''):er(isAgent?7:9,'No products found');
+  }).join(''):er(isAgent?6:9,'No products found');
   if(!isAgent){
     el('invT').querySelectorAll('[data-adj-inv]').forEach(function(b){b.addEventListener('click',function(){openAdj(this.getAttribute('data-adj-inv'));});});
     el('invT').querySelectorAll('[data-edit-inv]').forEach(function(b){b.addEventListener('click',function(){editInv(this.getAttribute('data-edit-inv'));});});
@@ -1310,32 +1321,46 @@ function completeSale(){
 
   // Validate LPP fields if needed
   if(pay==='Lipa Pole Pole'){
-    var phone=val('lppCartPhone').trim();
-    if(!phone){toast('Phone number required for Lipa Pole Pole','error');return;}
+    var phoneCheck=val('lppCartPhone').trim();
+    if(!phoneCheck){toast('Phone number required for Lipa Pole Pole','error');return;}
   }
 
   // Deduct stock
   cart.forEach(function(c){var i=DB.inv.findIndex(function(x){return x.id===c.pid;});if(i>-1)DB.inv[i].qty=Math.max(0,DB.inv[i].qty-c.qty);});
 
-  var sale={id:nid('sale'),cust:cust,items:cart.map(function(c){return{pid:c.pid,name:c.name,qty:c.qty,price:c.price};}),total:tot,disc:disc,pay:pay,agent:CU.name,date:td(),ts:Date.now()};
+  // For LPP: the amount recorded in SALES is the deposit (amount actually collected today)
+  // The full total is tracked in the LPP plan itself
+  var dep=pay==='Lipa Pole Pole'?(parseFloat(val('lppCartDeposit'))||0):0;
+  var saleAmount=pay==='Lipa Pole Pole'?dep:tot;
+
+  var sale={
+    id:nid('sale'),
+    cust:cust,
+    items:cart.map(function(c){return{pid:c.pid,name:c.name,qty:c.qty,price:c.price};}),
+    total:saleAmount,        // only deposit for LPP, full amount for other payments
+    fullTotal:tot,           // always store full cart total for reference
+    disc:disc,
+    pay:pay,
+    agent:CU.name,
+    date:td(),
+    ts:Date.now()
+  };
   DB.sales.unshift(sale);
 
   // AUTO-CREATE LPP PLAN if payment is Lipa Pole Pole
   if(pay==='Lipa Pole Pole'){
-    var dep=parseFloat(val('lppCartDeposit'))||0;
     var inst=parseFloat(val('lppCartInst'))||0;
     var freq=val('lppCartFreq')||'Monthly';
     var due=val('lppCartDue')||'';
     var note=val('lppCartNote')||'';
     var phone=val('lppCartPhone').trim();
-    // Build item description from cart
     var itemDesc=cart.map(function(c){return c.name+(c.qty>1?' x'+c.qty:'');}).join(', ');
     var newPlan={
       id:nid('lpp'),
       cust:cust,
       phone:phone,
       item:itemDesc,
-      total:tot,
+      total:tot,             // full price goes into LPP total
       dep:dep,
       paid:dep,
       inst:inst,
@@ -1347,7 +1372,7 @@ function completeSale(){
       pays:dep>0?[{amt:dep,date:td(),meth:'Cash',note:'Deposit on sale #'+sale.id}]:[]
     };
     DB.lpp.unshift(newPlan);
-    toast('Lipa Pole Pole plan created for '+cust,'info');
+    toast('Lipa Pole Pole plan created for '+cust+' — deposit: '+K(dep)+', balance: '+K(tot-dep),'info');
   }
 
   sv();
@@ -1361,7 +1386,7 @@ function completeSale(){
   el('sPay').value='Cash';
   toggleLppCartFields();
   rSaleItems();rSH();
-  toast('Sale completed! '+K(tot),'success');
+  toast('Sale completed! '+K(saleAmount)+(pay==='Lipa Pole Pole'?' (deposit received)':''),'success');
   setTimeout(function(){showReceipt(sid);},300);
 }
 
@@ -1376,11 +1401,17 @@ function rSH(){
     return(!s||(x.cust+itms).toLowerCase().indexOf(s)>-1)&&(!f||x.pay===f)&&inRange(x.date,from,to);
   });
   var tot=data.reduce(function(s,x){return s+x.total;},0);
-  el('shSm').innerHTML='<div class="sp">Transactions<span>'+data.length+'</span></div><div class="sp">Revenue<span class="tg">'+K(tot)+'</span></div><div class="sp">Avg<span>'+(data.length?K(Math.round(tot/data.length)):K(0))+'</span></div>';
+  el('shSm').innerHTML='<div class="sp">Transactions<span>'+data.length+'</span></div>'+
+    '<div class="sp">Cash Collected<span class="tg">'+K(tot)+'</span></div>'+
+    '<div class="sp">Avg<span>'+(data.length?K(Math.round(tot/data.length)):K(0))+'</span></div>';
   el('shT').innerHTML=data.length?data.map(function(s){
     var itms=s.items.map(function(i){return i.name+'x'+i.qty;}).join(', ');
     var del=(CU&&CU.role==='manager')?'<button class="btn bs bdr" data-del-sale="'+s.id+'">Del</button>':'&#x2014;';
-    return'<tr><td>#'+s.id+'</td><td>'+s.cust+'</td><td style="font-size:11px;font-weight:600">'+itms+'</td><td class="mono tg">'+K(s.total)+'</td><td><span class="badge bg-b">'+s.pay+'</span></td><td>'+s.agent+'</td><td>'+s.date+'</td><td><button class="btn bs bsu" data-receipt="'+s.id+'">&#x1F9FE;</button></td><td>'+del+'</td></tr>';
+    // For LPP: show deposit collected + full total for context
+    var amtDisplay=s.pay==='Lipa Pole Pole'
+      ?('<span class="mono tg">'+K(s.total)+'</span><br><span style="font-size:10px;color:var(--tx3);font-weight:700">of '+K(s.fullTotal||s.total)+' total</span>')
+      :('<span class="mono tg">'+K(s.total)+'</span>');
+    return'<tr><td>#'+s.id+'</td><td>'+s.cust+'</td><td style="font-size:11px;font-weight:600">'+itms+'</td><td>'+amtDisplay+'</td><td><span class="badge bg-b">'+s.pay+'</span></td><td>'+s.agent+'</td><td>'+s.date+'</td><td><button class="btn bs bsu" data-receipt="'+s.id+'">&#x1F9FE;</button></td><td>'+del+'</td></tr>';
   }).join(''):er(9,'No sales found');
   el('shT').querySelectorAll('[data-receipt]').forEach(function(b){b.addEventListener('click',function(){showReceipt(parseInt(this.getAttribute('data-receipt')));});});
   el('shT').querySelectorAll('[data-del-sale]').forEach(function(b){b.addEventListener('click',function(){var id=parseInt(this.getAttribute('data-del-sale'));cdel(function(){dSale(id);});});});
@@ -1406,7 +1437,14 @@ function showReceipt(saleId){
   html+='<div class="rrow"><span>Cashier</span><span>'+s.agent+'</span></div>';
   html+='<div style="border-top:1px dashed #ccc;margin:8px 0;padding-top:8px">'+rows+'</div>';
   if(s.disc>0)html+='<div class="rrow"><span>Discount</span><span>- '+K(s.disc)+'</span></div>';
-  html+='<div class="rtot"><span>TOTAL PAID</span><span>'+K(s.total)+'</span></div>';
+  if(s.pay==='Lipa Pole Pole'){
+    html+='<div class="rrow"><span>Full Price</span><span>'+K(s.fullTotal||s.total)+'</span></div>';
+    html+='<div class="rtot"><span>DEPOSIT PAID</span><span>'+K(s.total)+'</span></div>';
+    var bal=(s.fullTotal||s.total)-s.total;
+    if(bal>0)html+='<div class="rrow" style="margin-top:4px;color:#c00;font-weight:800"><span>Balance Remaining</span><span>'+K(bal)+'</span></div>';
+  } else {
+    html+='<div class="rtot"><span>TOTAL PAID</span><span>'+K(s.total)+'</span></div>';
+  }
   html+='<div class="rrow" style="margin-top:6px"><span>Payment</span><span>'+s.pay+'</span></div>';
   html+='<div style="text-align:center;margin:12px 0"><img src="'+qrUrl+'" width="100" height="100" alt="QR" style="border:2px solid #ccc;border-radius:6px"/></div>';
   html+='<div class="rft">Thank you for shopping at '+SHOP.name+'!<br>Goods sold are not returnable.</div>';
@@ -1726,6 +1764,15 @@ function init(){
 
 if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',init);}
 else{init();}
+
+// ── PWA SERVICE WORKER REGISTRATION ──
+if('serviceWorker' in navigator){
+  window.addEventListener('load', function(){
+    navigator.serviceWorker.register('/sw.js')
+      .then(function(reg){ console.log('SW registered:', reg.scope); })
+      .catch(function(err){ console.log('SW error:', err); });
+  });
+}
 })();
 </script>
 
