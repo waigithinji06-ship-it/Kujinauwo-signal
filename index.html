@@ -242,7 +242,7 @@ tr:hover td{background:var(–sf2)}
 .mo{position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);display:none;align-items:flex-end;justify-content:center;padding:0}
 @media(min-width:580px){.mo{align-items:center;padding:16px}}
 .mo.open{display:flex}
-.md{background:var(–sf);border:2px solid var(–bd);width:100%;max-width:500px;max-height:92vh;overflow-y:auto;border-radius:18px 18px 0 0;box-shadow:var(–sh)}
+.md{background:var(–sf);border:2px solid var(–bd);width:100%;max-width:500px;max-height:92vh;overflow-y:auto;overflow-x:visible;border-radius:18px 18px 0 0;box-shadow:var(–sh)}
 @media(min-width:580px){.md{border-radius:14px}}
 .mh{padding:16px 18px 12px;border-bottom:2px solid var(–bd);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(–sf);z-index:1}
 .mht{font-size:14px;font-weight:800;color:var(–tx)}
@@ -351,14 +351,42 @@ tr:hover td{background:var(–sf2)}
 .cnt{padding:14px 16px}
 }
 /* Purchase modal product search */
-.prod-search-wrap{position:relative;margin-bottom:8px}
+.prod-search-wrap{position:relative;margin-bottom:4px}
 .prod-search-wrap .si{width:100%}
-.prod-dropdown{position:absolute;top:100%;left:0;right:0;background:var(–sf);border:2px solid var(–ac);border-top:none;border-radius:0 0 var(–r2) var(–r2);max-height:180px;overflow-y:auto;z-index:100;display:none}
+.prod-dropdown{
+position:absolute;top:100%;left:0;right:0;
+background:var(–sf);
+border:2px solid var(–ac);
+border-radius:var(–r2);
+max-height:200px;overflow-y:auto;
+z-index:9999;  /* must be above the modal */
+box-shadow:0 8px 24px rgba(0,0,0,.45);
+display:none;
+margin-top:2px;
+}
 .prod-dropdown.show{display:block}
-.prod-opt{padding:9px 12px;cursor:pointer;font-size:13px;font-weight:600;border-bottom:1px solid var(–bd)}
-.prod-opt:hover{background:var(–sf2);color:var(–ac)}
+.prod-opt{
+padding:11px 13px;cursor:pointer;
+font-size:13px;font-weight:600;
+border-bottom:1px solid var(–bd);
+color:var(–tx);
+transition:background .12s;
+}
+.prod-opt:hover{background:rgba(74,139,245,.12);color:var(–ac)}
 .prod-opt:last-child{border-bottom:none}
-.prod-selected{background:var(–sf2);border:2px solid var(–gn);border-radius:var(–r2);padding:8px 12px;font-size:12px;font-weight:700;color:var(–gn);margin-bottom:8px;display:none}
+.prod-opt small{display:block;font-size:10px;color:var(–tx3);margin-top:1px;font-weight:600}
+.prod-selected{
+background:rgba(51,204,136,.1);
+border:2px solid var(–gn);
+border-radius:var(–r2);
+padding:9px 13px;
+font-size:12px;font-weight:800;
+color:var(–gn);
+margin-bottom:6px;
+display:none;
+align-items:center;
+justify-content:space-between;
+}
 
 /* ═══ REPORTS ═══ */
 .rg3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px}
@@ -1833,32 +1861,64 @@ function rCharts(){
 function initProdSearch(){
   var si=el('pprodSearch'),dd=el('pprodDrop'),hid=el('pprod'),sel=el('pprodSelected');
   if(!si)return;
-  si.addEventListener('input',function(){
-    var q=si.value.toLowerCase().trim();
+
+  function posDD(){
+    // Position dropdown using fixed coords so modal overflow never clips it
+    var rect=si.getBoundingClientRect();
+    dd.style.position='fixed';
+    dd.style.top=(rect.bottom+2)+'px';
+    dd.style.left=rect.left+'px';
+    dd.style.width=rect.width+'px';
+    dd.style.zIndex='9999';
+  }
+
+  function showResults(q){
     if(!q){dd.classList.remove('show');return;}
-    var matches=DB.inv.filter(function(p){return(p.name+p.sku).toLowerCase().indexOf(q)>-1;}).slice(0,8);
-    if(!matches.length){dd.innerHTML='<div class="prod-opt" style="color:var(--tx3)">No products found</div>';dd.classList.add('show');return;}
-    dd.innerHTML=matches.map(function(p){
-      return'<div class="prod-opt" data-pid="'+p.id+'" data-pname="'+p.name+'">'+
-        '<strong>'+p.name+'</strong> <span style="font-size:10px;color:var(--tx3)">'+p.sku+' | Stock: '+p.qty+'</span>'+
-      '</div>';
-    }).join('');
-    dd.classList.add('show');
-    dd.querySelectorAll('.prod-opt[data-pid]').forEach(function(opt){
-      opt.addEventListener('click',function(){
-        var pid=this.getAttribute('data-pid');
-        var pname=this.getAttribute('data-pname');
-        hid.value=pid;
-        si.value='';
-        dd.classList.remove('show');
-        if(sel){sel.textContent='Selected: '+pname;sel.style.display='block';}
-        // Auto-fill cost with last known buy price
-        var p=DB.inv.filter(function(x){return x.id===pid;})[0];
-        if(p&&p.buy&&!val('pcost'))el('pcost').value=p.buy;
+    var matches=DB.inv.filter(function(p){
+      return(p.name+' '+(p.sku||'')).toLowerCase().indexOf(q)>-1;
+    }).slice(0,8);
+    if(!matches.length){
+      dd.innerHTML='<div class="prod-opt" style="color:var(--tx3);cursor:default">No products found</div>';
+    } else {
+      dd.innerHTML=matches.map(function(p){
+        var stockColor=p.qty===0?'color:var(--dn)':p.qty<=p.low?'color:var(--wn)':'color:var(--gn)';
+        return'<div class="prod-opt" data-pid="'+p.id+'" data-pname="'+p.name+'">'+
+          '<strong>'+p.name+'</strong>'+
+          '<small>SKU: '+(p.sku||'-')+' &nbsp;|&nbsp; <span style="'+stockColor+'">Stock: '+p.qty+' '+(p.unit||'')+'</span></small>'+
+        '</div>';
+      }).join('');
+      dd.querySelectorAll('.prod-opt[data-pid]').forEach(function(opt){
+        opt.addEventListener('click',function(){
+          var pid=this.getAttribute('data-pid');
+          var pname=this.getAttribute('data-pname');
+          hid.value=pid;
+          si.value='';
+          dd.classList.remove('show');
+          if(sel){
+            sel.innerHTML='&#x2705; <strong>'+pname+'</strong>';
+            sel.style.display='flex';
+          }
+          // Auto-fill cost with last known buy price
+          var p=DB.inv.filter(function(x){return x.id===pid;})[0];
+          if(p&&p.buy){var pc=el('pcost');if(pc&&!pc.value)pc.value=p.buy;}
+        });
       });
-    });
+    }
+    posDD();
+    dd.classList.add('show');
+  }
+
+  si.addEventListener('input',function(){showResults(si.value.toLowerCase().trim());});
+  si.addEventListener('focus',function(){if(si.value.trim())showResults(si.value.toLowerCase().trim());});
+
+  // Reposition on scroll/resize
+  window.addEventListener('scroll',function(){if(dd.classList.contains('show'))posDD();},{passive:true});
+  window.addEventListener('resize',function(){if(dd.classList.contains('show'))posDD();});
+
+  // Close on outside click
+  document.addEventListener('click',function(e){
+    if(dd&&!dd.contains(e.target)&&e.target!==si)dd.classList.remove('show');
   });
-  document.addEventListener('click',function(e){if(dd&&!dd.contains(e.target)&&e.target!==si)dd.classList.remove('show');});
 }
 
 /* ─── DATA EXPORT / IMPORT ─── */
