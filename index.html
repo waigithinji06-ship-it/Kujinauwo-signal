@@ -83,7 +83,7 @@ text-transform:uppercase;
 
 /* ═══ SIDEBAR ═══ */
 #sb{position:fixed;top:0;left:0;bottom:0;width:var(–sw);z-index:150;background:var(–sf);border-right:2px solid var(–bd);display:flex;flex-direction:column;box-shadow:4px 0 24px rgba(0,0,0,.25);transition:transform .28s cubic-bezier(.4,0,.2,1);overflow-y:auto}
-@media(min-width:769px){#sb{transform:translateX(0)}#ma{padding-left:var(–sw)}}
+@media(min-width:769px){#sb{transform:translateX(0)}}
 @media(max-width:768px){#sb{transform:translateX(-100%)}#sb.open{transform:translateX(0)}#ma{padding-left:0;padding-bottom:var(–mb)}}
 @media(min-width:769px)and(max-width:1024px){:root{–sw:210px}}
 .sbh{padding:16px 14px 12px;border-bottom:2px solid var(–bd);flex-shrink:0}
@@ -311,20 +311,67 @@ tr:hover td{background:var(–sf2)}
 .ll{font-size:9px;color:var(–tx3);letter-spacing:.5px;text-transform:uppercase;margin-bottom:2px;font-weight:800}
 .lv{font-size:13px;font-weight:800;font-family:var(–fm);color:var(–tx)}
 
+/* ═══ CHART STYLES ═══ */
+.chart-wrap{position:relative;height:200px;background:var(–sf2);border:2px solid var(–bd);border-radius:var(–r);overflow:hidden;margin-bottom:14px}
+.chart-bar-wrap{display:flex;align-items:flex-end;gap:4px;height:160px;padding:10px 10px 0;overflow-x:auto}
+.chart-bar{flex-shrink:0;min-width:28px;border-radius:5px 5px 0 0;background:linear-gradient(180deg,var(–ac),var(–ac2));cursor:pointer;transition:opacity .15s;position:relative}
+.chart-bar:hover{opacity:.8}
+.chart-bar-label{font-size:9px;color:var(–tx3);text-align:center;margin-top:3px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:48px}
+.chart-bar-val{position:absolute;top:-18px;left:50%;transform:translateX(-50%);font-size:9px;font-weight:800;color:var(–tx);white-space:nowrap;background:var(–sf);border:1px solid var(–bd);border-radius:4px;padding:1px 4px;display:none}
+.chart-bar:hover .chart-bar-val{display:block}
+.chart-legend{display:flex;gap:10px;flex-wrap:wrap;padding:8px 12px;border-top:1px solid var(–bd)}
+.chart-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+
+/* ═══ DATA SYNC BANNER ═══ */
+.sync-banner{background:rgba(74,139,245,.1);border:2px solid var(–ac);border-radius:var(–r2);padding:11px 14px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.sync-text{font-size:12px;font-weight:700;color:var(–tx2)}
+.sync-btns{display:flex;gap:7px;flex-wrap:wrap}
+
+/* ═══ DESKTOP LAYOUT ═══ */
+@media(min-width:769px){
+#app{display:flex;flex-direction:row;min-height:100vh}
+#sb{position:fixed;top:0;left:0;bottom:0;z-index:150}
+#ma{flex:1;margin-left:var(–sw);min-width:0}
+.cnt{padding:20px 24px}
+.dg2{gap:16px}
+.sg{gap:14px;margin-bottom:20px}
+}
+@media(min-width:1200px){
+:root{–sw:260px}
+.cnt{padding:22px 32px}
+.sg{grid-template-columns:repeat(4,1fr)}
+}
+/* Tablet */
+@media(min-width:769px)and(max-width:1100px){
+:root{–sw:200px}
+.sg{grid-template-columns:1fr 1fr}
+.dg2{grid-template-columns:1fr}
+.slayout{grid-template-columns:1fr}
+.acg{grid-template-columns:1fr 1fr}
+.cnt{padding:14px 16px}
+}
+/* Purchase modal product search */
+.prod-search-wrap{position:relative;margin-bottom:8px}
+.prod-search-wrap .si{width:100%}
+.prod-dropdown{position:absolute;top:100%;left:0;right:0;background:var(–sf);border:2px solid var(–ac);border-top:none;border-radius:0 0 var(–r2) var(–r2);max-height:180px;overflow-y:auto;z-index:100;display:none}
+.prod-dropdown.show{display:block}
+.prod-opt{padding:9px 12px;cursor:pointer;font-size:13px;font-weight:600;border-bottom:1px solid var(–bd)}
+.prod-opt:hover{background:var(–sf2);color:var(–ac)}
+.prod-opt:last-child{border-bottom:none}
+.prod-selected{background:var(–sf2);border:2px solid var(–gn);border-radius:var(–r2);padding:8px 12px;font-size:12px;font-weight:700;color:var(–gn);margin-bottom:8px;display:none}
+
 /* ═══ REPORTS ═══ */
 .rg3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px}
 @media(max-width:640px){.rg3{grid-template-columns:1fr}}
 .rcard{background:var(–sf);border:2px solid var(–bd);border-radius:var(–r);padding:22px 14px;text-align:center;cursor:pointer;transition:all .2s}
 .rcard:hover{border-color:var(–ac);background:var(–sf2)}
-
-/* ═══ HELPERS ═══ */
 .mono{font-family:var(–fm);font-size:12px;font-weight:700}
 .tg{color:var(–gn)}.tr{color:var(–dn)}.ta{color:var(–ac)}
 .fw8{font-weight:900}
 .divl{height:2px;background:var(–bd);margin:11px 0}
 .empty{text-align:center;padding:34px 14px;color:var(–tx3);font-size:12px;font-weight:700}
 
-/* ═══ TOAST ═══ */
+/* ═══ HELPERS ═══ */
 #toast{position:fixed;bottom:18px;right:14px;z-index:9999;display:flex;flex-direction:column;gap:5px;pointer-events:none}
 @media(max-width:768px){#toast{bottom:calc(var(–mb) + 10px)}}
 .ti{background:var(–sf);border:2px solid var(–bd);border-radius:var(–r2);padding:10px 14px;min-width:200px;max-width:270px;font-size:12px;font-weight:700;animation:tup .2s ease;box-shadow:var(–sh)}
@@ -333,7 +380,7 @@ tr:hover td{background:var(–sf2)}
 .ti.info{border-left:4px solid var(–ac)}
 @keyframes tup{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 
-/* ═══ RECEIPT PRINT ═══ */
+/* ═══ TOAST ═══ */
 @media print{
 body *{visibility:hidden}
 #receiptPrint,#receiptPrint *{visibility:visible}
@@ -467,6 +514,12 @@ body *{visibility:hidden}
         <div class="sbar">
           <input class="si" id="invS" placeholder="&#x1F50D; Search products..."/>
           <select id="invCF"><option value="">All Categories</option></select>
+          <select id="invStockF">
+            <option value="">All Stock</option>
+            <option value="out">&#x1F534; Out of Stock</option>
+            <option value="low">&#x26A0; Low Stock</option>
+            <option value="ok">&#x2705; In Stock</option>
+          </select>
           <button class="btn bac" id="addInvBtn">+ Add Product</button>
         </div>
         <!-- Summary pills -->
@@ -622,8 +675,24 @@ body *{visibility:hidden}
 
   <!-- REPORTS -->
   <div class="page" id="page-reports">
+    <!-- Live Charts Section -->
+    <div class="dg2" style="margin-bottom:16px">
+      <div class="card">
+        <div class="ch"><div class="ct">&#x1F4CA; Daily Sales (Last 14 Days)</div></div>
+        <div style="padding:12px" id="chartDailySales"></div>
+      </div>
+      <div class="card">
+        <div class="ch"><div class="ct">&#x1F3C6; Top Selling Products</div></div>
+        <div style="padding:12px" id="chartTopProds"></div>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:16px">
+      <div class="ch"><div class="ct">&#x1F4B0; Revenue vs Expenses (Monthly)</div></div>
+      <div style="padding:12px" id="chartRevExp"></div>
+    </div>
+    <!-- Date-filtered reports -->
     <div style="background:var(--sf2);border:2px solid var(--bd);border-radius:var(--r);padding:16px;margin-bottom:16px">
-      <div style="font-size:12px;font-weight:800;color:var(--tx2);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px">&#x1F4C5; Select Date Range (leave blank for all time)</div>
+      <div style="font-size:12px;font-weight:800;color:var(--tx2);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px">&#x1F4C5; Generate Detailed Report (select date range)</div>
       <div style="display:flex;gap:9px;flex-wrap:wrap;align-items:center">
         <div class="fg2" style="margin:0;flex:1;min-width:130px"><label>From</label><input type="date" id="rFrom" class="si"/></div>
         <div class="fg2" style="margin:0;flex:1;min-width:130px"><label>To</label><input type="date" id="rTo" class="si"/></div>
@@ -640,6 +709,15 @@ body *{visibility:hidden}
 
   <!-- SETTINGS (Manager Only) -->
   <div class="page" id="page-settings">
+    <!-- Data Sync Banner -->
+    <div class="sync-banner">
+      <div class="sync-text">&#x2601; <strong>Data is stored per device.</strong> Phone and laptop have separate data. Use Export/Import to sync between devices.</div>
+      <div class="sync-btns">
+        <button class="btn bs bwn" id="exportDataBtn">&#x1F4E5; Export Data</button>
+        <button class="btn bs bac" id="importDataBtn">&#x1F4E4; Import Data</button>
+        <input type="file" id="importFile" accept=".json" style="display:none"/>
+      </div>
+    </div>
     <div class="dg2">
       <div class="card">
         <div class="ch"><div class="ct">&#x1F465; User Management</div><button class="btn bs bac" id="addUserBtn">+ Add Agent</button></div>
@@ -813,10 +891,16 @@ body *{visibility:hidden}
     <div class="mh"><div class="mht" id="mPurT">Record Purchase</div><button class="mhc" data-close="mPur">&#x2715;</button></div>
     <div class="mb2">
       <input type="hidden" id="peid"/>
-      <div class="fr">
-        <div class="fg2"><label>Product *</label><select id="pprod"></select></div>
-        <div class="fg2"><label>Supplier</label><input id="psup" type="text" placeholder="Supplier name"/></div>
+      <input type="hidden" id="pprod"/>
+      <div class="fg2">
+        <label>Product * — type to search</label>
+        <div class="prod-search-wrap">
+          <input class="si" id="pprodSearch" type="text" placeholder="&#x1F50D; Search product name or SKU..." autocomplete="off"/>
+          <div class="prod-dropdown" id="pprodDrop"></div>
+        </div>
+        <div class="prod-selected" id="pprodSelected"></div>
       </div>
+      <div class="fg2"><label>Supplier</label><input id="psup" type="text" placeholder="Supplier name"/></div>
       <div class="fr">
         <div class="fg2"><label>Quantity *</label><input id="pqty" type="number" placeholder="0"/></div>
         <div class="fg2"><label>Unit Cost (KSh) *</label><input id="pcost" type="number" placeholder="0"/></div>
@@ -1067,7 +1151,7 @@ function go(p){
   if(el('ptitle'))el('ptitle').textContent=pT[p]||p;
   if(p==='dashboard')rDash();if(p==='inventory'){rInv();rAdjLog();}if(p==='sales'){rSaleItems();rSH();}
   if(p==='purchases'){fpProds();rPur();}if(p==='accounting')rAcc();if(p==='expenses')rExp();
-  if(p==='lpp')rLpp();if(p==='settings')rSettings();
+  if(p==='lpp')rLpp();if(p==='settings')rSettings();if(p==='reports'){rCharts();}
   if(window.innerWidth<=768)closeSB();
 }
 function stab(cid,tid){
@@ -1107,29 +1191,33 @@ function rDash(){
 
 /* ─── INVENTORY ─── */
 function rInv(){
-  var s=val('invS').toLowerCase(),cv=val('invCF');
+  var s=val('invS').toLowerCase(),cv=val('invCF'),sf=val('invStockF')||'';
   var cats=[];DB.inv.forEach(function(x){if(cats.indexOf(x.cat)===-1)cats.push(x.cat);});
   var cf=el('invCF');var pv=cf.value;
   cf.innerHTML='<option value="">All Categories</option>'+cats.map(function(c){return'<option'+(c===pv?' selected':'')+'>'+c+'</option>';}).join('');cf.value=pv;
-  var data=DB.inv.filter(function(p){return(!s||(p.name+p.sku+p.cat).toLowerCase().indexOf(s)>-1)&&(!cv||p.cat===cv);});
+  var data=DB.inv.filter(function(p){
+    var mt=(!s||(p.name+p.sku+p.cat).toLowerCase().indexOf(s)>-1);
+    var mc=(!cv||p.cat===cv);
+    var ms=!sf||(sf==='out'&&p.qty===0)||(sf==='low'&&p.qty>0&&p.qty<=p.low)||(sf==='ok'&&p.qty>p.low);
+    return mt&&mc&&ms;
+  });
   var tv=data.reduce(function(s,x){return s+(x.qty*x.sell);},0);
   var tbv=data.reduce(function(s,x){return s+(x.qty*x.buy);},0);
-  var lowCount=data.filter(function(x){return x.qty<=x.low;}).length;
-  var outCount=data.filter(function(x){return x.qty===0;}).length;
+  var lowCount=DB.inv.filter(function(x){return x.qty>0&&x.qty<=x.low;}).length;
+  var outCount=DB.inv.filter(function(x){return x.qty===0;}).length;
   var isAgent=CU&&CU.role==='agent';
   el('invSum').textContent=data.length+' products shown';
   if(el('invSumPills'))el('invSumPills').innerHTML=
-    '<div class="sp">Products<span>'+data.length+'</span></div>'+
-    // Agents only see counts — no financial values
+    '<div class="sp" id="pillAll" style="cursor:pointer">All<span>'+DB.inv.length+'</span></div>'+
+    '<div class="sp" id="pillOut" style="cursor:pointer;'+(outCount?'border-color:var(--dn)':'')+'">\uD83D\uDD34 Out of Stock<span class="tr">'+outCount+'</span></div>'+
+    '<div class="sp" id="pillLow" style="cursor:pointer;'+(lowCount?'border-color:var(--wn)':'')+'">&#x26A0; Low<span style="color:var(--wn)">'+lowCount+'</span></div>'+
     (!isAgent?'<div class="sp">Sell Value<span class="tg">'+K(tv)+'</span></div>':'')+
-    (!isAgent?'<div class="sp">Cost Value<span class="ta">'+K(tbv)+'</span></div>':'')+
-    (lowCount?'<div class="sp">Low Stock<span style="color:var(--wn)">'+lowCount+'</span></div>':'')+
-    (outCount?'<div class="sp">Out of Stock<span class="tr">'+outCount+'</span></div>':'');
-
-  // Hide/show manager-only columns in ALL tables
+    (!isAgent?'<div class="sp">Cost Value<span class="ta">'+K(tbv)+'</span></div>':'');
+  if(el('pillAll'))el('pillAll').addEventListener('click',function(){var e=el('invStockF');if(e){e.value='';rInv();}});
+  if(el('pillOut'))el('pillOut').addEventListener('click',function(){var e=el('invStockF');if(e){e.value='out';rInv();}});
+  if(el('pillLow'))el('pillLow').addEventListener('click',function(){var e=el('invStockF');if(e){e.value='low';rInv();}});
   var mgrCols=document.querySelectorAll('.mgr-col');
   for(var c=0;c<mgrCols.length;c++)mgrCols[c].style.display=isAgent?'none':'';
-
   el('invT').innerHTML=data.length?data.map(function(p){
     var st=p.qty===0?'Out':p.qty<=p.low?'Low':'OK';var bc=p.qty===0?'bg-r':p.qty<=p.low?'bg-w':'bg-g';
     var mg=p.buy>0?Math.round(((p.sell-p.buy)/p.buy)*100):0;
@@ -1140,9 +1228,7 @@ function rInv(){
          '<button class="btn bs bgh" data-edit-inv="'+p.id+'">&#x270F; Edit</button>'+
          '<button class="btn bs bdr" data-del-inv="'+p.id+'">Del</button>'+
        '</div>';
-    // AGENT: no buy price cell, no stock value cell, no margin %
     var buyCell=isAgent?'':('<td class="mono">'+K(p.buy)+'</td>');
-    // Sell price shown to agent but WITHOUT margin % (margin reveals profit)
     var sellCell='<td class="mono">'+K(p.sell)+(isAgent?'':(' <span style="font-size:9px;color:var(--ac)">(+'+mg+'%)</span>'))+'</td>';
     var valCell=isAgent?'':('<td class="mono">'+K(p.qty*p.sell)+'</td>');
     return'<tr>'+
@@ -1150,13 +1236,11 @@ function rInv(){
       '<td><strong>'+p.name+'</strong><br><span style="font-size:10px;color:var(--tx3);font-weight:600">'+(p.desc||'')+'</span></td>'+
       '<td>'+p.cat+'</td>'+
       '<td class="mono" style="font-size:14px;font-weight:900;color:'+(p.qty===0?'var(--dn)':p.qty<=p.low?'var(--wn)':'var(--tx)')+'">'+p.qty+' <span style="font-size:10px;font-weight:600;color:var(--tx3)">'+(p.unit||'')+'</span></td>'+
-      buyCell+
-      sellCell+
-      valCell+
+      buyCell+sellCell+valCell+
       '<td><span class="badge '+bc+'">'+st+'</span></td>'+
       '<td>'+actions+'</td>'+
     '</tr>';
-  }).join(''):er(isAgent?6:9,'No products found');
+  }).join(''):'<tr><td colspan="'+(isAgent?6:9)+'" class="empty">'+(sf==='out'?'&#x1F389; No out-of-stock items — all products have stock!':sf==='low'?'&#x1F389; No low-stock items!':'No products found')+'</td></tr>';
   if(!isAgent){
     el('invT').querySelectorAll('[data-adj-inv]').forEach(function(b){b.addEventListener('click',function(){openAdj(this.getAttribute('data-adj-inv'));});});
     el('invT').querySelectorAll('[data-edit-inv]').forEach(function(b){b.addEventListener('click',function(){editInv(this.getAttribute('data-edit-inv'));});});
@@ -1555,6 +1639,7 @@ function dExp(id){DB.exp=DB.exp.filter(function(x){return x.id!==id;});sv();rExp
 function gst(l){var b=l.total-l.paid;if(b<=0)return'Completed';if(l.due&&new Date(l.due)<new Date()&&b>0)return'Overdue';return'Active';}
 function rLpp(){
   var s=val('lppS').toLowerCase(),f=val('lppF');
+  var isAgent=CU&&CU.role==='agent';
   var data=DB.lpp.filter(function(l){return(!s||(l.cust+l.item+l.phone).toLowerCase().indexOf(s)>-1)&&(!f||gst(l)===f);});
   var tOut=DB.lpp.reduce(function(s,l){return s+(l.total-l.paid);},0),tColl=DB.lpp.reduce(function(s,l){return s+l.paid;},0);
   el('lpSm').innerHTML='<div class="sp">Plans<span>'+DB.lpp.length+'</span></div><div class="sp">Collected<span class="tg">'+K(tColl)+'</span></div><div class="sp">Outstanding<span class="tr">'+K(tOut)+'</span></div>';
@@ -1562,11 +1647,33 @@ function rLpp(){
     var bal=l.total-l.paid,pct=Math.min(100,Math.round((l.paid/l.total)*100)),st=gst(l);
     var bc=st==='Completed'?'bg-g':st==='Overdue'?'bg-r':'bg-b';
     var pays=l.pays&&l.pays.length?'<div style="margin-top:10px;padding-top:9px;border-top:1px solid var(--bd)"><div style="font-size:9px;color:var(--tx3);letter-spacing:.8px;margin-bottom:6px;font-weight:800">PAYMENT HISTORY</div><div style="display:flex;gap:5px;flex-wrap:wrap">'+l.pays.slice(-6).map(function(p){return'<span style="background:var(--sf2);border:2px solid var(--bd);border-radius:5px;padding:3px 8px;font-size:10px;font-weight:700"><span class="tg">'+K(p.amt)+'</span> - '+p.date+' - '+p.meth+'</span>';}).join('')+'</div></div>':'';
-    return'<div class="lppc"><div class="lpph"><div><div style="font-weight:800;font-size:13px">'+l.cust+'</div><div style="font-size:11px;color:var(--tx3);margin-top:2px;font-weight:600">'+l.phone+' &bull; '+l.item+'</div></div><div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap"><span class="badge '+bc+'">'+st+'</span><button class="btn bs bsu" data-lpp-pay="'+l.id+'">&#x1F4B3; Pay</button><button class="btn bs bgh" data-edit-lpp="'+l.id+'">Edit</button><button class="btn bs bdr" data-del-lpp="'+l.id+'">Del</button></div></div><div class="lppb"><div class="lig"><div><div class="ll">TOTAL</div><div class="lv">'+K(l.total)+'</div></div><div><div class="ll">PAID</div><div class="lv tg">'+K(l.paid)+'</div></div><div><div class="ll">BALANCE</div><div class="lv tr">'+K(bal)+'</div></div><div><div class="ll">INSTALMENT</div><div class="lv">'+K(l.inst)+'/'+l.freq+'</div></div></div><div class="lbw" style="margin-bottom:5px"><div class="lb" style="width:'+pct+'%"></div></div><div style="display:flex;justify-content:space-between;font-size:10px;color:var(--tx3);font-weight:700"><span>'+pct+'% complete</span><span>Due: '+(l.due||'&#x2014;')+'</span></div>'+pays+'</div></div>';
+    // Agent: only Pay button visible (no Edit/Delete)
+    var actionBtns=isAgent
+      ?'<button class="btn bs bsu" data-lpp-pay="'+l.id+'">&#x1F4B3; Add Payment</button>'
+      :'<span class="badge '+bc+'">'+st+'</span><button class="btn bs bsu" data-lpp-pay="'+l.id+'">&#x1F4B3; Pay</button><button class="btn bs bgh" data-edit-lpp="'+l.id+'">Edit</button><button class="btn bs bdr" data-del-lpp="'+l.id+'">Del</button>';
+    return'<div class="lppc">'+
+      '<div class="lpph">'+
+        '<div><div style="font-weight:800;font-size:13px">'+l.cust+'</div><div style="font-size:11px;color:var(--tx3);margin-top:2px;font-weight:600">'+l.phone+' &bull; '+l.item+'</div></div>'+
+        '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">'+actionBtns+'</div>'+
+      '</div>'+
+      '<div class="lppb">'+
+        '<div class="lig">'+
+          '<div><div class="ll">TOTAL</div><div class="lv">'+K(l.total)+'</div></div>'+
+          '<div><div class="ll">PAID</div><div class="lv tg">'+K(l.paid)+'</div></div>'+
+          '<div><div class="ll">BALANCE</div><div class="lv tr">'+K(bal)+'</div></div>'+
+          '<div><div class="ll">INSTALMENT</div><div class="lv">'+K(l.inst)+'/'+l.freq+'</div></div>'+
+        '</div>'+
+        '<div class="lbw" style="margin-bottom:5px"><div class="lb" style="width:'+pct+'%"></div></div>'+
+        '<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--tx3);font-weight:700"><span>'+pct+'% complete</span><span>Due: '+(l.due||'&#x2014;')+'</span></div>'+
+        pays+
+      '</div>'+
+    '</div>';
   }).join(''):'<div class="empty" style="padding:50px">No installment plans found</div>';
   el('lppC').querySelectorAll('[data-lpp-pay]').forEach(function(b){b.addEventListener('click',function(){openLP(parseInt(this.getAttribute('data-lpp-pay')));});});
-  el('lppC').querySelectorAll('[data-edit-lpp]').forEach(function(b){b.addEventListener('click',function(){editLpp(parseInt(this.getAttribute('data-edit-lpp')));});});
-  el('lppC').querySelectorAll('[data-del-lpp]').forEach(function(b){b.addEventListener('click',function(){var id=parseInt(this.getAttribute('data-del-lpp'));cdel(function(){dLpp(id);});});});
+  if(!isAgent){
+    el('lppC').querySelectorAll('[data-edit-lpp]').forEach(function(b){b.addEventListener('click',function(){editLpp(parseInt(this.getAttribute('data-edit-lpp')));});});
+    el('lppC').querySelectorAll('[data-del-lpp]').forEach(function(b){b.addEventListener('click',function(){var id=parseInt(this.getAttribute('data-del-lpp'));cdel(function(){dLpp(id);});});});
+  }
 }
 function openLpp(){['lid','lcust','lphone','litem','ltotal','ldep','linst','lnotes'].forEach(function(id){var e=el(id);if(e)e.value='';});el('lstart').value=td();el('ldue').value='';el('mLT').textContent='New Installment Plan';om('mL');}
 function editLpp(id){var l=DB.lpp.filter(function(x){return x.id===id;})[0];if(!l)return;el('mLT').textContent='Edit Plan';el('lid').value=l.id;el('lcust').value=l.cust;el('lphone').value=l.phone;el('litem').value=l.item;el('ltotal').value=l.total;el('ldep').value=l.dep;el('linst').value=l.inst;el('lfreq').value=l.freq;el('lstart').value=l.start;el('ldue').value=l.due||'';el('lnotes').value=l.notes||'';om('mL');}
@@ -1632,6 +1739,173 @@ function genR(t){
     html='<div class="card"><div class="ch"><div class="ct">Profit Report — '+period+'</div></div><div style="padding:15px"><div class="acg"><div class="ac" style="border-color:var(--gn)"><div class="av tg">'+K(gp)+'</div><div class="al">Gross Profit</div><div style="font-size:10px;color:var(--tx3);margin-top:3px;font-weight:700">'+(rv>0?((gp/rv)*100).toFixed(1):0)+'% margin</div></div><div class="ac" style="border-color:var(--dn)"><div class="av tr">'+K(ex)+'</div><div class="al">Total Expenses</div></div><div class="ac" style="border-color:'+(np>=0?'var(--gn)':'var(--dn)')+'"><div class="av '+(np>=0?'tg':'tr')+'">'+K(np)+'</div><div class="al">Net Profit</div><div style="font-size:10px;color:var(--tx3);margin-top:3px;font-weight:700">'+(rv>0?((np/rv)*100).toFixed(1):0)+'% margin</div></div></div></div></div>';
   }
   el('rOut').innerHTML=html;toast('Report generated','info');
+}
+
+/* ─── CHARTS ─── */
+function drawBarChart(containerId,labels,values,colors,maxVal){
+  var c=el(containerId);if(!c)return;
+  var mx=maxVal||Math.max.apply(null,values.concat([1]));
+  var h=150;
+  var barsHtml=labels.map(function(lbl,i){
+    var pct=Math.round((values[i]/mx)*h);
+    var col=colors?colors[i%colors.length]:'linear-gradient(180deg,var(--ac),var(--ac2))';
+    return'<div style="display:flex;flex-direction:column;align-items:center;flex:1;min-width:32px;max-width:60px">'+
+      '<div style="font-size:9px;font-weight:800;color:var(--tx2);margin-bottom:3px;white-space:nowrap">'+K(values[i]).replace('KSh ','')+'</div>'+
+      '<div style="width:100%;height:'+pct+'px;background:'+col+';border-radius:5px 5px 0 0;min-height:3px;transition:height .4s;cursor:pointer" title="'+lbl+': '+K(values[i])+'"></div>'+
+      '<div style="font-size:9px;color:var(--tx3);margin-top:4px;text-align:center;font-weight:700;max-width:50px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+lbl+'</div>'+
+    '</div>';
+  }).join('');
+  c.innerHTML='<div style="display:flex;align-items:flex-end;gap:4px;height:'+(h+50)+'px;overflow-x:auto;padding:4px 0 0">'+barsHtml+'</div>';
+}
+function drawHBarChart(containerId,labels,values,colors){
+  var c=el(containerId);if(!c)return;
+  var mx=Math.max.apply(null,values.concat([1]));
+  c.innerHTML=labels.map(function(lbl,i){
+    var pct=Math.round((values[i]/mx)*100);
+    var col=colors?colors[i%colors.length]:'var(--ac)';
+    return'<div style="margin-bottom:10px">'+
+      '<div style="display:flex;justify-content:space-between;font-size:11px;font-weight:700;margin-bottom:4px"><span style="color:var(--tx)">'+lbl+'</span><span style="color:var(--gn)">'+K(values[i])+'</span></div>'+
+      '<div style="height:12px;background:var(--sf2);border-radius:6px;overflow:hidden;border:1px solid var(--bd)">'+
+        '<div style="height:100%;width:'+pct+'%;background:'+col+';border-radius:6px;transition:width .5s"></div>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+}
+function rCharts(){
+  // ── Daily Sales last 14 days ──
+  var days=[];var dayLabels=[];
+  for(var i=13;i>=0;i--){
+    var d=new Date();d.setDate(d.getDate()-i);
+    var ds=d.toISOString().split('T')[0];
+    days.push(ds);dayLabels.push(ds.slice(5));// MM-DD
+  }
+  var dayVals=days.map(function(ds){
+    return DB.sales.filter(function(s){return s.date===ds;}).reduce(function(t,s){return t+s.total;},0);
+  });
+  var colors14=days.map(function(_,i){
+    return i===13?'linear-gradient(180deg,var(--gn),#00aa55)':'linear-gradient(180deg,var(--ac),var(--ac2))';
+  });
+  drawBarChart('chartDailySales',dayLabels,dayVals,colors14);
+
+  // ── Top Selling Products ──
+  var bp={};
+  DB.sales.forEach(function(s){s.items.forEach(function(i){if(!bp[i.name])bp[i.name]={u:0,r:0};bp[i.name].u+=i.qty;bp[i.name].r+=i.qty*i.price;});});
+  var top=Object.keys(bp).map(function(n){return[n,bp[n]];}).sort(function(a,b){return b[1].r-a[1].r;}).slice(0,6);
+  var prodColors=['linear-gradient(180deg,#ff6b35,#e53935)','linear-gradient(180deg,#f9a825,#e65100)','linear-gradient(180deg,#00897b,#004d40)','linear-gradient(180deg,#1e88e5,#0d47a1)','linear-gradient(180deg,#8e24aa,#4a148c)','linear-gradient(180deg,#3949ab,#1a237e)'];
+  if(top.length){drawHBarChart('chartTopProds',top.map(function(t){return t[0];}),top.map(function(t){return t[1].r;}),prodColors.map(function(c){return c;}));}
+  else{var cp=el('chartTopProds');if(cp)cp.innerHTML='<div class="empty">No sales data yet</div>';}
+
+  // ── Revenue vs Expenses monthly ──
+  var months={};var now=new Date();
+  for(var m=5;m>=0;m--){
+    var md=new Date(now.getFullYear(),now.getMonth()-m,1);
+    var mk=md.getFullYear()+'-'+String(md.getMonth()+1).padStart(2,'0');
+    months[mk]={rev:0,exp:0};
+  }
+  DB.sales.forEach(function(s){var mk=s.date.slice(0,7);if(months[mk])months[mk].rev+=s.total;});
+  DB.exp.forEach(function(e){var mk=e.date.slice(0,7);if(months[mk])months[mk].exp+=e.amt;});
+  var mkeys=Object.keys(months).sort();
+  var mLabels=mkeys.map(function(k){var p=k.split('-');return p[1]+'/'+p[0].slice(2);});
+  var revVals=mkeys.map(function(k){return months[k].rev;});
+  var expVals=mkeys.map(function(k){return months[k].exp;});
+  var mx2=Math.max.apply(null,revVals.concat(expVals).concat([1]));
+  var h2=120;
+  var revExpHtml='<div style="display:flex;align-items:flex-end;gap:6px;height:'+(h2+40)+'px;overflow-x:auto;padding-top:4px">';
+  mkeys.forEach(function(k,i){
+    var rp=Math.max(3,Math.round((revVals[i]/mx2)*h2));
+    var ep=Math.max(3,Math.round((expVals[i]/mx2)*h2));
+    revExpHtml+='<div style="display:flex;flex-direction:column;align-items:center;flex:1;min-width:44px">'+
+      '<div style="display:flex;align-items:flex-end;gap:2px;height:'+h2+'px">'+
+        '<div style="width:14px;height:'+rp+'px;background:linear-gradient(180deg,var(--gn),#00aa55);border-radius:3px 3px 0 0" title="Revenue '+K(revVals[i])+'"></div>'+
+        '<div style="width:14px;height:'+ep+'px;background:linear-gradient(180deg,var(--dn),#c62828);border-radius:3px 3px 0 0" title="Expenses '+K(expVals[i])+'"></div>'+
+      '</div>'+
+      '<div style="font-size:9px;color:var(--tx3);margin-top:4px;font-weight:700">'+mLabels[i]+'</div>'+
+    '</div>';
+  });
+  revExpHtml+='</div><div style="display:flex;gap:12px;padding:8px 0;border-top:1px solid var(--bd);margin-top:4px">'+
+    '<div style="display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700"><div style="width:12px;height:12px;background:var(--gn);border-radius:2px"></div>Revenue</div>'+
+    '<div style="display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700"><div style="width:12px;height:12px;background:var(--dn);border-radius:2px"></div>Expenses</div>'+
+  '</div>';
+  var cre=el('chartRevExp');if(cre)cre.innerHTML=revExpHtml;
+}
+
+/* ─── PRODUCT SEARCH PICKER (Purchase Modal) ─── */
+function initProdSearch(){
+  var si=el('pprodSearch'),dd=el('pprodDrop'),hid=el('pprod'),sel=el('pprodSelected');
+  if(!si)return;
+  si.addEventListener('input',function(){
+    var q=si.value.toLowerCase().trim();
+    if(!q){dd.classList.remove('show');return;}
+    var matches=DB.inv.filter(function(p){return(p.name+p.sku).toLowerCase().indexOf(q)>-1;}).slice(0,8);
+    if(!matches.length){dd.innerHTML='<div class="prod-opt" style="color:var(--tx3)">No products found</div>';dd.classList.add('show');return;}
+    dd.innerHTML=matches.map(function(p){
+      return'<div class="prod-opt" data-pid="'+p.id+'" data-pname="'+p.name+'">'+
+        '<strong>'+p.name+'</strong> <span style="font-size:10px;color:var(--tx3)">'+p.sku+' | Stock: '+p.qty+'</span>'+
+      '</div>';
+    }).join('');
+    dd.classList.add('show');
+    dd.querySelectorAll('.prod-opt[data-pid]').forEach(function(opt){
+      opt.addEventListener('click',function(){
+        var pid=this.getAttribute('data-pid');
+        var pname=this.getAttribute('data-pname');
+        hid.value=pid;
+        si.value='';
+        dd.classList.remove('show');
+        if(sel){sel.textContent='Selected: '+pname;sel.style.display='block';}
+        // Auto-fill cost with last known buy price
+        var p=DB.inv.filter(function(x){return x.id===pid;})[0];
+        if(p&&p.buy&&!val('pcost'))el('pcost').value=p.buy;
+      });
+    });
+  });
+  document.addEventListener('click',function(e){if(dd&&!dd.contains(e.target)&&e.target!==si)dd.classList.remove('show');});
+}
+
+/* ─── DATA EXPORT / IMPORT ─── */
+function exportData(){
+  var json=JSON.stringify(DB,null,2);
+  var blob=new Blob([json],{type:'application/json'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');
+  a.href=url;
+  a.download='jsruah-bms-backup-'+td()+'.json';
+  document.body.appendChild(a);a.click();
+  document.body.removeChild(a);URL.revokeObjectURL(url);
+  toast('Data exported! Copy the file to your other device','success');
+}
+function importData(){
+  var fi=el('importFile');
+  fi.value='';
+  fi.click();
+}
+function handleImport(file){
+  if(!file)return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var imported=JSON.parse(e.target.result);
+      if(!imported.inv||!imported.sales){toast('Invalid backup file','error');return;}
+      DB=imported;sv();
+      toast('Data imported successfully! Refreshing...','success');
+      setTimeout(function(){window.location.reload();},1500);
+    }catch(err){toast('Failed to read file: '+err.message,'error');}
+  };
+  reader.readAsText(file);
+}
+
+/* ─── UPDATE fpProds/openPur for searchable picker ─── */
+function fpProds(){
+  // no longer needed to populate old select — kept for editPur compat
+}
+function openPur(){
+  ['peid','psup','pqty','pcost','pnotes'].forEach(function(id){var e=el(id);if(e)e.value='';});
+  el('pdate').value=td();
+  el('mPurT').textContent='Record Purchase';
+  el('pprod').value='';
+  if(el('pprodSearch'))el('pprodSearch').value='';
+  if(el('pprodSelected')){el('pprodSelected').textContent='';el('pprodSelected').style.display='none';}
+  if(el('pprodDrop'))el('pprodDrop').classList.remove('show');
+  om('mPur');
 }
 
 /* ─── SETTINGS (User Management) ─── */
@@ -1709,6 +1983,7 @@ function init(){
   el('saveInvBtn').addEventListener('click',saveInv);
   el('invS').addEventListener('input',rInv);
   el('invCF').addEventListener('change',rInv);
+  el('invStockF').addEventListener('change',rInv);
   // Adjustment modal live preview
   el('adjType').addEventListener('change',updAdjPreview);
   el('adjQty').addEventListener('input',updAdjPreview);
@@ -1728,13 +2003,14 @@ function init(){
   el('shClearDates').addEventListener('click',function(){el('shFrom').value='';el('shTo').value='';rSH();});
   el('exportSalesBtn').addEventListener('click',function(){showStatement(val('shFrom'),val('shTo'));});
 
-  // Purchases
+  // Purchases — searchable product picker
   el('addPurBtn').addEventListener('click',openPur);
   el('savePurBtn').addEventListener('click',savePur);
   el('purS').addEventListener('input',rPur);
   el('purStatF').addEventListener('change',rPur);
   el('purFrom').addEventListener('change',rPur);
   el('purTo').addEventListener('change',rPur);
+  initProdSearch();
 
   // Expenses
   el('addExpBtn').addEventListener('click',openExp);
@@ -1756,10 +2032,13 @@ function init(){
   el('printReceiptBtn').addEventListener('click',function(){window.print();});
   el('printStmtBtn').addEventListener('click',function(){window.print();});
 
-  // Settings
+  // Settings — data export / import
   el('addUserBtn').addEventListener('click',openAddUser);
   el('saveUserBtn').addEventListener('click',saveUser);
   el('chgPwBtn').addEventListener('click',changePassword);
+  el('exportDataBtn').addEventListener('click',exportData);
+  el('importDataBtn').addEventListener('click',importData);
+  el('importFile').addEventListener('change',function(){handleImport(this.files[0]);});
 }
 
 if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',init);}
