@@ -354,38 +354,56 @@ tr:hover td{background:var(–sf2)}
 .prod-search-wrap{position:relative;margin-bottom:4px}
 .prod-search-wrap .si{width:100%}
 .prod-dropdown{
-position:absolute;top:100%;left:0;right:0;
-background:var(–sf);
-border:2px solid var(–ac);
-border-radius:var(–r2);
-max-height:200px;overflow-y:auto;
-z-index:9999;  /* must be above the modal */
-box-shadow:0 8px 24px rgba(0,0,0,.45);
+/* fixed positioning handled by JS - these are the visual styles */
+background:var(–sf) !important;
+border:3px solid var(–ac);
+border-radius:var(–r);
+max-height:220px;
+overflow-y:auto;
+z-index:99999;
+box-shadow:0 12px 40px rgba(0,0,0,.7), 0 4px 12px rgba(74,139,245,.3);
 display:none;
-margin-top:2px;
 }
 .prod-dropdown.show{display:block}
+/* Each result row */
 .prod-opt{
-padding:11px 13px;cursor:pointer;
-font-size:13px;font-weight:600;
+padding:13px 14px;
+cursor:pointer;
 border-bottom:1px solid var(–bd);
-color:var(–tx);
+background:var(–sf);
 transition:background .12s;
 }
-.prod-opt:hover{background:rgba(74,139,245,.12);color:var(–ac)}
-.prod-opt:last-child{border-bottom:none}
-.prod-opt small{display:block;font-size:10px;color:var(–tx3);margin-top:1px;font-weight:600}
+.prod-opt:first-child{border-radius:calc(var(–r) - 3px) calc(var(–r) - 3px) 0 0}
+.prod-opt:last-child{border-bottom:none;border-radius:0 0 calc(var(–r) - 3px) calc(var(–r) - 3px)}
+.prod-opt:hover,.prod-opt:active{background:rgba(74,139,245,.15)}
+.prod-opt .po-name{
+font-size:14px;
+font-weight:800;
+color:var(–tx);
+display:block;
+margin-bottom:3px;
+}
+.prod-opt .po-meta{
+font-size:11px;
+font-weight:700;
+color:var(–tx3);
+display:flex;
+gap:10px;
+flex-wrap:wrap;
+}
+/* Selected product confirmation */
 .prod-selected{
-background:rgba(51,204,136,.1);
+background:rgba(51,204,136,.12);
 border:2px solid var(–gn);
 border-radius:var(–r2);
-padding:9px 13px;
-font-size:12px;font-weight:800;
+padding:10px 13px;
+font-size:13px;
+font-weight:800;
 color:var(–gn);
-margin-bottom:6px;
+margin-bottom:8px;
 display:none;
 align-items:center;
-justify-content:space-between;
+gap:6px;
 }
 
 /* ═══ REPORTS ═══ */
@@ -1878,14 +1896,12 @@ function initProdSearch(){
       return(p.name+' '+(p.sku||'')).toLowerCase().indexOf(q)>-1;
     }).slice(0,8);
     if(!matches.length){
-      dd.innerHTML='<div class="prod-opt" style="color:var(--tx3);cursor:default">No products found</div>';
+      dd.innerHTML='<div style="padding:10px 14px;font-size:12px;font-weight:700;color:var(--tx3);background:var(--sf2);border-bottom:1px solid var(--bd)">&#x1F50D; Search Results</div><div class="prod-opt"><span class="po-name" style="color:var(--tx3)">No products found</span></div>';
     } else {
-      dd.innerHTML=matches.map(function(p){
-        var stockColor=p.qty===0?'color:var(--dn)':p.qty<=p.low?'color:var(--wn)':'color:var(--gn)';
-        return'<div class="prod-opt" data-pid="'+p.id+'" data-pname="'+p.name+'">'+
-          '<strong>'+p.name+'</strong>'+
-          '<small>SKU: '+(p.sku||'-')+' &nbsp;|&nbsp; <span style="'+stockColor+'">Stock: '+p.qty+' '+(p.unit||'')+'</span></small>'+
-        '</div>';
+      dd.innerHTML='<div style="padding:8px 14px;font-size:10px;font-weight:800;color:var(--ac);background:var(--sf2);border-bottom:2px solid var(--ac);letter-spacing:.8px;text-transform:uppercase">&#x1F50D; Select a Product — '+matches.length+' result'+(matches.length>1?'s':'')+'</div>'+matches.map(function(p){
+        var sc=p.qty===0?'color:var(--dn)':p.qty<=p.low?'color:var(--wn)':'color:var(--gn)';
+        var slabel=p.qty===0?'OUT OF STOCK':p.qty+' '+(p.unit||'units')+' in stock';
+        return'<div class="prod-opt" data-pid="'+p.id+'" data-pname="'+p.name+'">'+'<span class="po-name">'+p.name+'</span>'+'<span class="po-meta"><span>SKU: '+(p.sku||'—')+'</span><span style="'+sc+';font-weight:800">&#x25CF; '+slabel+'</span></span>'+'</div>';
       }).join('');
       dd.querySelectorAll('.prod-opt[data-pid]').forEach(function(opt){
         opt.addEventListener('click',function(){
@@ -1895,10 +1911,9 @@ function initProdSearch(){
           si.value='';
           dd.classList.remove('show');
           if(sel){
-            sel.innerHTML='&#x2705; <strong>'+pname+'</strong>';
+            sel.innerHTML='&#x2705; Selected: <strong style="margin-left:4px">'+pname+'</strong>';
             sel.style.display='flex';
           }
-          // Auto-fill cost with last known buy price
           var p=DB.inv.filter(function(x){return x.id===pid;})[0];
           if(p&&p.buy){var pc=el('pcost');if(pc&&!pc.value)pc.value=p.buy;}
         });
