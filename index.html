@@ -1880,48 +1880,70 @@ function initProdSearch(){
   var si=el('pprodSearch'),hid=el('pprod'),sel=el('pprodSelected');
   if(!si)return;
 
-  // Create dropdown once, attach to BODY so modal overflow never clips it
+  // Remove any old dropdown
+  var old=document.getElementById('bodyProdDrop');
+  if(old)old.parentNode.removeChild(old);
+
+  // Create dropdown — attached to BODY, completely outside modal DOM
   var dd=document.createElement('div');
   dd.id='bodyProdDrop';
-  dd.style.cssText=[
-    'position:fixed',
-    'background:'+getComputedStyle(document.documentElement).getPropertyValue('--sf')||'#131826',
-    'border:3px solid #4a8bf5',
-    'border-radius:10px',
-    'max-height:240px',
-    'overflow-y:auto',
-    'z-index:999999',
-    'box-shadow:0 16px 48px rgba(0,0,0,.85)',
-    'display:none',
-    'min-width:200px'
-  ].join(';');
   document.body.appendChild(dd);
 
-  function applyThemeColors(){
-    var bg=document.body.classList.contains('light')?'#ffffff':'#131826';
-    var tx=document.body.classList.contains('light')?'#0d1220':'#e8edf8';
-    dd.style.background=bg;
-    dd.style.color=tx;
+  function isLight(){
+    return document.documentElement.getAttribute('data-theme')==='light';
   }
+  function getBG(){return isLight()?'#ffffff':'#0f1623';}
+  function getRowBG(){return isLight()?'#f5f7fc':'#131826';}
+  function getRowHover(){return isLight()?'#dce8ff':'#1a2a4a';}
+  function getTx(){return isLight()?'#0d1220':'#e8edf8';}
+  function getSub(){return isLight()?'#444e6e':'#8892b0';}
+  function getBdr(){return isLight()?'#b0bed8':'#2a3550';}
 
-  function posDD(){
+  function styleDD(){
+    dd.style.cssText=''+
+      'position:fixed !important;'+
+      'z-index:2147483647 !important;'+ // max possible z-index
+      'display:none;'+
+      'border-radius:12px;'+
+      'overflow:hidden;'+
+      'overflow-y:auto;'+
+      'max-height:260px;'+
+      'box-shadow:0 20px 60px rgba(0,0,0,0.9),0 8px 20px rgba(0,0,0,0.7);'+
+      'border:3px solid #4a8bf5;'+
+      'background:'+getBG()+' !important;'+
+      'min-width:200px;'+
+      '-webkit-overflow-scrolling:touch;';
+  }
+  styleDD();
+
+  function positionDD(){
     var rect=si.getBoundingClientRect();
-    var spaceBelow=window.innerHeight-rect.bottom;
-    var spaceAbove=rect.top;
-    var dropH=Math.min(240,dd.scrollHeight||240);
-    // Show below if space, else above
-    if(spaceBelow>=dropH||spaceBelow>=spaceAbove){
+    var vw=window.innerWidth||document.documentElement.clientWidth;
+    var vh=window.innerHeight||document.documentElement.clientHeight;
+    var w=Math.min(rect.width,vw-16);
+    var left=Math.max(8,Math.min(rect.left,vw-w-8));
+    var spaceBelow=vh-(rect.bottom+4);
+    var spaceAbove=rect.top-4;
+    var maxH=Math.min(260,Math.max(spaceBelow,spaceAbove,120));
+    dd.style.maxHeight=maxH+'px';
+    dd.style.width=w+'px';
+    dd.style.left=left+'px';
+    if(spaceBelow>=120||spaceBelow>=spaceAbove){
       dd.style.top=(rect.bottom+4)+'px';
     } else {
-      dd.style.top=(rect.top-dropH-4)+'px';
+      dd.style.top=(rect.top-maxH-4)+'px';
     }
-    dd.style.left=rect.left+'px';
-    dd.style.width=rect.width+'px';
-    applyThemeColors();
+    // Re-apply solid background every position (theme may have changed)
+    dd.style.background=getBG();
   }
 
   function closeDD(){dd.style.display='none';}
-  function openDD(){dd.style.display='block';posDD();}
+
+  function openDD(){
+    styleDD();
+    dd.style.display='block';
+    positionDD();
+  }
 
   function buildResults(q){
     if(!q.trim()){closeDD();return;}
@@ -1929,37 +1951,57 @@ function initProdSearch(){
       return(p.name+' '+(p.sku||'')).toLowerCase().indexOf(q.toLowerCase())>-1;
     }).slice(0,8);
 
-    var bg=document.body.classList.contains('light')?'#f0f4fc':'#1a2035';
-    var hdr='<div style="padding:9px 14px;font-size:10px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;background:'+bg+';border-bottom:2px solid #4a8bf5;color:#4a8bf5">&#x1F50D; '+(!matches.length?'No products found':matches.length+' result'+(matches.length>1?'s':'')+' — tap to select')+'</div>';
+    // Header
+    var hdrBG=isLight()?'#e8edf8':'#1a2035';
+    var hdrText=matches.length
+      ? '&#x1F50D;&nbsp;'+matches.length+' result'+(matches.length>1?'s':'')+' &mdash; tap to select'
+      : '&#x1F50D;&nbsp;No products found';
+    var html='<div style="'+
+      'padding:10px 14px;'+
+      'font-size:11px;'+
+      'font-weight:800;'+
+      'letter-spacing:.8px;'+
+      'text-transform:uppercase;'+
+      'background:'+hdrBG+' !important;'+
+      'border-bottom:3px solid #4a8bf5;'+
+      'color:#4a8bf5;'+
+    '">'+hdrText+'</div>';
 
-    if(!matches.length){dd.innerHTML=hdr;openDD();return;}
-
-    var rows=matches.map(function(p){
+    matches.forEach(function(p){
       var sc=p.qty===0?'#f04f6b':p.qty<=p.low?'#f5c842':'#33cc88';
-      var sl=p.qty===0?'OUT OF STOCK':p.qty+' '+(p.unit||'units')+' in stock';
-      var rowBg=document.body.classList.contains('light')?'#ffffff':'#131826';
-      var rowTx=document.body.classList.contains('light')?'#0d1220':'#e8edf8';
-      return'<div data-pid="'+p.id+'" data-pname="'+p.name+'" style="padding:13px 14px;cursor:pointer;border-bottom:1px solid rgba(128,128,128,.2);background:'+rowBg+'">'+
-        '<div style="font-size:14px;font-weight:800;color:'+rowTx+';margin-bottom:3px">'+p.name+'</div>'+
-        '<div style="font-size:11px;font-weight:700;color:#8892b0">SKU: '+(p.sku||'—')+'&nbsp;&nbsp;<span style="color:'+sc+'">&#x25CF; '+sl+'</span></div>'+
+      var sl=p.qty===0?'&#x26D4; OUT OF STOCK':p.qty+' '+(p.unit||'units')+' in stock';
+      html+='<div data-pid="'+p.id+'" data-pname="'+p.name+'" style="'+
+        'padding:14px 14px;'+
+        'cursor:pointer;'+
+        'border-bottom:1px solid '+getBdr()+';'+
+        'background:'+getRowBG()+' !important;'+
+        '-webkit-tap-highlight-color:rgba(74,139,245,.2);'+
+      '">'+
+        '<div style="font-size:15px;font-weight:900;color:'+getTx()+';margin-bottom:4px;line-height:1.2">'+p.name+'</div>'+
+        '<div style="font-size:12px;font-weight:700;color:'+getSub()+'">SKU: '+(p.sku||'&mdash;')+'&nbsp;&nbsp;<span style="color:'+sc+';font-weight:800">&#x25CF; '+sl+'</span></div>'+
       '</div>';
-    }).join('');
+    });
 
-    dd.innerHTML=hdr+rows;
+    dd.innerHTML=html;
+    dd.style.background=getBG();
 
-    // Hover effect
+    // Tap/click handlers
     dd.querySelectorAll('[data-pid]').forEach(function(row){
-      var orig=row.style.background;
-      row.addEventListener('mouseenter',function(){this.style.background='rgba(74,139,245,.15)';});
-      row.addEventListener('mouseleave',function(){this.style.background=orig;});
-      row.addEventListener('click',function(){
+      function setHover(on){row.style.background=(on?getRowHover():getRowBG())+' !important';}
+      row.addEventListener('mouseenter',function(){setHover(true);});
+      row.addEventListener('mouseleave',function(){setHover(false);});
+      row.addEventListener('touchstart',function(){setHover(true);},{passive:true});
+      row.addEventListener('touchend',function(){setHover(false);},{passive:true});
+      row.addEventListener('click',function(e){
+        e.stopPropagation();
         var pid=this.getAttribute('data-pid');
         var pname=this.getAttribute('data-pname');
         hid.value=pid;
         si.value='';
         closeDD();
         if(sel){
-          sel.innerHTML='&#x2705;&nbsp;<strong>'+pname+'</strong>&nbsp;<span style="font-size:10px;font-weight:600;opacity:.7">(tap to change)</span>';
+          sel.innerHTML='&#x2705;&nbsp;<strong style="color:'+getTx()+'">'+pname+'</strong>';
+          sel.style.background=isLight()?'rgba(51,204,136,.12)':'rgba(51,204,136,.12)';
           sel.style.display='flex';
         }
         var p=DB.inv.filter(function(x){return x.id===pid;})[0];
@@ -1973,24 +2015,13 @@ function initProdSearch(){
   si.addEventListener('input',function(){buildResults(si.value);});
   si.addEventListener('focus',function(){if(si.value.trim())buildResults(si.value);});
 
-  // Reposition on scroll/resize
-  window.addEventListener('scroll',function(){if(dd.style.display!=='none')posDD();},{passive:true});
-  window.addEventListener('resize',function(){if(dd.style.display!=='none')posDD();},{passive:true});
+  window.addEventListener('scroll',function(){if(dd.style.display!=='none')positionDD();},{passive:true});
+  window.addEventListener('resize',function(){if(dd.style.display!=='none')positionDD();},{passive:true});
 
-  // Close on outside click
   document.addEventListener('click',function(e){
     if(e.target!==si&&!dd.contains(e.target))closeDD();
   });
 
-  // Close when modal closes
-  var mPur=el('mPur');
-  if(mPur){
-    mPur.addEventListener('click',function(e){
-      if(e.target===mPur)closeDD();
-    });
-  }
-
-  // Store ref for manual close on openPur reset
   window._closeProdDD=closeDD;
 }
 
