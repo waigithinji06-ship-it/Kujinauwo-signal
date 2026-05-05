@@ -328,18 +328,27 @@ tr:hover td{background:var(–sf2)}
 .sync-btns{display:flex;gap:7px;flex-wrap:wrap}
 
 /* ═══ DESKTOP LAYOUT ═══ */
+/* App hidden by default — JS shows it after login */
+#app{display:none}
+
 @media(min-width:769px){
-#app{display:flex;flex-direction:row;min-height:100vh}
+/* Only apply flex WHEN app is visible — login controls display:none/flex via JS */
+#app.visible{display:flex;flex-direction:row;min-height:100vh}
 #sb{position:fixed;top:0;left:0;bottom:0;z-index:150}
 #ma{flex:1;margin-left:var(–sw);min-width:0}
 .cnt{padding:20px 24px}
 .dg2{gap:16px}
 .sg{gap:14px;margin-bottom:20px}
+/* Desktop login card — wider, more breathing room */
+.lcard{max-width:480px;padding:44px 40px 38px}
+.lbn{font-size:36px}
+.lbs{font-size:11px}
 }
 @media(min-width:1200px){
 :root{–sw:260px}
 .cnt{padding:22px 32px}
 .sg{grid-template-columns:repeat(4,1fr)}
+.lcard{max-width:520px}
 }
 /* Tablet */
 @media(min-width:769px)and(max-width:1100px){
@@ -525,6 +534,16 @@ body *{visibility:hidden}
 
   <!-- DASHBOARD -->
   <div class="page on" id="page-dashboard">
+    <!-- Month selector bar -->
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px;background:var(--sf);border:2px solid var(--bd);border-radius:var(--r);padding:12px 16px">
+      <div style="font-size:13px;font-weight:800;color:var(--tx)">&#x1F4C5; Showing data for:</div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <button class="btn bs bgh" id="dashPrevMonth">&#x2039; Prev</button>
+        <div id="dashMonthLabel" style="font-size:14px;font-weight:900;color:var(--ac);min-width:120px;text-align:center;padding:6px 14px;background:var(--sf2);border:2px solid var(--ac);border-radius:22px"></div>
+        <button class="btn bs bgh" id="dashNextMonth">Next &#x203A;</button>
+        <button class="btn bs bac" id="dashThisMonth">This Month</button>
+      </div>
+    </div>
     <div class="sg" id="dStats"></div>
     <div class="dg2">
       <div class="card">
@@ -1163,7 +1182,10 @@ function doLogin(){
   if(!user){toast('Invalid credentials','error');return;}
   CU=user;
   el('loginPage').style.display='none';
-  el('app').style.display='block';
+  // Add .visible class so desktop media query applies flex layout
+  var appEl=el('app');
+  appEl.classList.add('visible');
+  appEl.style.display='flex';
   el('sbAv').textContent=user.name.charAt(0).toUpperCase();
   el('sbN').textContent=user.name;
   el('sbR').textContent=user.role.charAt(0).toUpperCase()+user.role.slice(1);
@@ -1183,7 +1205,14 @@ function doLogin(){
     if(el('tdate'))el('tdate').textContent=d.toLocaleDateString('en-KE',{weekday:'short',day:'2-digit',month:'short'})+' '+d.toLocaleTimeString('en-KE',{hour:'2-digit',minute:'2-digit'});
   },1000);
 }
-function doLogout(){CU=null;cart=[];el('loginPage').style.display='flex';el('app').style.display='none';el('lu').value='';el('lp').value='';}
+function doLogout(){
+  CU=null;cart=[];
+  var appEl=el('app');
+  appEl.classList.remove('visible');
+  appEl.style.display='none';
+  el('loginPage').style.display='flex';
+  el('lu').value='';el('lp').value='';
+}
 
 /* ─── NAVIGATION ─── */
 var pT={dashboard:'Dashboard',inventory:'Inventory',sales:'Sales',purchases:'Purchases',accounting:'Accounting',expenses:'Expenses',lpp:'Lipa Pole Pole',reports:'Reports',settings:'User Management'};
@@ -1211,28 +1240,64 @@ function toggleSB(){var sb=el('sb'),ov=el('ov');var open=sb.classList.toggle('op
 function closeSB(){el('sb').classList.remove('open');el('ov').classList.remove('show');}
 
 /* ─── DASHBOARD ─── */
+/* ─── DASHBOARD MONTH STATE ─── */
+var dashYear=new Date().getFullYear();
+var dashMonth=new Date().getMonth(); // 0-indexed
+
+function dashMonthKey(){
+  return dashYear+'-'+String(dashMonth+1).padStart(2,'0');
+}
+function dashMonthLabel(){
+  var names=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  return names[dashMonth]+' '+dashYear;
+}
+function inMonth(date){
+  return date&&date.slice(0,7)===dashMonthKey();
+}
+
 function rDash(){
-  var rev=DB.sales.reduce(function(s,x){return s+x.total;},0);
-  var pur=DB.pur.reduce(function(s,x){return s+x.total;},0);
-  var exp=DB.exp.reduce(function(s,x){return s+x.amt;},0);
+  // Update month label
+  if(el('dashMonthLabel'))el('dashMonthLabel').textContent=dashMonthLabel();
+
+  // Filter all data to selected month
+  var mSales=DB.sales.filter(function(x){return inMonth(x.date);});
+  var mPur=DB.pur.filter(function(x){return inMonth(x.date);});
+  var mExp=DB.exp.filter(function(x){return inMonth(x.date);});
+
+  var rev=mSales.reduce(function(s,x){return s+x.total;},0);
+  var pur=mPur.reduce(function(s,x){return s+x.total;},0);
+  var exp=mExp.reduce(function(s,x){return s+x.amt;},0);
   var inv=DB.inv.reduce(function(s,x){return s+(x.qty*x.buy);},0);
-  var net=rev-pur-exp,low=DB.inv.filter(function(x){return x.qty<=x.low;}).length;
+  var net=rev-pur-exp;
+  var low=DB.inv.filter(function(x){return x.qty<=x.low;}).length;
   var isAgentDash=CU&&CU.role==='agent';
+  var mk=dashMonthKey();
+
   el('dStats').innerHTML=
-    '<div class="sc" style="--cc:var(--ac)"><div class="sci">&#x1F6D2;</div><div class="scl">Sales Revenue</div><div class="scv tg">'+K(rev)+'</div><div class="scs">'+DB.sales.length+' transactions</div></div>'+
+    '<div class="sc" style="--cc:var(--ac)"><div class="sci">&#x1F6D2;</div><div class="scl">Sales Revenue</div><div class="scv tg">'+K(rev)+'</div><div class="scs">'+mSales.length+' transactions</div></div>'+
     (!isAgentDash?'<div class="sc" style="--cc:var(--ac3)"><div class="sci">&#x1F4E6;</div><div class="scl">Inventory Value</div><div class="scv ta">'+K(inv)+'</div><div class="scs">'+DB.inv.length+' products</div></div>':
       '<div class="sc" style="--cc:var(--ac3)"><div class="sci">&#x1F4E6;</div><div class="scl">Products In Stock</div><div class="scv ta">'+DB.inv.filter(function(x){return x.qty>0;}).length+'</div><div class="scs">'+DB.inv.length+' total products</div></div>')+
-    (!isAgentDash?'<div class="sc" style="--cc:var(--dn)"><div class="sci">&#x1F4B8;</div><div class="scl">Total Expenses</div><div class="scv tr">'+K(exp)+'</div><div class="scs">All time</div></div>':'')+
-    (!isAgentDash?'<div class="sc" style="--cc:'+(net>=0?'var(--gn)':'var(--dn)')+'"><div class="sci">&#x1F4CA;</div><div class="scl">Net Profit</div><div class="scv '+(net>=0?'tg':'tr')+'">'+K(net)+'</div><div class="scs">'+low+' low stock alert'+(low!==1?'s':'')+'</div></div>':
+    (!isAgentDash?'<div class="sc" style="--cc:var(--dn)"><div class="sci">&#x1F4B8;</div><div class="scl">Expenses</div><div class="scv tr">'+K(exp)+'</div><div class="scs">'+mExp.length+' records</div></div>':'')+
+    (!isAgentDash?'<div class="sc" style="--cc:'+(net>=0?'var(--gn)':'var(--dn)')+'"><div class="sci">&#x1F4CA;</div><div class="scl">Net Profit</div><div class="scv '+(net>=0?'tg':'tr')+'">'+K(net)+'</div><div class="scs">'+(net>=0?'Profit':'Loss')+' this month</div></div>':
       '<div class="sc" style="--cc:var(--dn)"><div class="sci">&#x26A0;</div><div class="scl">Low Stock Items</div><div class="scv '+(low>0?'tr':'tg')+'">'+low+'</div><div class="scs">'+(low>0?'Need restocking':'All levels OK')+'</div></div>');
-  var rs=[].concat(DB.sales).sort(function(a,b){return b.ts-a.ts;}).slice(0,5);
-  el('dSales').innerHTML=rs.length?rs.map(function(s){return'<tr><td>'+s.items.map(function(i){return i.name;}).join(', ')+'</td><td class="mono tg">'+K(s.total)+'</td><td>'+s.date+'</td></tr>';}).join(''):er(3);
+
+  // Recent sales this month
+  var rs=[].concat(mSales).sort(function(a,b){return b.ts-a.ts;}).slice(0,5);
+  el('dSales').innerHTML=rs.length?rs.map(function(s){return'<tr><td>'+s.items.map(function(i){return i.name;}).join(', ')+'</td><td class="mono tg">'+K(s.total)+'</td><td>'+s.date+'</td></tr>';}).join(''):
+    '<tr><td colspan="3" class="empty">No sales in '+dashMonthLabel()+'</td></tr>';
+
+  // Low stock (always all inventory)
   var lows=DB.inv.filter(function(x){return x.qty<=x.low;});
   el('dLow').innerHTML=lows.length?lows.map(function(p){return'<tr><td>'+p.name+'</td><td class="mono">'+p.qty+'</td><td><span class="badge '+(p.qty===0?'bg-r':'bg-w')+'">'+(p.qty===0?'OUT':'LOW')+'</span></td></tr>';}).join(''):'<tr><td colspan="3" class="empty">&#x2705; All stock levels OK</td></tr>';
+
+  // LPP pending (always all)
   var pl=DB.lpp.filter(function(l){return l.paid<l.total;});
   el('dLpp').innerHTML=pl.length?pl.slice(0,3).map(function(l){var pct=Math.round((l.paid/l.total)*100);return'<div style="padding:12px 14px;border-bottom:1px solid var(--bd)"><div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-weight:800;font-size:12px">'+l.cust+'</span><span class="mono" style="font-size:11px;color:var(--ac)">'+K(l.paid)+'/'+K(l.total)+'</span></div><div style="font-size:11px;color:var(--tx3);margin-bottom:6px;font-weight:600">'+l.item+'</div><div class="lbw"><div class="lb" style="width:'+pct+'%"></div></div><div style="font-size:10px;color:var(--tx3);margin-top:3px;font-weight:700">'+pct+'% paid</div></div>';}).join(''):'<div class="empty">No pending plans</div>';
-  var re=[].concat(DB.exp).sort(function(a,b){return new Date(b.date)-new Date(a.date);}).slice(0,5);
-  el('dExp').innerHTML=re.length?re.map(function(e){return'<tr><td>'+e.desc+'</td><td class="mono tr">'+K(e.amt)+'</td><td>'+e.date+'</td></tr>';}).join(''):er(3);
+
+  // Expenses this month
+  var re=[].concat(mExp).sort(function(a,b){return new Date(b.date)-new Date(a.date);}).slice(0,5);
+  el('dExp').innerHTML=re.length?re.map(function(e){return'<tr><td>'+e.desc+'</td><td class="mono tr">'+K(e.amt)+'</td><td>'+e.date+'</td></tr>';}).join(''):
+    '<tr><td colspan="3" class="empty">No expenses in '+dashMonthLabel()+'</td></tr>';
 }
 
 /* ─── INVENTORY ─── */
@@ -2117,6 +2182,17 @@ function changePassword(){
 /* ─── INIT ─── */
 function init(){
   loadTheme();lDB();
+
+  // Dashboard month navigation
+  el('dashPrevMonth').addEventListener('click',function(){
+    dashMonth--;if(dashMonth<0){dashMonth=11;dashYear--;}rDash();
+  });
+  el('dashNextMonth').addEventListener('click',function(){
+    dashMonth++;if(dashMonth>11){dashMonth=0;dashYear++;}rDash();
+  });
+  el('dashThisMonth').addEventListener('click',function(){
+    var n=new Date();dashYear=n.getFullYear();dashMonth=n.getMonth();rDash();
+  });
 
   // Theme toggles
   el('loginThemeBtn').addEventListener('click',function(){setTheme(!isDark);});
