@@ -1798,8 +1798,32 @@ function saveLPay(){
   var id=parseInt(val('lpId')),amt=parseFloat(val('lpAmt'))||0,date=val('lpDate');
   if(!amt||!date){toast('Fill required fields','error');return;}
   var i=DB.lpp.findIndex(function(x){return x.id===id;});
-  if(i>-1){DB.lpp[i].paid=Math.min(DB.lpp[i].total,DB.lpp[i].paid+amt);if(!DB.lpp[i].pays)DB.lpp[i].pays=[];DB.lpp[i].pays.push({amt:amt,date:date,meth:val('lpMeth'),note:val('lpNote')});toast('Payment recorded','success');}
-  sv();cm('mLP');rLpp();
+  if(i<0){toast('Plan not found','error');return;}
+  var plan=DB.lpp[i];
+
+  // 1. Update LPP plan
+  DB.lpp[i].paid=Math.min(plan.total,plan.paid+amt);
+  if(!DB.lpp[i].pays)DB.lpp[i].pays=[];
+  DB.lpp[i].pays.push({amt:amt,date:date,meth:val('lpMeth'),note:val('lpNote')});
+
+  // 2. Also record as a SALES entry so it flows into revenue, daily sales & profit
+  var saleRecord={
+    id:nid('sale'),
+    cust:plan.cust,
+    items:[{pid:'LPP-'+plan.id,name:plan.item+' (LPP instalment)',qty:1,price:amt}],
+    total:amt,
+    fullTotal:amt,
+    disc:0,
+    pay:'Lipa Pole Pole',
+    agent:CU?CU.name:'Manager',
+    date:date,
+    ts:new Date(date).getTime(),
+    lppRef:plan.id  // link back to LPP plan
+  };
+  DB.sales.unshift(saleRecord);
+
+  sv();cm('mLP');rLpp();rSH();rDash();
+  toast('Payment of '+K(amt)+' recorded and added to revenue for '+date,'success');
 }
 
 /* ─── ACCOUNTING ─── */
